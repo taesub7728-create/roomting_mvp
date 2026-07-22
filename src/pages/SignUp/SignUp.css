@@ -18,24 +18,9 @@
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 .slide-content { animation: fadeUp .45s both; }
 
-.slide-eyebrow { font-size: 12px; font-weight: 700; color: var(--pink); margin-bottom: 10px; letter-spacing: 0.2px; }
-.slide-title { font-size: 19px; font-weight: 800; color: var(--ink); line-height: 1.35; letter-spacing: -0.3px; margin-bottom: 6px; white-space: pre-line; }
-.slide-sub { font-size: 13px; font-weight: 500; color: var(--ink-soft); line-height: 1.6; margin-bottom: 22px; }
-
 .terms { font-size: 11px; color: #B5ADA7; font-weight: 500; margin-top: 18px; line-height: 1.6; }
 
 .email-form { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
-
-.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.lang-card {
-  background: var(--white); border: 1.5px solid var(--line); border-radius: 13px; padding: 16px 14px; cursor: pointer;
-  display: flex; align-items: center; gap: 11px; transition: border-color .15s;
-}
-.lang-card:hover { border-color: #DDD5D0; }
-.lang-card.selected { border-color: var(--pink); background: var(--pink-soft); }
-.lang-card-flag { font-size: 22px; }
-.lang-card-name { font-size: 14px; font-weight: 700; color: var(--ink); }
-.lang-card.selected .lang-card-name { color: var(--pink); }
 
 .nick-hint { font-size: 12px; font-weight: 600; margin-top: 8px; }
 .nick-hint.ok { color: #2A9D5C; }

@@ -154,6 +154,22 @@ body {
 
 .input-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; display: block; }
 
+/* 언어 선택 카드 (첫 실행 언어선택 화면, 회원가입 화면에서 공통 사용) */
+.slide-eyebrow { font-size: 12px; font-weight: 700; color: var(--pink); margin-bottom: 10px; letter-spacing: 0.2px; }
+.slide-title { font-size: 19px; font-weight: 800; color: var(--ink); line-height: 1.35; letter-spacing: -0.3px; margin-bottom: 6px; white-space: pre-line; }
+.slide-sub { font-size: 13px; font-weight: 500; color: var(--ink-soft); line-height: 1.6; margin-bottom: 22px; }
+
+.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lang-card {
+  background: var(--white); border: 1.5px solid var(--line); border-radius: 13px; padding: 16px 14px; cursor: pointer;
+  display: flex; align-items: center; gap: 11px; transition: border-color .15s;
+}
+.lang-card:hover { border-color: #DDD5D0; }
+.lang-card.selected { border-color: var(--pink); background: var(--pink-soft); }
+.lang-card-flag { font-size: 22px; }
+.lang-card-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.lang-card.selected .lang-card-name { color: var(--pink); }
+
 /* 소셜 로그인 버튼 (회원가입/로그인 화면에서 공통 사용) */
 .social-btns { display: flex; flex-direction: column; gap: 10px; }
 .social-btn {
