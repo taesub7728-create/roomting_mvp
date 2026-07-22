@@ -9,8 +9,8 @@
 -- 계정 유형: 고객 / 공인중개사 / 에이전트(케어 패키지 담당) / 관리자
 create type user_role as enum ('customer', 'realtor', 'care_agent', 'admin');
 
--- 방 타입
-create type room_type as enum ('one_room', 'two_room', 'officetel', 'apartment', 'share_house', 'other');
+-- 방 타입 ('other'는 예비값으로 남겨두고, 화면에는 6개만 노출: 원룸/투룸/고시원/셰어하우스/오피스텔/아파트)
+create type room_type as enum ('one_room', 'two_room', 'goshiwon', 'officetel', 'apartment', 'share_house', 'other');
 
 -- 조건 요청서 상태
 create type request_status as enum ('open', 'closed', 'expired');
@@ -66,10 +66,13 @@ create table requests (
   id uuid primary key default gen_random_uuid(),
   customer_id uuid not null references profiles(id) on delete cascade, -- 조건의 실제 당사자(고객)
   created_by uuid not null references profiles(id) on delete cascade,  -- 실제로 이 요청서를 작성한 사람(고객 본인 또는 에이전트)
-  region_text text not null,
-  budget_min integer,
-  budget_max integer,
-  room_type room_type not null,
+  region_text text not null, -- 희망 지역/지하철역 (자유 텍스트)
+  rent_max integer, -- 월세 최대 (만원 단위)
+  deposit_max integer, -- 보증금 최대 (만원 단위)
+  room_types room_type[] not null default '{}', -- 방 타입 복수 선택 가능
+  contract_months integer, -- 희망 계약 기간(개월)
+  amenities text[] not null default '{}', -- 세탁기/에어컨/주차 등 편의시설 요청 (자유 태그)
+  extra_note text, -- 추가 요청사항 자유 입력
   move_in_date date,
   registration_required boolean not null default false, -- 전입신고 가능 여부
   status request_status not null default 'open',

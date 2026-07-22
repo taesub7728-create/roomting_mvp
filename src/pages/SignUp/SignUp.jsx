@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../../context/LanguageContext'
 import { signUpWithEmail, signInWithOAuth, updateOwnProfile, getSession } from '../../api/auth.api'
+import { createRequest } from '../../api/requests.api'
+import { PENDING_REQUEST_KEY } from '../RequestWizard/RequestWizard'
 import logo from '../../assets/roomting-logo-symbol.png'
 import { signupText, langOptions } from './translations'
 import './SignUp.css'
@@ -27,6 +29,21 @@ export default function SignUp() {
   const [error, setError] = useState(null)
   const [done, setDone] = useState(false) // 가입 완료 (바로 로그인된 상태)
   const [awaitingEmailConfirm, setAwaitingEmailConfirm] = useState(false) // 이메일 인증 대기
+  const [pendingRequestError, setPendingRequestError] = useState(null)
+
+  // 로그인 없이 조건 요청서를 작성하다가 가입하러 온 경우, 가입이 끝나자마자 그 내용을 이어서 제출
+  async function submitPendingRequestIfAny() {
+    const raw = localStorage.getItem(PENDING_REQUEST_KEY)
+    if (!raw) return
+    localStorage.removeItem(PENDING_REQUEST_KEY)
+    try {
+      const payload = JSON.parse(raw)
+      const { error } = await createRequest(payload)
+      if (error) setPendingRequestError(error)
+    } catch {
+      // 저장된 내용을 읽지 못하면 조용히 무시 (가입 자체는 이미 성공한 상태이므로)
+    }
+  }
 
   useEffect(() => {
     async function checkExistingSession() {
@@ -78,6 +95,7 @@ export default function SignUp() {
       setLoading(false)
       if (error) { setError(error); return }
       setDone(true)
+      await submitPendingRequestIfAny()
       return
     }
 
@@ -93,6 +111,7 @@ export default function SignUp() {
 
     if (data?.session) {
       setDone(true)
+      await submitPendingRequestIfAny()
     } else {
       // Supabase 프로젝트의 "이메일 확인" 설정이 켜져 있으면 세션 없이 가입만 되고, 이메일 인증 후 로그인 가능
       setAwaitingEmailConfirm(true)
@@ -262,6 +281,7 @@ export default function SignUp() {
           <div className="done-icon-wrap"><img src={logo} alt="roomting" /></div>
           <div className="done-title">{t.doneTitle}<br /><span className="accent">{nickTrimmed}</span></div>
           <div className="done-sub">{t.doneSub}</div>
+          {pendingRequestError && <div className="rt-error-text" style={{ marginBottom: 12 }}>{pendingRequestError}</div>}
           <button className="rt-btn-primary" onClick={() => navigate('/')}>{t.doneBtn}</button>
         </div>
       )}
