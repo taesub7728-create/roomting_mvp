@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Roomting — 조건 입력</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #E8547A;
+    --pink-soft: #FDEEF1;
+    --pink-dim: #F8D6DE;
+    --ink: #1C1A19;
+    --ink-soft: #6B6562;
+    --line: #ECE7E3;
+    --paper: #FBFAF8;
+    --white: #fff;
+    --radius: 16px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    font-family: 'Noto Sans KR', 'Manrope', sans-serif;
+    background: #ECE6E2;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    color: var(--ink);
+  }
+
+  .frame {
+    width: 100%; max-width: 430px; min-height: 100vh;
+    background: var(--paper);
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+
+  /* ── TOP BAR ── */
+  .top-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 18px 20px 0;
+    position: sticky; top: 0;
+    background: var(--paper); z-index: 20;
+  }
+  .back-btn {
+    width: 36px; height: 36px; border-radius: 11px;
+    background: var(--white); border: 1px solid var(--line);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--ink); text-decoration: none; flex-shrink: 0;
+  }
+  .top-title { font-size: 16px; font-weight: 800; color: var(--ink); letter-spacing: -0.3px; }
+
+  .lang-box { margin-left: auto; position: relative; }
+  .lang-trigger {
+    background: var(--white); border: 1px solid var(--line);
+    border-radius: 20px; padding: 6px 11px;
+    font-size: 12px; font-weight: 600; color: var(--ink);
+    cursor: pointer; display: flex; align-items: center; gap: 5px;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  .lang-dd {
+    display: none; position: absolute; top: calc(100%+8px); right: 0;
+    background: white; border-radius: 14px; border: 1px solid var(--line);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden; min-width: 130px; z-index: 100;
+  }
+  .lang-dd.open { display: block; }
+  .lang-dd div { padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); }
+  .lang-dd div:hover { background: var(--pink-soft); }
+
+  /* ── PROGRESS ── */
+  .progress-wrap { padding: 16px 20px 0; }
+  .progress-label {
+    font-size: 11.5px; font-weight: 600; color: var(--ink-soft);
+    margin-bottom: 8px; display: flex; justify-content: space-between;
+  }
+  .progress-bar { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; width: 0%; background: var(--pink); border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* ── FORM ── */
+  .form-body { padding: 22px 20px 130px; display: flex; flex-direction: column; gap: 26px; }
+
+  .section { display: flex; flex-direction: column; gap: 12px; }
+  .section-header { display: flex; align-items: baseline; gap: 8px; }
+  .section-title { font-size: 14.5px; font-weight: 800; color: var(--ink); letter-spacing: -0.2px; }
+  .section-sub { font-size: 12px; font-weight: 500; color: var(--ink-soft); }
+  .section-required { font-size: 11px; color: var(--pink); font-weight: 700; }
+
+  /* ── INPUTS ── */
+  input[type="text"], textarea {
+    width: 100%; background: #F3EFEB;
+    border: 1.5px solid var(--line); border-radius: 13px;
+    padding: 13px 15px; font-size: 14.5px; font-weight: 600;
+    color: var(--ink); font-family: 'Noto Sans KR', sans-serif;
+    outline: none; transition: border-color .15s, background .15s;
+  }
+  input:focus, textarea:focus { border-color: var(--pink); background: var(--white); }
+  input::placeholder, textarea::placeholder { color: #ABA39C; font-weight: 500; }
+  textarea { resize: none; height: 86px; line-height: 1.6; }
+
+  /* station search */
+  .station-input-wrap { position: relative; }
+  .station-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 15px; pointer-events: none; opacity: 0.5; }
+  .station-input { padding-left: 38px !important; }
+
+  /* ── CHIPS ── */
+  .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 8px 14px; border-radius: 50px;
+    border: 1.5px solid var(--line); background: #F3EFEB;
+    font-size: 12.5px; font-weight: 700; color: var(--ink-soft);
+    cursor: pointer; transition: all .15s; user-select: none;
+  }
+  .chip.active { background: var(--ink); border-color: var(--ink); color: white; }
+  .chip:active { transform: scale(0.96); }
+
+  /* ── SLIDER CARD ── */
+  .slider-card { background: #F3EFEB; border: 1.5px solid var(--line); border-radius: 14px; padding: 16px; }
+  .slider-display { display: flex; align-items: baseline; justify-content: center; gap: 4px; margin-bottom: 14px; }
+  .slider-value { font-size: 23px; font-weight: 800; color: var(--pink); letter-spacing: -0.5px; }
+  .slider-unit { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+
+  input[type="range"] {
+    width: 100%; height: 4px; border-radius: 4px;
+    background: var(--line); outline: none; border: none;
+    padding: 0; cursor: pointer; -webkit-appearance: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--white); border: 3px solid var(--pink);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15); cursor: pointer;
+  }
+  .range-labels { display: flex; justify-content: space-between; margin-top: 9px; font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+
+  /* ── TOGGLE ── */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #F3EFEB; border: 1.5px solid var(--line);
+    border-radius: 14px; padding: 14px 16px; cursor: pointer;
+  }
+  .toggle-row.on { border-color: var(--pink); background: var(--pink-soft); }
+  .toggle-left { flex: 1; padding-right: 10px; }
+  .toggle-main { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .toggle-desc { font-size: 11.5px; color: var(--ink-soft); font-weight: 500; margin-top: 2px; }
+  .toggle-row.on .toggle-main { color: var(--pink); }
+
+  .switch {
+    width: 42px; height: 24px; border-radius: 12px;
+    background: var(--line); position: relative; transition: background .2s; flex-shrink: 0;
+  }
+  .switch::after {
+    content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%;
+    background: white; top: 3px; left: 3px; transition: transform .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle-row.on .switch { background: var(--pink); }
+  .toggle-row.on .switch::after { transform: translateX(18px); }
+
+  /* ── TWO COL ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* ── DATE TRIGGER ── */
+  .date-trigger {
+    width: 100%; background: #F3EFEB;
+    border: 1.5px solid var(--line); border-radius: 13px;
+    padding: 13px 15px; font-size: 14px; font-weight: 600;
+    color: #ABA39C; font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer; display: flex; align-items: center; gap: 8px; text-align: left;
+  }
+  .date-trigger.has-date { color: var(--ink); border-color: var(--pink); background: var(--white); }
+
+  /* ── CALENDAR OVERLAY ── */
+  .cal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(28,26,25,0.4);
+    z-index: 200; align-items: flex-end; justify-content: center;
+  }
+  .cal-overlay.open { display: flex; }
+  .cal-sheet {
+    background: var(--paper); border-radius: 22px 22px 0 0;
+    padding: 18px 20px 36px; width: 100%; max-width: 430px;
+    animation: slideUp .3s cubic-bezier(.34,1.2,.64,1);
+  }
+  @keyframes slideUp { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+  .cal-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-close { width: 30px; height: 30px; border-radius: 9px; background: var(--white); border: 1px solid var(--line); cursor: pointer; font-size: 14px; color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .cal-nav-row { display: flex; align-items: center; gap: 10px; }
+  .cal-nav { width: 30px; height: 30px; border-radius: 9px; background: var(--white); border: 1px solid var(--line); cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .cal-month-label { font-size: 15px; font-weight: 800; color: var(--ink); min-width: 110px; text-align: center; }
+  .cal-weekdays { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 4px; }
+  .cal-wd { text-align: center; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); padding: 4px 0; }
+  .cal-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+  .cal-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--ink);
+    cursor: pointer; transition: background .15s; border: none; background: none;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  .cal-day:hover:not(.empty):not(.past) { background: var(--pink-soft); }
+  .cal-day.today { color: var(--pink); font-weight: 800; }
+  .cal-day.picked { background: var(--pink); color: white; }
+  .cal-day.past { color: #DDD8D4; cursor: default; }
+  .cal-day.empty { cursor: default; }
+  .cal-confirm {
+    margin-top: 16px; width: 100%; background: var(--ink); color: white; border: none;
+    border-radius: 13px; padding: 14px; font-size: 14px; font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+  }
+
+  /* ── BOTTOM CTA ── */
+  .bottom-cta {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px; padding: 14px 20px 32px;
+    background: linear-gradient(to top, var(--paper) 75%, transparent); z-index: 30;
+  }
+  .submit-btn {
+    width: 100%; background: var(--pink); color: white; border: none;
+    border-radius: 14px; padding: 16px; font-size: 15px; font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+    transition: opacity .15s, transform .15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .submit-btn:hover { opacity: 0.92; }
+  .submit-btn:active { transform: scale(.98); }
+
+  /* ── SUCCESS OVERLAY ── */
+  .success-overlay {
+    display: none; position: fixed; inset: 0; background: var(--paper);
+    z-index: 100; flex-direction: column; align-items: center; justify-content: center; padding: 40px;
+  }
+  .success-overlay.show { display: flex; }
+  .success-icon-wrap {
+    width: 64px; height: 64px; border-radius: 18px; background: var(--pink-soft);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 22px;
+  }
+  .success-icon-wrap img { width: 34px; height: 34px; object-fit: contain; }
+  .success-title { font-size: 20px; font-weight: 800; color: var(--ink); text-align: center; margin-bottom: 10px; letter-spacing: -0.4px; }
+  .success-desc { font-size: 13.5px; font-weight: 500; color: var(--ink-soft); text-align: center; line-height: 1.65; margin-bottom: 32px; }
+  .success-close {
+    width: 100%; background: var(--ink); color: white; border: none;
+    border-radius: 14px; padding: 15px; font-size: 14.5px; font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="frame" id="app">
+
+  <div class="top-bar">
+    <a class="back-btn" href="roomting-landing-v5.html">←</a>
+    <div class="top-title" id="topTitle">조건 입력하기</div>
+    <div class="lang-box" id="langBox">
+      <button class="lang-trigger" onclick="toggleLang()">
+        <span id="lf">🇯🇵</span><span id="ll">日本語</span>
+      </button>
+      <div class="lang-dd" id="ldd">
+        <div onclick="setLang('ko','🇰🇷')">🇰🇷 한국어</div>
+        <div onclick="setLang('ja','🇯🇵')">🇯🇵 日本語</div>
+        <div onclick="setLang('zh','🇨🇳')">🇨🇳 中文</div>
+        <div onclick="setLang('en','🌐')">🌐 English</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span id="progressLabel">조건을 입력해주세요</span>
+      <span id="pct" style="color:var(--pink);font-weight:800;">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <div class="form-body">
+
+    <!-- 1. 지역/역 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title" id="s1title">지역 / 지하철역</div>
+        <span class="section-required">*</span>
+      </div>
+      <div class="station-input-wrap">
+        <span class="station-icon">⌖</span>
+        <input type="text" class="station-input" id="stationInput" oninput="updateProgress()" />
+      </div>
+      <div class="chip-group" id="stationChips"></div>
+    </div>
+
+    <!-- 2. 예산 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title" id="s2title">예산</div>
+      </div>
+
+      <div class="slider-card">
+        <div class="section-sub" id="rentLabel" style="margin-bottom:10px;">월세 (최대)</div>
+        <div class="slider-display">
+          <span class="slider-value" id="rentVal">70</span>
+          <span class="slider-unit" id="rentUnit">만원</span>
+        </div>
+        <input type="range" id="rentSlider" min="20" max="300" step="10" value="70" oninput="updateRent(this.value)" />
+        <div class="range-labels" id="rentRangeLabels"><span>20만원</span><span>300만원+</span></div>
+      </div>
+
+      <div class="slider-card">
+        <div class="section-sub" id="depositLabel" style="margin-bottom:10px;">보증금 (최대)</div>
+        <div class="slider-display">
+          <span class="slider-value" id="depositVal">1,000</span>
+          <span class="slider-unit" id="depositUnit">만원</span>
+        </div>
+        <input type="range" id="depositSlider" min="0" max="5000" step="100" value="1000" oninput="updateDeposit(this.value)" />
+        <div class="range-labels" id="depositRangeLabels"><span>0</span><span>5,000만원+</span></div>
+      </div>
+    </div>
+
+    <!-- 3. 방 타입 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title" id="s3title">방 타입</div>
+      </div>
+      <div class="chip-group" id="roomTypeChips"></div>
+    </div>
+
+    <!-- 4. 전입신고 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title" id="s4title">전입신고</div>
+      </div>
+      <div class="toggle-row" id="jeonipToggle" onclick="toggleJeonip()">
+        <div class="toggle-left">
+          <div class="toggle-main" id="jeonipMain">전입신고 가능한 방만 보기</div>
+          <div class="toggle-desc" id="jeonipDesc">외국인등록증 발급·갱신 시 필요해요</div>
+        </div>
+        <div class="switch"></div>
+      </div>
+    </div>
+
+    <!-- 5. 입주 일정 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title" id="s5title">입주 일정</div>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="section-sub" id="moveinLabel" style="margin-bottom:8px;">입주 희망일 <span style="color:var(--pink);">*</span></div>
+          <button class="date-trigger" id="dateTrigger" onclick="openCal()">
+            <span>📅</span><span id="dateTriggerText">—</span>
+          </button>
+        </div>
+        <div>
+          <div class="section-sub" id="contractLabel" style="margin-bottom:8px;">계약 기간</div>
+          <div class="slider-card" style="padding:11px 13px;">
+            <div style="text-align:center;margin-bottom:8px;">
+              <span id="contractVal" style="font-size:18px;font-weight:800;color:var(--pink);">6</span>
+              <span id="contractUnit" style="font-size:12px;font-weight:600;color:var(--ink-soft);margin-left:2px;">개월</span>
+            </div>
+            <input type="range" id="contractSlider" min="1" max="24" step="1" value="6" oninput="updateContract(this.value)" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. 추가 요청 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title" id="s6title">추가 요청사항</div>
+      </div>
+      <div class="chip-group" id="optionChips" style="margin-bottom:6px;"></div>
+      <textarea id="extraNote" oninput="updateProgress()"></textarea>
+    </div>
+
+  </div>
+
+  <div class="bottom-cta">
+    <button class="submit-btn" onclick="submitForm()">
+      <span id="submitLabel">조건 제출하기</span>
+    </button>
+  </div>
+
+  <!-- 캘린더 -->
+  <div class="cal-overlay" id="calOverlay" onclick="bgCloseCal(event)">
+    <div class="cal-sheet">
+      <div class="cal-top">
+        <div class="cal-nav-row">
+          <button class="cal-nav" onclick="moveCal(-1)">‹</button>
+          <div class="cal-month-label" id="calMonthLabel"></div>
+          <button class="cal-nav" onclick="moveCal(1)">›</button>
+        </div>
+        <button class="cal-close" onclick="closeCal()">✕</button>
+      </div>
+      <div class="cal-weekdays" id="calWeekdays"></div>
+      <div class="cal-days" id="calDays"></div>
+      <button class="cal-confirm" id="calConfirm" onclick="confirmDate()"></button>
+    </div>
+  </div>
+
+  <!-- 완료 -->
+  <div class="success-overlay" id="successOverlay">
+    <div class="success-icon-wrap">
+      <img src="roomting-logo-symbol.png" alt="roomting" />
+    </div>
+    <div class="success-title" id="successTitle">조건이 전송됐어요</div>
+    <div class="success-desc" id="successDesc">주변 부동산에 요청서가 전달됐어요.<br>빠르면 오늘 중으로 응답이 올 거예요</div>
+    <button class="success-close" id="successClose" onclick="closeSuccess()">확인</button>
+  </div>
+
+</div>
+
+<script>
+const T = {
+  ko: {
+    topTitle:'조건 입력하기', progressLabel:'조건을 입력해주세요',
+    s1title:'지역 / 지하철역', stationPlaceholder:'예) 홍대입구, 신촌, 건대입구',
+    stationChips:['홍대입구','신촌','건대입구','이태원','동대문','강남'],
+    s2title:'예산', rentLabel:'월세 (최대)', rentUnit:'만원', rentRangeLabels:['20만원','300만원+'],
+    depositLabel:'보증금 (최대)', depositUnit:'만원', depositRangeLabels:['0','5,000만원+'],
+    s3title:'방 타입', roomTypes:['원룸','투룸','고시원','셰어하우스','오피스텔','아파트'],
+    s4title:'전입신고', jeonipMain:'전입신고 가능한 방만 보기', jeonipDesc:'외국인등록증 발급·갱신 시 필요해요',
+    s5title:'입주 일정', moveinLabel:'입주 희망일', contractLabel:'계약 기간', contractUnit:'개월',
+    s6title:'추가 요청사항', optionChips:['🧺 세탁기','❄️ 에어컨','🅿️ 주차','🐾 반려동물','🔥 풀옵션'],
+    textareaPlaceholder:'예) 여성 전용 건물, 보안 카메라 있으면 좋겠어요',
+    submitLabel:'조건 제출하기',
+    successTitle:'조건이 전송됐어요', successDesc:'주변 부동산에 요청서가 전달됐어요.\n빠르면 오늘 중으로 응답이 올 거예요',
+    successClose:'확인', alertMsg:'지역/역명과 입주 희망일은 필수입니다',
+    yearLabel:'년', monthLabel:'월', dayLabel:'일',
+    weekdays:['일','월','화','수','목','금','토'], confirmLabel:'이 날짜로 선택',
+    monthFn:(y,m)=>`${y}년 ${m}월`,
+    dateFmt:(y,m,d)=>`${y}년 ${m}월 ${d}일`,
+  },
+  ja: {
+    topTitle:'条件を入力する', progressLabel:'条件を入力してください',
+    s1title:'エリア / 駅', stationPlaceholder:'例）弘大入口、新村、建大入口',
+    stationChips:['弘大入口','新村','建大入口','梨泰院','東大門','江南'],
+    s2title:'予算', rentLabel:'家賃（上限）', rentUnit:'万ウォン', rentRangeLabels:['20万','300万+'],
+    depositLabel:'保証金（上限）', depositUnit:'万ウォン', depositRangeLabels:['0','5,000万+'],
+    s3title:'部屋タイプ', roomTypes:['ワンルーム','2部屋','コシウォン','シェアハウス','オフィステル','マンション'],
+    s4title:'転入届', jeonipMain:'転入届可能な部屋のみ表示', jeonipDesc:'外国人登録証の発行・更新に必要です',
+    s5title:'入居スケジュール', moveinLabel:'入居希望日', contractLabel:'契約期間', contractUnit:'ヶ月',
+    s6title:'その他のご要望', optionChips:['🧺 洗濯機','❄️ エアコン','🅿️ 駐車場','🐾 ペット可','🔥 フルオプション'],
+    textareaPlaceholder:'例）女性専用建物、防犯カメラがあると嬉しいです',
+    submitLabel:'条件を送信する',
+    successTitle:'条件が送信されました', successDesc:'近くの不動産に送信されました。\n早ければ本日中にご連絡があります',
+    successClose:'確認', alertMsg:'エリア/駅名と入居希望日は必須です',
+    yearLabel:'年', monthLabel:'月', dayLabel:'日',
+    weekdays:['日','月','火','水','木','金','土'], confirmLabel:'この日付を選択',
+    monthFn:(y,m)=>`${y}年 ${m}月`,
+    dateFmt:(y,m,d)=>`${y}年${m}月${d}日`,
+  },
+  zh: {
+    topTitle:'输入找房条件', progressLabel:'请输入您的条件',
+    s1title:'地区 / 地铁站', stationPlaceholder:'例）弘大入口、新村、建大入口',
+    stationChips:['弘大入口','新村','建大入口','梨泰院','东大门','江南'],
+    s2title:'预算', rentLabel:'月租（最高）', rentUnit:'万韩元', rentRangeLabels:['20万','300万+'],
+    depositLabel:'保证金（最高）', depositUnit:'万韩元', depositRangeLabels:['0','5,000万+'],
+    s3title:'房间类型', roomTypes:['单间','两居室','考试院','合租','写字楼型','公寓'],
+    s4title:'迁入登记', jeonipMain:'只看可办理迁入登记的房源', jeonipDesc:'发行/更新外国人登记证时需要',
+    s5title:'入住时间', moveinLabel:'入住日期', contractLabel:'合约期限', contractUnit:'个月',
+    s6title:'其他需求', optionChips:['🧺 洗衣机','❄️ 空调','🅿️ 停车场','🐾 可养宠物','🔥 全配置'],
+    textareaPlaceholder:'例）女性专用楼，希望有安全摄像头',
+    submitLabel:'提交条件',
+    successTitle:'条件已发送', successDesc:'已发送给周边中介。\n最快今天就会收到回复',
+    successClose:'确认', alertMsg:'地区/车站名称和入住日期为必填项',
+    yearLabel:'年', monthLabel:'月', dayLabel:'日',
+    weekdays:['日','一','二','三','四','五','六'], confirmLabel:'选择此日期',
+    monthFn:(y,m)=>`${y}年${m}月`,
+    dateFmt:(y,m,d)=>`${y}年${m}月${d}日`,
+  },
+  en: {
+    topTitle:'Enter Your Criteria', progressLabel:'Fill in your conditions',
+    s1title:'Area / Station', stationPlaceholder:'e.g. Hongdae, Sinchon, Konkuk Univ.',
+    stationChips:['Hongdae','Sinchon','Konkuk Univ.','Itaewon','Dongdaemun','Gangnam'],
+    s2title:'Budget', rentLabel:'Monthly Rent (Max)', rentUnit:'0k KRW', rentRangeLabels:['₩200k','₩3M+'],
+    depositLabel:'Deposit (Max)', depositUnit:'0k KRW', depositRangeLabels:['₩0','₩50M+'],
+    s3title:'Room Type', roomTypes:['Studio','2-Room','Goshiwon','Share House','Officetel','Apartment'],
+    s4title:'Address Registration', jeonipMain:'Only show rooms with address reg.', jeonipDesc:'Required for Alien Registration Card',
+    s5title:'Move-in Schedule', moveinLabel:'Move-in Date', contractLabel:'Contract Period', contractUnit:'months',
+    s6title:'Additional Requests', optionChips:['🧺 Washer','❄️ A/C','🅿️ Parking','🐾 Pet-friendly','🔥 Full Option'],
+    textareaPlaceholder:'e.g. Women-only building, CCTV preferred',
+    submitLabel:'Submit Criteria',
+    successTitle:'Request Sent', successDesc:'Your request has been sent to nearby agents.\nYou may hear back today',
+    successClose:'Got it', alertMsg:'Area/station name and move-in date are required',
+    yearLabel:'Year', monthLabel:'Month', dayLabel:'Day',
+    weekdays:['Su','Mo','Tu','We','Th','Fr','Sa'], confirmLabel:'Select this date',
+    monthFn:(y,m)=>{const n=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return `${n[m-1]} ${y}`;},
+    dateFmt:(y,m,d)=>{const n=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return `${n[m-1]} ${d}, ${y}`;},
+  },
+};
+
+let currentLang = localStorage.getItem('roomting_lang') || 'ja';
+let jeonipOn = false;
+let selectedStation = '';
+let selectedRoomTypes = new Set();
+let selectedOptions = new Set();
+let pickedDate = null;
+let calViewYear, calViewMonth;
+
+function renderAll() {
+
+  const _flagMap = { ko:'🇰🇷', ja:'🇯🇵', zh:'🇨🇳', en:'🌐' };
+  const _labelMap = { ko:'한국어', ja:'日本語', zh:'中文', en:'English' };
+  document.getElementById('lf').textContent = _flagMap[currentLang];
+  if(document.getElementById('ll')) document.getElementById('ll').textContent = _labelMap[currentLang];
+  const t = T[currentLang];
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+
+  set('topTitle', t.topTitle); set('progressLabel', t.progressLabel);
+  set('s1title', t.s1title); set('s2title', t.s2title); set('s3title', t.s3title);
+  set('s4title', t.s4title); set('s5title', t.s5title); set('s6title', t.s6title);
+
+  document.getElementById('stationInput').placeholder = t.stationPlaceholder;
+  document.getElementById('extraNote').placeholder = t.textareaPlaceholder;
+
+  set('rentLabel', t.rentLabel); set('rentUnit', t.rentUnit);
+  set('depositLabel', t.depositLabel); set('depositUnit', t.depositUnit);
+
+  const rl = document.getElementById('rentRangeLabels');
+  rl.innerHTML = t.rentRangeLabels.map(s=>`<span>${s}</span>`).join('');
+  const dl = document.getElementById('depositRangeLabels');
+  dl.innerHTML = t.depositRangeLabels.map(s=>`<span>${s}</span>`).join('');
+
+  set('jeonipMain', t.jeonipMain); set('jeonipDesc', t.jeonipDesc);
+  set('moveinLabel', t.moveinLabel);
+  document.getElementById('moveinLabel').innerHTML = t.moveinLabel + ' <span style="color:var(--pink);">*</span>';
+  set('contractLabel', t.contractLabel); set('contractUnit', t.contractUnit);
+
+  renderStationChips(); renderRoomTypeChips(); renderOptionChips();
+
+  set('submitLabel', t.submitLabel);
+  set('successTitle', t.successTitle); set('successClose', t.successClose);
+  document.getElementById('successDesc').innerHTML = t.successDesc.replace('\n','<br>');
+
+  updateRent(document.getElementById('rentSlider').value);
+  updateDeposit(document.getElementById('depositSlider').value);
+  updateContract(document.getElementById('contractSlider').value);
+  updateDateTrigger();
+  updateProgress();
+}
+
+function renderStationChips() {
+  const t = T[currentLang];
+  const wrap = document.getElementById('stationChips');
+  wrap.innerHTML = '';
+  t.stationChips.forEach(name => {
+    const el = document.createElement('div');
+    el.className = 'chip' + (selectedStation === name ? ' active' : '');
+    el.textContent = name;
+    el.onclick = () => pickStation(el, name);
+    wrap.appendChild(el);
+  });
+}
+function renderRoomTypeChips() {
+  const t = T[currentLang];
+  const wrap = document.getElementById('roomTypeChips');
+  wrap.innerHTML = '';
+  t.roomTypes.forEach((name, i) => {
+    const el = document.createElement('div');
+    el.className = 'chip' + (selectedRoomTypes.has(i) ? ' active' : '');
+    el.textContent = name;
+    el.onclick = () => {
+      if(selectedRoomTypes.has(i)) selectedRoomTypes.delete(i);
+      else selectedRoomTypes.add(i);
+      el.classList.toggle('active');
+      updateProgress();
+    };
+    wrap.appendChild(el);
+  });
+}
+function renderOptionChips() {
+  const t = T[currentLang];
+  const wrap = document.getElementById('optionChips');
+  wrap.innerHTML = '';
+  t.optionChips.forEach((name, i) => {
+    const el = document.createElement('div');
+    el.className = 'chip' + (selectedOptions.has(i) ? ' active' : '');
+    el.textContent = name;
+    el.onclick = () => {
+      if(selectedOptions.has(i)) selectedOptions.delete(i);
+      else selectedOptions.add(i);
+      el.classList.toggle('active');
+    };
+    wrap.appendChild(el);
+  });
+}
+function pickStation(el, name) {
+  selectedStation = name;
+  document.getElementById('stationInput').value = name;
+  renderStationChips();
+  updateProgress();
+}
+
+function updateRent(val) {
+  const v = parseInt(val);
+  document.getElementById('rentVal').textContent = v;
+  updateProgress();
+}
+function updateDeposit(val) {
+  const v = parseInt(val);
+  document.getElementById('depositVal').textContent = v.toLocaleString();
+  updateProgress();
+}
+function updateContract(val) {
+  document.getElementById('contractVal').textContent = val;
+}
+function toggleJeonip() {
+  jeonipOn = !jeonipOn;
+  document.getElementById('jeonipToggle').classList.toggle('on', jeonipOn);
+  updateProgress();
+}
+
+function updateProgress() {
+  let score = 0;
+  if (document.getElementById('stationInput').value.trim()) score++;
+  if (pickedDate) score++;
+  if (selectedRoomTypes.size > 0) score++;
+  score++; // budget always set
+  score++; // contract slider always set
+  const pct = Math.round(score / 5 * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('pct').textContent = pct + '%';
+}
+
+function submitForm() {
+  const station = document.getElementById('stationInput').value.trim();
+  if (!station || !pickedDate) {
+    alert(T[currentLang].alertMsg);
+    return;
+  }
+  document.getElementById('successOverlay').classList.add('show');
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('pct').textContent = '100%';
+}
+function closeSuccess() { window.location.href = 'roomting-response-v2.html'; }
+
+/* 캘린더 */
+const MONTH_NAMES_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let today;
+
+function openCal() {
+  const now = new Date();
+  if (!pickedDate) { calViewYear = now.getFullYear(); calViewMonth = now.getMonth() + 1; }
+  else { calViewYear = pickedDate.y; calViewMonth = pickedDate.m; }
+  renderCal();
+  document.getElementById('calOverlay').classList.add('open');
+}
+function closeCal() { document.getElementById('calOverlay').classList.remove('open'); }
+function bgCloseCal(e) { if (e.target === document.getElementById('calOverlay')) closeCal(); }
+function moveCal(d) {
+  calViewMonth += d;
+  if (calViewMonth > 12) { calViewMonth = 1; calViewYear++; }
+  if (calViewMonth < 1) { calViewMonth = 12; calViewYear--; }
+  renderCal();
+}
+function renderCal() {
+  const t = T[currentLang];
+  const now = new Date();
+  today = { y: now.getFullYear(), m: now.getMonth()+1, d: now.getDate() };
+
+  document.getElementById('calMonthLabel').textContent = t.monthFn(calViewYear, calViewMonth);
+  document.getElementById('calWeekdays').innerHTML = t.weekdays.map(w => `<div class="cal-wd">${w}</div>`).join('');
+
+  const firstDay = new Date(calViewYear, calViewMonth - 1, 1).getDay();
+  const daysInMonth = new Date(calViewYear, calViewMonth, 0).getDate();
+  const daysEl = document.getElementById('calDays');
+  daysEl.innerHTML = '';
+  for (let i = 0; i < firstDay; i++) daysEl.innerHTML += `<div class="cal-day empty"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isPast = (calViewYear < today.y) || (calViewYear === today.y && calViewMonth < today.m) ||
+                   (calViewYear === today.y && calViewMonth === today.m && d < today.d);
+    const isToday = calViewYear===today.y && calViewMonth===today.m && d===today.d;
+    const isPicked = pickedDate && pickedDate.y===calViewYear && pickedDate.m===calViewMonth && pickedDate.d===d;
+    let cls = 'cal-day';
+    if (isPast) cls += ' past';
+    if (isToday) cls += ' today';
+    if (isPicked) cls += ' picked';
+    const handler = isPast ? '' : `onclick="pickDay(${d})"`;
+    daysEl.innerHTML += `<button class="${cls}" ${handler}>${d}</button>`;
+  }
+  document.getElementById('calConfirm').textContent = t.confirmLabel;
+}
+function pickDay(d) { pickedDate = { y: calViewYear, m: calViewMonth, d }; renderCal(); }
+function confirmDate() {
+  if (!pickedDate) { closeCal(); return; }
+  updateDateTrigger(); closeCal(); updateProgress();
+}
+function updateDateTrigger() {
+  if (!pickedDate) return;
+  const t = T[currentLang];
+  const { y, m, d } = pickedDate;
+  const label = t.dateFmt(y, m, d);
+  document.getElementById('dateTriggerText').textContent = label;
+  document.getElementById('dateTrigger').classList.add('has-date');
+}
+
+/* 언어 */
+function toggleLang() { document.getElementById('ldd').classList.toggle('open'); }
+function setLang(code, flag) {
+  currentLang = code;
+  localStorage.setItem('roomting_lang', code);
+  document.getElementById('lf').textContent = flag;
+  document.getElementById('ll').textContent = code==='ko'?'한국어':code==='ja'?'日本語':code==='zh'?'中文':'English';
+  document.getElementById('ldd').classList.remove('open');
+  renderAll();
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('langBox').contains(e.target))
+    document.getElementById('ldd').classList.remove('open');
+});
+
+renderAll();
+</script>
+</body>
+</html>

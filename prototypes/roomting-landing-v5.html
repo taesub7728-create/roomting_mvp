@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Roomting</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #E8547A;
+    --pink-soft: #FDEEF1;
+    --pink-dim: #F8D6DE;
+    --ink: #1C1A19;
+    --ink-soft: #6B6562;
+    --line: #ECE7E3;
+    --paper: #FBFAF8;
+    --white: #fff;
+    --radius: 16px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    font-family: 'Noto Sans KR', 'Manrope', sans-serif;
+    background: #ECE6E2;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    color: var(--ink);
+  }
+
+  .frame {
+    width: 100%; max-width: 430px; min-height: 100vh;
+    background: var(--paper);
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px 10px;
+    padding: 18px 22px 16px;
+    background: var(--paper);
+  }
+  .logo { display:flex; align-items:center; gap:8px; text-decoration:none; flex-wrap: wrap; }
+  .logo-mark {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-mark img { width: 100%; height: 100%; object-fit: contain; }
+  .logo-text {
+    font-family: 'Manrope', sans-serif;
+    font-size: 15px; font-weight: 800; color: var(--ink-soft);
+    letter-spacing: -0.2px;
+  }
+  .logo-divider {
+    width: 1px; height: 12px; background: var(--line);
+    margin: 0 1px;
+  }
+  .tagline-row { display: contents; }
+  .logo-tagline {
+    font-size: 12px; font-weight: 600; color: #B5ADA7;
+    letter-spacing: -0.1px;
+  }
+
+  .header-actions { display:flex; align-items:center; gap:8px; flex-shrink: 0; }
+  .lang-box { position:relative; }
+  .lang-btn {
+    background: var(--white); border: 1px solid var(--line);
+    border-radius: 20px; padding: 7px 12px;
+    font-size: 12.5px; font-weight: 600; color: var(--ink);
+    cursor: pointer; display:flex; align-items:center; gap:5px;
+    font-family: 'Noto Sans KR', sans-serif;
+    white-space: nowrap;
+  }
+  .lang-dd {
+    display:none; position:absolute; top:calc(100%+8px); right:0;
+    background:white; border-radius:14px; border:1px solid var(--line);
+    box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; min-width:130px; z-index:100;
+  }
+  .lang-dd.open { display:block; }
+  .lang-dd div { padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; color:var(--ink); }
+  .lang-dd div:hover { background:var(--pink-soft); }
+  .profile-box { position: relative; }
+  .profile-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--pink-soft); border: 1.5px solid var(--pink-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; cursor: pointer; flex-shrink: 0;
+  }
+  .profile-dd {
+    display: none; position: absolute; top: calc(100%+8px); right: 0;
+    background: white; border-radius: 14px; border: 1px solid var(--line);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden; min-width: 150px; z-index: 100;
+  }
+  .profile-dd.open { display: block; }
+  .profile-dd a, .profile-dd div {
+    padding: 11px 14px; font-size: 13px; font-weight: 600; color: var(--ink);
+    cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 8px;
+  }
+  .profile-dd a:hover, .profile-dd div:hover { background: var(--pink-soft); }
+  .profile-dd .dd-logout { color: var(--pink); border-top: 1px solid var(--line); }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 8px 22px 0;
+    display: flex; flex-direction: column;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; color: var(--pink);
+    letter-spacing: 0.2px; margin-bottom: 14px;
+  }
+  .eyebrow-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--pink); }
+
+  .hero h1 {
+    font-size: 27px; font-weight: 800; color: var(--ink);
+    line-height: 1.32; letter-spacing: -0.6px;
+    margin-bottom: 10px;
+  }
+  .hero h1 .accent { color: var(--pink); }
+
+  .hero-sub {
+    font-size: 14px; font-weight: 500; color: var(--ink-soft);
+    line-height: 1.6; margin-bottom: 22px;
+  }
+
+  /* Hero visual: photo-style room card instead of mascot */
+  .hero-visual {
+    width: 100%; height: 170px;
+    border-radius: var(--radius);
+    background: linear-gradient(160deg, #F3DCE2 0%, #F8E8EA 55%, #FBF3F1 100%);
+    position: relative; overflow: hidden;
+    margin-bottom: 22px;
+    border: 1px solid var(--line);
+  }
+  .hero-visual-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(transparent 95%, rgba(0,0,0,0.03) 95%),
+      linear-gradient(90deg, transparent 95%, rgba(0,0,0,0.03) 95%);
+    background-size: 24px 24px;
+    opacity: 0.6;
+  }
+  .hero-mascot-mini {
+    position: absolute; bottom: 14px; right: 16px;
+    width: 64px; height: 64px;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,0.12));
+  }
+  .hero-mascot-mini img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+
+  .hero-visual-text {
+    position: absolute; top: 18px; left: 18px;
+    max-width: 60%;
+  }
+  .hvt-line1 { font-size: 11px; font-weight: 700; color: var(--pink); margin-bottom:4px; letter-spacing:0.3px; }
+  .hvt-line2 { font-size: 16px; font-weight: 800; color: var(--ink); line-height: 1.4; }
+
+  /* ── trust row: plain text + dividers, not pills ── */
+  .trust-row {
+    display: flex; align-items: center;
+    padding: 0 0 22px;
+    font-size: 12px; font-weight: 600; color: var(--ink-soft);
+  }
+  .trust-item { display:flex; align-items:center; gap:5px; }
+  .trust-divider { width:1px; height:11px; background:var(--line); margin:0 11px; }
+  .trust-check { color: var(--pink); font-weight: 800; }
+
+  /* ── ACTION CARDS ── */
+  .cards { padding: 24px 22px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .card {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+    padding: 18px 16px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    background: var(--white);
+    transition: border-color .15s, transform .15s;
+  }
+  .card:hover { border-color: #DDD5D0; transform: translateY(-1px); }
+  .card:active { transform: scale(0.99); }
+
+  .card.primary {
+    border-color: var(--pink-dim);
+  }
+
+  .card-icon {
+    width: 38px; height: 38px; border-radius: 11px;
+    background: var(--pink-soft);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .card.primary .card-icon { background: var(--pink); font-size: 16px; }
+
+  .card-text { width: 100%; }
+  .card-title {
+    font-size: 14px; font-weight: 700; color: var(--ink);
+    letter-spacing: -0.2px; margin-bottom: 3px; line-height: 1.35;
+  }
+  .card-desc { font-size: 11px; font-weight: 500; color: var(--ink-soft); line-height: 1.4; }
+
+  .card-arrow {
+    font-size: 16px; color: #D8D2CD; flex-shrink: 0;
+    align-self: flex-end; margin-top: -4px;
+  }
+  .card.primary .card-arrow { color: var(--pink); }
+
+  /* ── empty space filler: quick stat strip ── */
+  .quick-stats {
+    display: flex; padding: 0 22px; margin-top: 14px;
+  }
+  .quick-stat {
+    flex: 1; text-align: center; padding: 14px 6px;
+    border-right: 1px solid var(--line);
+  }
+  .quick-stat:last-child { border-right: none; }
+  .quick-stat-num {
+    font-family: 'Manrope', sans-serif;
+    font-size: 19px; font-weight: 800; color: var(--pink);
+    letter-spacing: -0.3px;
+  }
+  .quick-stat-label {
+    font-size: 11px; font-weight: 600; color: var(--ink-soft);
+    margin-top: 2px;
+  }
+
+  /* ── How it works (replaces decorative section) ── */
+  .how-section { padding: 34px 22px 0; }
+  .how-title {
+    font-size: 13px; font-weight: 700; color: var(--ink-soft);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    margin-bottom: 16px;
+  }
+  .how-tabs {
+    display: flex; gap: 6px;
+    margin-bottom: 18px;
+  }
+  .how-tab {
+    flex: 1; padding: 9px 10px;
+    border-radius: 50px; border: 1.5px solid var(--line);
+    background: var(--white); color: var(--ink-soft);
+    font-size: 12.5px; font-weight: 700; cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: all .15s;
+  }
+  .how-tab.active { background: var(--pink); border-color: var(--pink); color: white; }
+
+  .how-steps { display: flex; flex-direction: column; gap: 0; }
+  .how-step {
+    display: flex; gap: 14px; padding: 13px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .how-step:last-child { border-bottom: none; }
+  .how-num {
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px; font-weight: 800; color: var(--pink);
+    width: 22px; flex-shrink: 0; padding-top: 1px;
+  }
+  .how-text-title { font-size: 13.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+  .how-text-desc { font-size: 12px; font-weight: 500; color: var(--ink-soft); line-height: 1.5; }
+
+  /* ── FOOTER ── */
+  footer {
+    margin-top: auto;
+    text-align: center;
+    padding: 28px 24px 30px;
+    font-size: 12px; color: #B5ADA7; font-weight: 500;
+  }
+  footer a { color: var(--pink); font-weight: 700; text-decoration: none; }
+
+  /* ── LANG ── */
+  [data-lang] { display: none; }
+  .lang-ko [data-lang="ko"], .lang-ja [data-lang="ja"],
+  .lang-zh [data-lang="zh"], .lang-en [data-lang="en"] { display: block; }
+  span[data-lang] { display: none; }
+  .lang-ko span[data-lang="ko"], .lang-ja span[data-lang="ja"],
+  .lang-zh span[data-lang="zh"], .lang-en span[data-lang="en"] { display: inline; }
+</style>
+</head>
+<body>
+
+<div class="frame lang-ko" id="app">
+
+  <header>
+    <a class="logo" href="#">
+      <div class="logo-mark">
+        <img src="roomting-logo-symbol.png" style="width:100%;height:100%;object-fit:contain;" alt="roomting">
+      </div>
+      <span class="logo-text">roomting</span>
+      <div class="logo-divider"></div>
+      <span class="logo-tagline">
+        <span data-lang="ko">한국 생활의 첫 단추</span>
+        <span data-lang="ja">韓国生活の最初の一歩</span>
+        <span data-lang="zh">韩国生活的第一步</span>
+        <span data-lang="en">Your first step in Korea</span>
+      </span>
+    </a>
+    <div class="header-actions">
+      <div class="lang-box" id="langSelector">
+        <button class="lang-btn" onclick="toggleLang()">
+          <span id="langFlag">🇰🇷</span>
+          <span id="langLabel">한국어</span>
+        </button>
+        <div class="lang-dd" id="langDropdown">
+          <div onclick="setLang('ko','🇰🇷','한국어')">🇰🇷 한국어</div>
+          <div onclick="setLang('ja','🇯🇵','日本語')">🇯🇵 日本語</div>
+          <div onclick="setLang('zh','🇨🇳','中文')">🇨🇳 中文</div>
+          <div onclick="setLang('en','🌐','English')">🌐 English</div>
+        </div>
+      </div>
+      <div class="profile-box" id="profileBox">
+        <button class="profile-btn" id="profileBtn" onclick="toggleProfile()">Y</button>
+        <div class="profile-dd" id="profileDropdown">
+          <a href="roomting-mypage-v2.html">
+            <span>👤</span>
+            <span data-lang="ko">마이페이지</span>
+            <span data-lang="ja">マイページ</span>
+            <span data-lang="zh">我的页面</span>
+            <span data-lang="en">My Page</span>
+          </a>
+          <div class="dd-logout" onclick="logout()">
+            <span>🚪</span>
+            <span data-lang="ko">로그아웃</span>
+            <span data-lang="ja">ログアウト</span>
+            <span data-lang="zh">退出登录</span>
+            <span data-lang="en">Log out</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="cards">
+    <a class="card primary" href="roomting-request-v4.html">
+      <div class="card-icon">📋</div>
+      <div class="card-text">
+        <div class="card-title">
+          <span data-lang="ko">내 조건에 맞는 방 받아보기</span>
+          <span data-lang="ja">条件に合う部屋を提案してもらう</span>
+          <span data-lang="zh">获取符合我条件的房间</span>
+          <span data-lang="en">Get matched rooms</span>
+        </div>
+        <div class="card-desc">
+          <span data-lang="ko">조건 입력하고 제안 받기</span>
+          <span data-lang="ja">条件を入力して提案を受ける</span>
+          <span data-lang="zh">输入条件并获取建议</span>
+          <span data-lang="en">Set criteria, get proposals</span>
+        </div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+
+    <a class="card" href="roomting-map-v2.html">
+      <div class="card-icon">🗺️</div>
+      <div class="card-text">
+        <div class="card-title">
+          <span data-lang="ko">지도로 방 구경하기</span>
+          <span data-lang="ja">地図で部屋を探す</span>
+          <span data-lang="zh">用地图找房间</span>
+          <span data-lang="en">Browse on map</span>
+        </div>
+        <div class="card-desc">
+          <span data-lang="ko">지하철역 주변 매물 검색</span>
+          <span data-lang="ja">駅周辺の物件を検索</span>
+          <span data-lang="zh">搜索地铁站周边房源</span>
+          <span data-lang="en">Search near subway stations</span>
+        </div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+  </div>
+
+  <div class="quick-stats">
+    <div class="quick-stat">
+      <div class="quick-stat-num">30+</div>
+      <div class="quick-stat-label">
+        <span data-lang="ko">파트너 부동산</span>
+        <span data-lang="ja">パートナー不動産</span>
+        <span data-lang="zh">合作中介</span>
+        <span data-lang="en">Partner agents</span>
+      </div>
+    </div>
+    <div class="quick-stat">
+      <div class="quick-stat-num">24h</div>
+      <div class="quick-stat-label">
+        <span data-lang="ko">평균 응답 시간</span>
+        <span data-lang="ja">平均返答時間</span>
+        <span data-lang="zh">平均响应时间</span>
+        <span data-lang="en">Avg. response</span>
+      </div>
+    </div>
+    <div class="quick-stat">
+      <div class="quick-stat-num">4</div>
+      <div class="quick-stat-label">
+        <span data-lang="ko">지원 언어</span>
+        <span data-lang="ja">対応言語</span>
+        <span data-lang="zh">支持语言</span>
+        <span data-lang="en">Languages</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="how-section">
+    <div class="how-title">
+      <span data-lang="ko">이용 방법</span>
+      <span data-lang="ja">利用方法</span>
+      <span data-lang="zh">使用方法</span>
+      <span data-lang="en">How it works</span>
+    </div>
+
+    <div class="how-tabs">
+      <button class="how-tab active" id="howTab0" onclick="switchHowTab(0)">
+        <span data-lang="ko">조건 입력하기</span>
+        <span data-lang="ja">条件を入力</span>
+        <span data-lang="zh">输入条件</span>
+        <span data-lang="en">Get matched</span>
+      </button>
+      <button class="how-tab" id="howTab1" onclick="switchHowTab(1)">
+        <span data-lang="ko">지도로 보기</span>
+        <span data-lang="ja">地図で探す</span>
+        <span data-lang="zh">用地图找房</span>
+        <span data-lang="en">Browse on map</span>
+      </button>
+    </div>
+
+    <div class="how-steps" id="howSteps0">
+      <div class="how-step">
+        <div class="how-num">01</div>
+        <div>
+          <div class="how-text-title">
+            <span data-lang="ko">조건을 입력하세요</span>
+            <span data-lang="ja">条件を入力</span>
+            <span data-lang="zh">输入条件</span>
+            <span data-lang="en">Enter your criteria</span>
+          </div>
+          <div class="how-text-desc">
+            <span data-lang="ko">지역, 예산, 방 타입을 알려주세요</span>
+            <span data-lang="ja">地域、予算、部屋タイプを教えてください</span>
+            <span data-lang="zh">告诉我们地区、预算和房型</span>
+            <span data-lang="en">Area, budget, and room type</span>
+          </div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">02</div>
+        <div>
+          <div class="how-text-title">
+            <span data-lang="ko">부동산이 제안을 보내요</span>
+            <span data-lang="ja">不動産から提案が届く</span>
+            <span data-lang="zh">中介发送提案</span>
+            <span data-lang="en">Agents send proposals</span>
+          </div>
+          <div class="how-text-desc">
+            <span data-lang="ko">24시간 안에 여러 곳에서 응답해요</span>
+            <span data-lang="ja">24時間以内に複数から返答があります</span>
+            <span data-lang="zh">24小时内多家中介回复</span>
+            <span data-lang="en">Multiple replies within 24 hours</span>
+          </div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">03</div>
+        <div>
+          <div class="how-text-title">
+            <span data-lang="ko">비교하고 채팅하세요</span>
+            <span data-lang="ja">比較してチャット</span>
+            <span data-lang="zh">比较并聊天</span>
+            <span data-lang="en">Compare and chat</span>
+          </div>
+          <div class="how-text-desc">
+            <span data-lang="ko">자동번역 채팅으로 편하게 소통해요</span>
+            <span data-lang="ja">自動翻訳チャットで気軽にやり取り</span>
+            <span data-lang="zh">通过自动翻译聊天轻松沟通</span>
+            <span data-lang="en">Chat freely with auto-translation</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="how-steps" id="howSteps1" style="display:none;">
+      <div class="how-step">
+        <div class="how-num">01</div>
+        <div>
+          <div class="how-text-title">
+            <span data-lang="ko">지도에서 매물을 둘러보세요</span>
+            <span data-lang="ja">地図で物件を見てみましょう</span>
+            <span data-lang="zh">在地图上浏览房源</span>
+            <span data-lang="en">Browse listings on the map</span>
+          </div>
+          <div class="how-text-desc">
+            <span data-lang="ko">지하철역 기준으로 위치를 한눈에 봐요</span>
+            <span data-lang="ja">駅を基準に位置を一目で確認</span>
+            <span data-lang="zh">以地铁站为基准一目了然</span>
+            <span data-lang="en">See locations by subway station</span>
+          </div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">02</div>
+        <div>
+          <div class="how-text-title">
+            <span data-lang="ko">조건으로 필터링하세요</span>
+            <span data-lang="ja">条件で絞り込み</span>
+            <span data-lang="zh">按条件筛选</span>
+            <span data-lang="en">Filter by your criteria</span>
+          </div>
+          <div class="how-text-desc">
+            <span data-lang="ko">예산, 방 타입, 전입신고 여부로 좁혀요</span>
+            <span data-lang="ja">予算、部屋タイプ、転入届可否で絞り込み</span>
+            <span data-lang="zh">按预算、房型、迁入登记筛选</span>
+            <span data-lang="en">Narrow down by budget, type, registration</span>
+          </div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">03</div>
+        <div>
+          <div class="how-text-title">
+            <span data-lang="ko">마음에 들면 채팅하세요</span>
+            <span data-lang="ja">気に入ったらチャット</span>
+            <span data-lang="zh">满意的话直接聊天</span>
+            <span data-lang="en">Chat if you like it</span>
+          </div>
+          <div class="how-text-desc">
+            <span data-lang="ko">자동번역 채팅으로 바로 문의해요</span>
+            <span data-lang="ja">自動翻訳チャットでそのまま問い合わせ</span>
+            <span data-lang="zh">用自动翻译聊天直接咨询</span>
+            <span data-lang="en">Inquire directly with auto-translation</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-lang="ko">도움이 필요하신가요? <a href="#">고객센터 문의</a></span>
+    <span data-lang="ja">お困りですか？ <a href="#">お問い合わせ</a></span>
+    <span data-lang="zh">需要帮助？ <a href="#">联系客服</a></span>
+    <span data-lang="en">Need help? <a href="#">Contact support</a></span>
+  </footer>
+
+</div>
+
+<script>
+  // 가입 시 입력한 닉네임의 첫 글자를 프로필 아이콘으로 표시
+  function loadProfileInitial() {
+    const nick = localStorage.getItem('roomting_nickname') || 'Y';
+    document.getElementById('profileBtn').textContent = nick.charAt(0).toUpperCase();
+  }
+  loadProfileInitial();
+
+  function toggleProfile() {
+    document.getElementById('profileDropdown').classList.toggle('open');
+  }
+  function logout() {
+    window.location.href = 'roomting-landing-v5.html';
+  }
+  document.addEventListener('click', e => {
+    const box = document.getElementById('profileBox');
+    if (box && !box.contains(e.target)) {
+      document.getElementById('profileDropdown').classList.remove('open');
+    }
+  });
+
+  function switchHowTab(idx) {
+    for (let i = 0; i < 2; i++) {
+      document.getElementById(`howTab${i}`).classList.toggle('active', i === idx);
+      document.getElementById(`howSteps${i}`).style.display = i === idx ? 'flex' : 'none';
+    }
+  }
+
+  function toggleLang() {
+    const sel = document.getElementById('langSelector');
+    const dd  = document.getElementById('langDropdown');
+    dd.classList.toggle('open');
+  }
+  function setLang(code, flag, label) {
+    const app = document.getElementById('app');
+    app.className = app.className.replace(/lang-\w+/, 'lang-' + code);
+    document.getElementById('langFlag').textContent  = flag;
+    document.getElementById('langLabel').textContent = label;
+    document.getElementById('langDropdown').classList.remove('open');
+    localStorage.setItem('roomting_lang', code);
+  }
+  document.addEventListener('click', (e) => {
+    if (!document.getElementById('langSelector').contains(e.target)) {
+      document.getElementById('langDropdown').classList.remove('open');
+    }
+  });
+
+  // 가입 시 선택했거나 이전에 설정한 언어 불러오기
+  function loadSavedLang() {
+    const saved = localStorage.getItem('roomting_lang');
+    if (!saved) return;
+    const labels = { ko:['🇰🇷','한국어'], ja:['🇯🇵','日本語'], zh:['🇨🇳','中文'], en:['🌐','English'] };
+    const [flag, label] = labels[saved] || labels.ko;
+    setLang(saved, flag, label);
+  }
+  loadSavedLang();
+</script>
+</body>
+</html>

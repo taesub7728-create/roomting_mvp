@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Roomting — 지도로 방 찾기</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #E8547A; --pink-soft: #FDEEF1; --pink-dim: #F8D6DE;
+    --ink: #1C1A19; --ink-soft: #6B6562; --line: #ECE7E3;
+    --paper: #FBFAF8; --white: #fff; --radius: 16px; --green: #2A9D5C;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'Noto Sans KR','Manrope',sans-serif; background:#ECE6E2; display:flex; justify-content:center; min-height:100vh; color:var(--ink); }
+  .frame { width:100%; max-width:430px; height:100vh; position:relative; overflow:hidden; background:#EFEAE5; }
+
+  /* ── 상단 검색바 ── */
+  .top-bar { position:absolute; top:0; left:0; right:0; z-index:30; padding:16px 16px 0; display:flex; flex-direction:column; gap:10px; }
+  .search-row { display:flex; gap:10px; align-items:center; }
+
+  .back-btn { width:40px; height:40px; border-radius:12px; background:var(--white); border:1px solid var(--line); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--ink); box-shadow:0 2px 8px rgba(0,0,0,0.06); flex-shrink:0; text-decoration:none; }
+
+  .search-box { flex:1; background:var(--white); border:1px solid var(--line); border-radius:13px; padding:11px 15px; display:flex; align-items:center; gap:9px; box-shadow:0 2px 8px rgba(0,0,0,0.06); cursor:pointer; }
+  .search-icon { font-size:14px; opacity:.5; }
+  .search-text { font-size:13.5px; font-weight:700; color:var(--ink); }
+
+  .filter-row { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+  .filter-row::-webkit-scrollbar { display:none; }
+
+  .filter-chip { background:var(--white); border:1px solid var(--line); border-radius:50px; padding:7px 13px; font-size:11.5px; font-weight:700; color:var(--ink); white-space:nowrap; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.06); transition:all .15s; font-family:'Noto Sans KR',sans-serif; display:flex; align-items:center; gap:5px; }
+  .filter-chip.active { background:var(--pink); border-color:var(--pink); color:white; }
+
+  /* ── 지도 영역 ── */
+  .map-area { width:100%; height:100%; position:relative; overflow:hidden; }
+  .map-bg { width:100%; height:100%; background: linear-gradient(rgba(239,234,229,0.65), rgba(239,234,229,0.65)), repeating-linear-gradient(0deg, transparent, transparent 39px, #DDD5CC 39px, #DDD5CC 40px), repeating-linear-gradient(90deg, transparent, transparent 39px, #DDD5CC 39px, #DDD5CC 40px); position:relative; }
+
+  .road { position:absolute; background:#fff; border-radius:4px; }
+  .road-h { height:16px; left:0; right:0; }
+  .road-v { width:16px; top:0; bottom:0; }
+  .road-sm-h { height:9px; left:0; right:0; background:#F6F2EE; }
+  .road-sm-v { width:9px; top:0; bottom:0; background:#F6F2EE; }
+
+  .block { position:absolute; border-radius:6px; background:#E2DAD0; border:1px solid #D5CBBE; }
+  .park { position:absolute; border-radius:10px; background:#D8E5DC; border:1px solid #BFD6C5; }
+
+  .station { position:absolute; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:2px; cursor:pointer; }
+  .station-icon { width:26px; height:26px; background:#5B3CBB; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; color:white; font-weight:800; box-shadow:0 2px 6px rgba(91,60,187,0.35); }
+  .station-name { font-size:9px; font-weight:700; color:#5B3CBB; background:white; border-radius:6px; padding:1px 5px; box-shadow:0 1px 3px rgba(0,0,0,0.08); white-space:nowrap; }
+
+  /* ── 매물 핀 ── */
+  .pin { position:absolute; background:var(--ink); color:white; border-radius:20px; padding:5px 10px; font-size:11px; font-weight:800; white-space:nowrap; cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,0.22); transition:all .2s; transform:translateX(-50%); display:flex; align-items:center; gap:3px; font-family:'Noto Sans KR',sans-serif; border:2px solid white; z-index:10; }
+  .pin::after { content:''; position:absolute; bottom:-6px; left:50%; transform:translateX(-50%); border:4px solid transparent; border-top-color:var(--ink); }
+  .pin:hover, .pin.active { background:var(--pink); transform:translateX(-50%) scale(1.08); z-index:20; }
+  .pin.active::after { border-top-color:var(--pink); }
+
+  .pin.jeonip { background:white; color:var(--ink); border-color:var(--green); }
+  .pin.jeonip::after { border-top-color:white; }
+  .pin.jeonip.active, .pin.jeonip:hover { background:var(--pink-soft); color:var(--pink); }
+  .pin.jeonip.active::after, .pin.jeonip:hover::after { border-top-color:var(--pink-soft); }
+
+  /* ── 내 위치 버튼 ── */
+  .map-controls { position:absolute; right:16px; bottom:200px; display:flex; flex-direction:column; gap:8px; z-index:20; }
+  .map-btn { width:40px; height:40px; background:white; border:1px solid var(--line); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.1); transition:transform .15s; }
+  .map-btn:active { transform:scale(.93); }
+
+  .count-badge { position:absolute; top:118px; left:50%; transform:translateX(-50%); background:rgba(28,26,25,0.78); color:white; border-radius:20px; padding:6px 14px; font-size:11.5px; font-weight:700; z-index:15; white-space:nowrap; }
+
+  /* ── 하단 카드 시트 ── */
+  .bottom-sheet { position:absolute; bottom:0; left:0; right:0; z-index:40; transition:transform .35s cubic-bezier(.4,0,.2,1); transform:translateY(100%); }
+  .bottom-sheet.show { transform:translateY(0); }
+
+  .sheet-handle-area { display:flex; justify-content:center; padding:10px 0 0; }
+  .sheet-handle { width:34px; height:4px; background:#D8D2CD; border-radius:2px; }
+
+  .cards-wrap { background:var(--paper); border-radius:22px 22px 0 0; padding:8px 0 30px; box-shadow:0 -4px 20px rgba(0,0,0,0.1); }
+
+  .cards-header { display:flex; align-items:center; justify-content:space-between; padding:4px 18px 12px; }
+  .cards-title { font-size:13.5px; font-weight:800; color:var(--ink); }
+  .cards-close { width:26px; height:26px; background:#F3EFEB; border:none; border-radius:50%; font-size:13px; cursor:pointer; color:var(--ink); display:flex; align-items:center; justify-content:center; }
+
+  .cards-scroll { display:flex; gap:13px; overflow-x:auto; padding:0 18px 4px; scrollbar-width:none; scroll-snap-type:x mandatory; }
+  .cards-scroll::-webkit-scrollbar { display:none; }
+
+  /* ── 매물 카드 ── */
+  .listing-card { background:var(--white); border-radius:var(--radius); overflow:hidden; min-width:230px; box-shadow:0 2px 12px rgba(0,0,0,0.07); scroll-snap-align:start; cursor:pointer; transition:transform .18s; flex-shrink:0; border:1px solid var(--line); }
+  .listing-card:active { transform:scale(.97); }
+  .listing-card.highlighted { border-color:var(--pink-dim); box-shadow:0 4px 16px rgba(232,84,122,0.18); }
+
+  .card-img { width:100%; height:130px; background:#F3EFEB; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .card-img-placeholder { font-size:40px; opacity:0.5; }
+
+  .card-badges { position:absolute; top:9px; left:9px; display:flex; gap:5px; }
+  .badge { border-radius:50px; padding:4px 9px; font-size:10px; font-weight:800; }
+  .badge-type { background:var(--ink); color:white; }
+  .badge-jeonip { background:white; color:var(--green); border:1px solid #B4EFD0; }
+  .badge-no-jeonip { background:#F3F0ED; color:var(--ink-soft); }
+
+  .card-heart { position:absolute; top:9px; right:9px; width:28px; height:28px; background:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:transform .15s; }
+  .card-heart:active { transform:scale(.85); }
+  .card-heart.liked { color:var(--pink); }
+
+  .card-info { padding:11px 13px 13px; }
+  .card-price { font-size:15.5px; font-weight:800; color:var(--ink); margin-bottom:4px; letter-spacing:-0.3px; }
+  .card-price .deposit { font-size:11px; font-weight:600; color:var(--ink-soft); margin-left:4px; }
+  .card-meta { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:600; color:var(--ink-soft); margin-bottom:7px; }
+  .card-meta-dot { width:3px; height:3px; border-radius:50%; background:#D8D2CD; }
+  .card-location { display:flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:var(--pink); }
+
+  /* ── 리스트뷰 토글 ── */
+  .view-toggle { position:absolute; bottom:188px; left:50%; transform:translateX(-50%); background:var(--ink); color:white; border:none; border-radius:50px; padding:10px 19px; font-size:12.5px; font-weight:700; font-family:'Noto Sans KR',sans-serif; cursor:pointer; display:flex; align-items:center; gap:7px; box-shadow:0 4px 14px rgba(0,0,0,0.25); z-index:20; transition:transform .15s; white-space:nowrap; }
+  .view-toggle:active { transform:translateX(-50%) scale(.95); }
+  .view-toggle.hidden { display:none; }
+
+  /* ── 필터 시트 ── */
+  .filter-overlay { display:none; position:fixed; inset:0; background:rgba(28,26,25,0.4); z-index:50; align-items:flex-end; justify-content:center; }
+  .filter-overlay.open { display:flex; }
+  .filter-sheet { background:var(--paper); border-radius:22px 22px 0 0; padding:18px 20px 36px; width:100%; max-width:430px; animation:slideUp .3s cubic-bezier(.34,1.2,.64,1); max-height:88vh; overflow-y:auto; }
+  @keyframes slideUp { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+  .filter-sheet-handle { display:flex; justify-content:center; margin-bottom:16px; }
+  .filter-sheet-handle div { width:34px; height:4px; background:#D8D2CD; border-radius:2px; }
+  .filter-section { margin-bottom:18px; }
+  .filter-section-title { font-size:12.5px; font-weight:800; color:var(--ink); margin-bottom:10px; }
+  .filter-chips-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .f-chip { padding:8px 14px; border-radius:50px; border:1px solid var(--line); background:#F3EFEB; font-size:12px; font-weight:700; color:var(--ink-soft); cursor:pointer; transition:all .15s; font-family:'Noto Sans KR',sans-serif; }
+  .f-chip.on { background:var(--ink); border-color:var(--ink); color:white; }
+
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; background:#F3EFEB; border:1px solid var(--line); border-radius:13px; padding:13px 15px; cursor:pointer; }
+  .toggle-row.on { border-color:var(--pink-dim); background:var(--pink-soft); }
+  .toggle-main { font-size:13px; font-weight:700; color:var(--ink); }
+  .toggle-desc { font-size:11px; color:var(--ink-soft); font-weight:500; margin-top:2px; }
+  .toggle-row.on .toggle-main { color:var(--pink); }
+  .switch { width:40px; height:23px; border-radius:12px; background:var(--line); position:relative; transition:background .2s; flex-shrink:0; }
+  .switch::after { content:''; position:absolute; width:17px; height:17px; border-radius:50%; background:white; top:3px; left:3px; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,0.15); }
+  .toggle-row.on .switch { background:var(--pink); }
+  .toggle-row.on .switch::after { transform:translateX(17px); }
+
+  .filter-apply { width:100%; background:var(--pink); color:white; border:none; border-radius:13px; padding:15px; font-size:14px; font-weight:700; font-family:'Noto Sans KR',sans-serif; cursor:pointer; margin-top:6px; }
+  .filter-reset { width:100%; background:none; border:1px solid var(--line); color:var(--ink-soft); border-radius:13px; padding:12px; font-size:13px; font-weight:700; font-family:'Noto Sans KR',sans-serif; cursor:pointer; margin-top:8px; }
+
+  /* 슬라이더 카드 */
+  .slider-card { background:#F3EFEB; border:1px solid var(--line); border-radius:13px; padding:14px 15px; }
+  input[type="range"] { width:100%; height:4px; border-radius:4px; background:var(--line); outline:none; border:none; padding:0; cursor:pointer; -webkit-appearance:none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:white; border:3px solid var(--pink); box-shadow:0 1px 4px rgba(0,0,0,0.15); cursor:pointer; }
+
+  /* 언어 버튼 */
+  .lang-box { position:relative; }
+  .lang-trigger { background:white; border:1px solid var(--line); border-radius:12px; width:40px; height:40px; font-size:15px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+  .lang-dd { display:none; position:absolute; top:calc(100%+6px); right:0; background:white; border-radius:14px; border:1px solid var(--line); box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; min-width:130px; z-index:100; }
+  .lang-dd.open { display:block; }
+  .lang-dd div { padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Noto Sans KR',sans-serif; }
+  .lang-dd div:hover { background:var(--pink-soft); }
+</style>
+</head>
+<body>
+<div class="frame" id="app">
+
+  <div class="map-area">
+    <div class="map-bg">
+      <div class="road road-h" style="top:160px;"></div>
+      <div class="road road-h" style="top:300px;"></div>
+      <div class="road road-h" style="top:450px;"></div>
+      <div class="road road-h" style="top:580px;"></div>
+      <div class="road road-v" style="left:80px;"></div>
+      <div class="road road-v" style="left:220px;"></div>
+      <div class="road road-v" style="left:360px;"></div>
+      <div class="road road-sm-h" style="top:230px;"></div>
+      <div class="road road-sm-h" style="top:380px;"></div>
+      <div class="road road-sm-v" style="left:150px;"></div>
+      <div class="road road-sm-v" style="left:290px;"></div>
+
+      <div class="block" style="top:180px;left:100px;width:110px;height:100px;"></div>
+      <div class="block" style="top:180px;left:240px;width:100px;height:80px;"></div>
+      <div class="block" style="top:320px;left:100px;width:100px;height:110px;"></div>
+      <div class="block" style="top:320px;left:240px;width:90px;height:90px;"></div>
+      <div class="block" style="top:180px;left:20px;width:40px;height:100px;"></div>
+      <div class="block" style="top:470px;left:100px;width:100px;height:80px;"></div>
+      <div class="block" style="top:470px;left:240px;width:90px;height:90px;"></div>
+      <div class="block" style="top:470px;left:20px;width:40px;height:80px;"></div>
+
+      <div class="park" style="top:320px;left:20px;width:50px;height:110px;"></div>
+      <div class="park" style="top:470px;left:380px;width:40px;height:80px;"></div>
+
+      <div class="station" style="top:148px;left:215px;">
+        <div class="station-icon">M</div><div class="station-name">홍대입구</div>
+      </div>
+      <div class="station" style="top:288px;left:355px;">
+        <div class="station-icon">M</div><div class="station-name">상수</div>
+      </div>
+
+      <div class="pin active" style="top:200px;left:170px;" onclick="showCard(0)">45만원</div>
+      <div class="pin jeonip" style="top:240px;left:310px;" onclick="showCard(1)">38만원</div>
+      <div class="pin" style="top:350px;left:130px;" onclick="showCard(2)">52만원</div>
+      <div class="pin jeonip" style="top:380px;left:280px;" onclick="showCard(3)">60만원</div>
+      <div class="pin" style="top:490px;left:180px;" onclick="showCard(4)">33만원</div>
+      <div class="pin jeonip" style="top:510px;left:330px;" onclick="showCard(5)">42만원</div>
+    </div>
+  </div>
+
+  <div class="count-badge" id="countBadge">이 지역 매물 24개</div>
+
+  <div class="top-bar">
+    <div class="search-row">
+      <a class="back-btn" href="roomting-landing-v5.html">←</a>
+      <div class="search-box" onclick="focusSearch()">
+        <span class="search-icon">⌖</span>
+        <span class="search-text" id="searchText">홍대입구역</span>
+      </div>
+      <div class="lang-box" id="langBox">
+        <button class="lang-trigger" onclick="toggleLang()"><span id="lf">🇯🇵</span></button>
+        <div class="lang-dd" id="ldd">
+          <div onclick="setLang('ko','🇰🇷')">🇰🇷 한국어</div>
+          <div onclick="setLang('ja','🇯🇵')">🇯🇵 日本語</div>
+          <div onclick="setLang('zh','🇨🇳')">🇨🇳 中文</div>
+          <div onclick="setLang('en','🌐')">🌐 English</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-row">
+      <div class="filter-chip" id="filterBtn" onclick="openFilter()">
+        <span>⚙️</span><span id="filterLabel">조건 필터</span>
+        <span id="filterBadge" style="display:none;background:var(--pink);color:white;border-radius:50%;width:16px;height:16px;font-size:9.5px;font-weight:900;align-items:center;justify-content:center;margin-left:2px;">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="map-controls" id="mapControls">
+    <button class="map-btn" title="내 위치">⌖</button>
+    <button class="map-btn" title="확대">＋</button>
+    <button class="map-btn" title="축소">－</button>
+  </div>
+
+  <button class="view-toggle" id="viewToggle" onclick="toggleView()">
+    <span>☰</span><span id="viewLabel">목록 보기</span>
+  </button>
+
+  <div class="bottom-sheet" id="bottomSheet">
+    <div class="cards-wrap">
+      <div class="sheet-handle-area"><div class="sheet-handle"></div></div>
+      <div class="cards-header">
+        <div class="cards-title" id="sheetTitle">근처 매물</div>
+        <button class="cards-close" onclick="closeSheet()">✕</button>
+      </div>
+      <div class="cards-scroll" id="cardsScroll"></div>
+    </div>
+  </div>
+
+  <!-- 필터 오버레이 -->
+  <div class="filter-overlay" id="filterOverlay" onclick="bgCloseFilter(event)">
+    <div class="filter-sheet">
+      <div class="filter-sheet-handle"><div></div></div>
+
+      <div class="filter-section">
+        <div class="filter-section-title" id="ft1">🏠 방 타입</div>
+        <div class="filter-chips-row" id="roomTypeFilter"></div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-section-title" id="ft2">💰 월세 (최대)</div>
+        <div class="slider-card">
+          <div style="text-align:center;margin-bottom:8px;">
+            <span id="fRentVal" style="font-size:20px;font-weight:800;color:var(--pink);font-family:'Manrope',sans-serif;">70</span>
+            <span style="font-size:12px;font-weight:600;color:var(--ink-soft);margin-left:3px;" id="fRentUnit">만원</span>
+          </div>
+          <input type="range" id="fRentSlider" min="20" max="300" step="10" value="70" oninput="updateFRent(this.value)" />
+          <div style="display:flex;justify-content:space-between;margin-top:7px;font-size:10.5px;font-weight:600;color:var(--ink-soft);">
+            <span id="fRentMin">20만원</span><span id="fRentMax">300만원+</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-section-title" id="ft3">🏦 보증금 (최대)</div>
+        <div class="slider-card">
+          <div style="text-align:center;margin-bottom:8px;">
+            <span id="fDepositVal" style="font-size:20px;font-weight:800;color:var(--pink);font-family:'Manrope',sans-serif;">1,000</span>
+            <span style="font-size:12px;font-weight:600;color:var(--ink-soft);margin-left:3px;" id="fDepositUnit">만원</span>
+          </div>
+          <input type="range" id="fDepositSlider" min="0" max="5000" step="100" value="1000" oninput="updateFDeposit(this.value)" />
+          <div style="display:flex;justify-content:space-between;margin-top:7px;font-size:10.5px;font-weight:600;color:var(--ink-soft);">
+            <span id="fDepositMin">0</span><span id="fDepositMax">5,000만원+</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-section-title" id="ft4">📅 계약 기간</div>
+        <div class="slider-card">
+          <div style="text-align:center;margin-bottom:8px;">
+            <span id="fContractVal" style="font-size:20px;font-weight:800;color:var(--pink);font-family:'Manrope',sans-serif;">6</span>
+            <span style="font-size:12px;font-weight:600;color:var(--ink-soft);margin-left:3px;" id="fContractUnit">개월</span>
+          </div>
+          <input type="range" id="fContractSlider" min="1" max="24" step="1" value="6" oninput="updateFContract(this.value)" />
+          <div style="display:flex;justify-content:space-between;margin-top:7px;font-size:10.5px;font-weight:600;color:var(--ink-soft);">
+            <span id="fContractMin">1개월</span><span id="fContractMax">24개월</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-section-title" id="ft5">📋 전입신고</div>
+        <div class="toggle-row" id="fJeonipToggle" onclick="toggleFJeonip()">
+          <div>
+            <div class="toggle-main" id="fJeonipMain">전입신고 가능한 방만 보기</div>
+            <div class="toggle-desc" id="fJeonipDesc">외국인등록증 발급·갱신 시 필요해요</div>
+          </div>
+          <div class="switch"></div>
+        </div>
+      </div>
+
+      <button class="filter-apply" onclick="applyFilter()" id="filterApplyBtn">적용하기</button>
+      <button class="filter-reset" onclick="resetFilter()" id="filterResetBtn">초기화</button>
+    </div>
+  </div>
+
+</div>
+<script>
+const LISTINGS = [
+  { id:0, type:'원룸', rent:45, deposit:300, jeonip:false, dist:'도보 8분', area:'홍대입구역', emoji:'🏠', bg:'#F3EFEB' },
+  { id:1, type:'고시원', rent:38, deposit:0, jeonip:true, dist:'도보 5분', area:'상수역', emoji:'🏘️', bg:'#EDEEEB' },
+  { id:2, type:'투룸', rent:52, deposit:500, jeonip:false, dist:'도보 12분', area:'홍대입구역', emoji:'🏠', bg:'#F0EFE9' },
+  { id:3, type:'원룸', rent:60, deposit:1000, jeonip:true, dist:'도보 3분', area:'상수역', emoji:'🏡', bg:'#EFEDE8' },
+  { id:4, type:'고시원', rent:33, deposit:0, jeonip:false, dist:'도보 15분', area:'홍대입구역', emoji:'🏘️', bg:'#F2EEE7' },
+  { id:5, type:'셰어하우스', rent:42, deposit:200, jeonip:true, dist:'도보 7분', area:'상수역', emoji:'🏠', bg:'#F0E9E6' },
+];
+
+const T = {
+  ko: {
+    jeonipY:'전입신고 가능', jeonipN:'전입신고 불가',
+    deposit:(d) => d>0 ? `보증금 ${d}만원` : '보증금 없음', rent:(r) => `월 ${r}만원`,
+    nearby:'근처 매물', searchText:'홍대입구역', countBadge:'이 지역 매물 24개',
+    filterLabel:'조건 필터', viewLabel:'목록 보기',
+    ft1:'🏠 방 타입', ft2:'💰 월세 (최대)', ft3:'🏦 보증금 (최대)', ft4:'📅 계약 기간', ft5:'📋 전입신고',
+    rentUnit:'만원', rentMin:'20만원', rentMax:'300만원+',
+    depositUnit:'만원', depositMin:'0', depositMax:'5,000만원+',
+    contractUnit:'개월', contractMin:'1개월', contractMax:'24개월',
+    jeonipMain:'전입신고 가능한 방만 보기', jeonipDesc:'외국인등록증 발급·갱신 시 필요해요',
+    filterApply:'적용하기', filterReset:'초기화',
+    roomTypes:['원룸','투룸','고시원','셰어하우스','오피스텔'],
+    distFn:(d)=>d,
+  },
+  ja: {
+    jeonipY:'転入届可能', jeonipN:'転入届不可',
+    deposit:(d) => d>0 ? `保証金${d}万W` : '保証金なし', rent:(r) => `月${r}万W`,
+    nearby:'近くの物件', searchText:'弘大入口駅', countBadge:'このエリア 24件',
+    filterLabel:'条件フィルター', viewLabel:'リスト表示',
+    ft1:'🏠 部屋タイプ', ft2:'💰 家賃（上限）', ft3:'🏦 保証金（上限）', ft4:'📅 契約期間', ft5:'📋 転入届',
+    rentUnit:'万ウォン', rentMin:'20万', rentMax:'300万+',
+    depositUnit:'万ウォン', depositMin:'0', depositMax:'5,000万+',
+    contractUnit:'ヶ月', contractMin:'1ヶ月', contractMax:'24ヶ月',
+    jeonipMain:'転入届可能な部屋のみ表示', jeonipDesc:'外国人登録証の発行・更新に必要です',
+    filterApply:'適用する', filterReset:'リセット',
+    roomTypes:['ワンルーム','2部屋','コシウォン','シェアハウス','オフィステル'],
+    distFn:(d)=>d.replace('도보','徒歩').replace('분','分'),
+  },
+  zh: {
+    jeonipY:'可迁入登记', jeonipN:'不可迁入登记',
+    deposit:(d) => d>0 ? `押金${d}万韩元` : '无押金', rent:(r) => `月租${r}万韩元`,
+    nearby:'附近房源', searchText:'弘大入口站', countBadge:'该地区 24个房源',
+    filterLabel:'条件筛选', viewLabel:'列表查看',
+    ft1:'🏠 房间类型', ft2:'💰 月租（最高）', ft3:'🏦 押金（最高）', ft4:'📅 合约期限', ft5:'📋 迁入登记',
+    rentUnit:'万韩元', rentMin:'20万', rentMax:'300万+',
+    depositUnit:'万韩元', depositMin:'0', depositMax:'5,000万+',
+    contractUnit:'个月', contractMin:'1个月', contractMax:'24个月',
+    jeonipMain:'只看可办理迁入登记的房源', jeonipDesc:'办理外国人登记时需要',
+    filterApply:'应用', filterReset:'重置',
+    roomTypes:['单间','两居室','考试院','合租','写字楼型'],
+    distFn:(d)=>d.replace('도보','步行').replace('분','分钟'),
+  },
+  en: {
+    jeonipY:'Address Reg. OK', jeonipN:'No Address Reg.',
+    deposit:(d) => d>0 ? `Dep. ₩${d*10000}` : 'No deposit', rent:(r) => `₩${r*10000}/mo`,
+    nearby:'Nearby Listings', searchText:'Hongdae Station', countBadge:'24 listings in this area',
+    filterLabel:'Filters', viewLabel:'List View',
+    ft1:'🏠 Room Type', ft2:'💰 Monthly Rent (Max)', ft3:'🏦 Deposit (Max)', ft4:'📅 Contract Period', ft5:'📋 Address Registration',
+    rentUnit:'0k KRW', rentMin:'₩200k', rentMax:'₩3M+',
+    depositUnit:'0k KRW', depositMin:'₩0', depositMax:'₩50M+',
+    contractUnit:'months', contractMin:'1 mo', contractMax:'24 mo',
+    jeonipMain:'Only show rooms with address reg.', jeonipDesc:'Required for Alien Registration Card',
+    filterApply:'Apply', filterReset:'Reset',
+    roomTypes:['Studio','2-Room','Goshiwon','Share House','Officetel'],
+    distFn:(d)=>d.replace('도보','').replace('분',' min walk').trim(),
+  },
+};
+
+let currentLang = localStorage.getItem('roomting_lang') || 'ja';
+let activeCard = null;
+let likedCards = new Set();
+const filterState = { type: new Set(), jeonip: false };
+
+function setText() {
+
+  const _flagMap = { ko:'🇰🇷', ja:'🇯🇵', zh:'🇨🇳', en:'🌐' };
+  const _labelMap = { ko:'한국어', ja:'日本語', zh:'中文', en:'English' };
+  document.getElementById('lf').textContent = _flagMap[currentLang];
+  const t = T[currentLang];
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('searchText', t.searchText); set('countBadge', t.countBadge);
+  set('filterLabel', t.filterLabel); set('viewLabel', t.viewLabel);
+  set('ft1', t.ft1); set('ft2', t.ft2); set('ft3', t.ft3); set('ft4', t.ft4); set('ft5', t.ft5);
+  set('fRentUnit', t.rentUnit); set('fRentMin', t.rentMin); set('fRentMax', t.rentMax);
+  set('fDepositUnit', t.depositUnit); set('fDepositMin', t.depositMin); set('fDepositMax', t.depositMax);
+  set('fContractUnit', t.contractUnit); set('fContractMin', t.contractMin); set('fContractMax', t.contractMax);
+  set('jeonipMain', t.jeonipMain); set('jeonipDesc', t.jeonipDesc);
+  set('filterApplyBtn', t.filterApply); set('filterResetBtn', t.filterReset);
+
+  const wrap = document.getElementById('roomTypeFilter');
+  wrap.innerHTML = '';
+  t.roomTypes.forEach(name => {
+    const el = document.createElement('div');
+    el.className = 'f-chip' + (filterState.type.has(name) ? ' on' : '');
+    el.textContent = name;
+    el.onclick = () => {
+      el.classList.toggle('on');
+      if (filterState.type.has(name)) filterState.type.delete(name);
+      else filterState.type.add(name);
+    };
+    wrap.appendChild(el);
+  });
+}
+
+function renderCards(highlightId = null) {
+  const t = T[currentLang];
+  const wrap = document.getElementById('cardsScroll');
+  document.getElementById('sheetTitle').textContent = t.nearby;
+  wrap.innerHTML = '';
+  LISTINGS.forEach(l => {
+    const isHighlighted = l.id === highlightId;
+    const isLiked = likedCards.has(l.id);
+    const div = document.createElement('div');
+    div.className = 'listing-card' + (isHighlighted ? ' highlighted' : '');
+    div.onclick = () => window.location.href = 'roomting-detail-v2.html';
+    div.innerHTML = `
+      <div class="card-img" style="background:${l.bg};">
+        <div class="card-img-placeholder">${l.emoji}</div>
+        <div class="card-badges">
+          <span class="badge badge-type">${l.type}</span>
+          <span class="badge ${l.jeonip ? 'badge-jeonip' : 'badge-no-jeonip'}">${l.jeonip ? t.jeonipY : t.jeonipN}</span>
+        </div>
+        <div class="card-heart ${isLiked ? 'liked' : ''}" onclick="toggleLike(event,${l.id})">${isLiked ? '♥' : '♡'}</div>
+      </div>
+      <div class="card-info">
+        <div class="card-price">${t.rent(l.rent)}<span class="deposit">${t.deposit(l.deposit)}</span></div>
+        <div class="card-meta"><span>${l.type}</span><div class="card-meta-dot"></div><span>${t.distFn(l.dist)}</span></div>
+        <div class="card-location">📍 ${l.area}</div>
+      </div>
+    `;
+    wrap.appendChild(div);
+    if (isHighlighted) setTimeout(() => div.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'start' }), 100);
+  });
+}
+
+function showCard(id) {
+  activeCard = id;
+  document.getElementById('bottomSheet').classList.add('show');
+  document.getElementById('viewToggle').classList.add('hidden');
+  document.getElementById('mapControls').style.bottom = '228px';
+  renderCards(id);
+}
+function closeSheet() {
+  document.getElementById('bottomSheet').classList.remove('show');
+  document.getElementById('viewToggle').classList.remove('hidden');
+  document.getElementById('mapControls').style.bottom = '200px';
+  activeCard = null;
+}
+function toggleLike(e, id) {
+  e.stopPropagation();
+  if (likedCards.has(id)) likedCards.delete(id); else likedCards.add(id);
+  renderCards(activeCard);
+}
+function toggleView() { showCard(null); renderCards(); }
+function focusSearch() {}
+
+function setSliderFill(el, min, max) {
+  const pct = (el.value - min) / (max - min) * 100;
+  el.style.background = `linear-gradient(to right, #E8547A ${pct}%, #ECE7E3 ${pct}%)`;
+}
+function updateFRent(val) {
+  document.getElementById('fRentVal').textContent = val;
+  setSliderFill(document.getElementById('fRentSlider'), 20, 300);
+}
+function updateFDeposit(val) {
+  document.getElementById('fDepositVal').textContent = parseInt(val).toLocaleString();
+  setSliderFill(document.getElementById('fDepositSlider'), 0, 5000);
+}
+function updateFContract(val) {
+  document.getElementById('fContractVal').textContent = val;
+  setSliderFill(document.getElementById('fContractSlider'), 1, 24);
+}
+function toggleFJeonip() {
+  const el = document.getElementById('fJeonipToggle');
+  el.classList.toggle('on');
+  filterState.jeonip = el.classList.contains('on');
+}
+
+function openFilter() { document.getElementById('filterOverlay').classList.add('open'); }
+function bgCloseFilter(e) { if (e.target === document.getElementById('filterOverlay')) closeFilter(); }
+function closeFilter() { document.getElementById('filterOverlay').classList.remove('open'); }
+
+function applyFilter() {
+  const rentChanged = parseInt(document.getElementById('fRentSlider').value) !== 300;
+  const depositChanged = parseInt(document.getElementById('fDepositSlider').value) !== 5000;
+  const contractChanged = parseInt(document.getElementById('fContractSlider').value) !== 24;
+  const count = filterState.type.size + (filterState.jeonip?1:0) + (rentChanged?1:0) + (depositChanged?1:0) + (contractChanged?1:0);
+  const badge = document.getElementById('filterBadge');
+  const btn = document.getElementById('filterBtn');
+  if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; btn.classList.add('active'); }
+  else { badge.style.display = 'none'; btn.classList.remove('active'); }
+  closeFilter();
+}
+function resetFilter() {
+  filterState.type.clear(); filterState.jeonip = false;
+  document.querySelectorAll('.f-chip').forEach(c => c.classList.remove('on'));
+  document.getElementById('fJeonipToggle').classList.remove('on');
+  const rs = document.getElementById('fRentSlider'); rs.value = 70; updateFRent(70);
+  const ds = document.getElementById('fDepositSlider'); ds.value = 1000; updateFDeposit(1000);
+  const cs = document.getElementById('fContractSlider'); cs.value = 6; updateFContract(6);
+  document.getElementById('filterBadge').style.display = 'none';
+  document.getElementById('filterBtn').classList.remove('active');
+  setText();
+  closeFilter();
+}
+
+function toggleLang() { document.getElementById('ldd').classList.toggle('open'); }
+function setLang(code, flag) {
+  currentLang = code;
+  localStorage.setItem('roomting_lang', code);
+  document.getElementById('lf').textContent = flag;
+  document.getElementById('ldd').classList.remove('open');
+  setText();
+  if (document.getElementById('bottomSheet').classList.contains('show')) renderCards(activeCard);
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('langBox').contains(e.target))
+    document.getElementById('ldd').classList.remove('open');
+});
+
+setText();
+updateFRent(70); updateFDeposit(1000); updateFContract(6);
+showCard(0);
+</script>
+</body>
+</html>

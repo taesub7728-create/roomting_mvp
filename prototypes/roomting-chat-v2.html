@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Roomting — 채팅</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #E8547A; --pink-soft: #FDEEF1; --pink-dim: #F8D6DE;
+    --ink: #1C1A19; --ink-soft: #6B6562; --line: #ECE7E3;
+    --paper: #FBFAF8; --white: #fff; --green: #2A9D5C;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'Noto Sans KR','Manrope',sans-serif; background:#ECE6E2; min-height:100vh; display:flex; justify-content:center; color:var(--ink); }
+  .frame { width:100%; max-width:430px; height:100vh; background:var(--paper); display:flex; flex-direction:column; overflow:hidden; }
+
+  /* TOP BAR */
+  .top-bar { background:var(--white); padding:14px 16px 12px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line); flex-shrink:0; z-index:10; }
+  .back-btn { width:36px; height:36px; border-radius:11px; background:var(--paper); border:1px solid var(--line); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--ink); text-decoration:none; flex-shrink:0; }
+  .agent-info { flex:1; min-width:0; }
+  .agent-name { font-size:14px; font-weight:800; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .agent-meta { font-size:11px; font-weight:500; color:var(--ink-soft); margin-top:1px; display:flex; align-items:center; gap:4px; }
+  .online-dot { width:6px; height:6px; border-radius:50%; background:var(--green); flex-shrink:0; }
+
+  /* 언어 버튼 */
+  .lang-box { position:relative; flex-shrink:0; }
+  .lang-btn { background:var(--paper); border:1px solid var(--line); border-radius:11px; width:34px; height:34px; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .lang-dd { display:none; position:absolute; top:calc(100%+6px); right:0; background:white; border-radius:14px; border:1px solid var(--line); box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; min-width:130px; z-index:100; }
+  .lang-dd.open { display:block; }
+  .lang-dd div { padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; color:var(--ink); }
+  .lang-dd div:hover { background:var(--pink-soft); }
+
+  /* 번역 배지 */
+  .translate-badge { background:var(--pink-soft); border-radius:50px; padding:5px 10px; font-size:10.5px; font-weight:700; color:var(--pink); white-space:nowrap; flex-shrink:0; }
+
+  /* 배너 */
+  .banner { background:var(--pink-soft); padding:9px 16px; display:flex; align-items:center; gap:8px; flex-shrink:0; border-bottom:1px solid var(--pink-dim); }
+  .banner-text { font-size:11.5px; font-weight:600; color:var(--pink); flex:1; line-height:1.4; }
+
+  /* 채팅 영역 */
+  .chat-area { flex:1; overflow-y:auto; padding:14px 16px 8px; display:flex; flex-direction:column; gap:10px; scrollbar-width:none; }
+  .chat-area::-webkit-scrollbar { display:none; }
+
+  /* 날짜 구분선 */
+  .date-divider { display:flex; align-items:center; gap:10px; margin:2px 0; }
+  .date-line { flex:1; height:1px; background:var(--line); }
+  .date-text { font-size:11px; font-weight:600; color:#B5ADA7; }
+
+  /* 메시지 */
+  .msg-row { display:flex; gap:8px; animation:msgIn .3s cubic-bezier(.34,1.26,.64,1); }
+  .msg-row.user { flex-direction:row-reverse; }
+  @keyframes msgIn { from{opacity:0;transform:translateY(8px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+
+  .avatar { width:30px; height:30px; border-radius:10px; background:var(--pink-soft); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; align-self:flex-end; }
+  .msg-col { display:flex; flex-direction:column; gap:3px; max-width:74%; }
+  .msg-row.user .msg-col { align-items:flex-end; }
+  .msg-sender { font-size:11px; font-weight:700; color:var(--ink-soft); padding:0 4px; }
+
+  .bubble { background:var(--white); border:1px solid var(--line); border-radius:16px 16px 16px 4px; padding:10px 13px; font-size:13.5px; font-weight:500; color:var(--ink); line-height:1.55; word-break:break-word; }
+  .msg-row.user .bubble { background:var(--pink); border:none; color:white; border-radius:16px 16px 4px 16px; }
+
+  .translation { background:var(--pink-soft); border-radius:10px; padding:7px 10px; font-size:11.5px; font-weight:500; color:var(--ink-soft); line-height:1.5; border-left:2.5px solid var(--pink-dim); }
+  .trans-label { font-size:10px; font-weight:700; color:var(--pink); margin-bottom:3px; }
+  .msg-time { font-size:10px; font-weight:500; color:#C9C2BC; padding:0 4px; }
+
+  /* 타이핑 */
+  .typing-row { display:flex; gap:8px; }
+  .typing-bubble { background:var(--white); border:1px solid var(--line); border-radius:16px 16px 16px 4px; padding:12px 15px; display:flex; gap:5px; align-items:center; }
+  .dot { width:6px; height:6px; border-radius:50%; background:var(--pink-dim); animation:bounce .8s ease-in-out infinite; }
+  .dot:nth-child(2){animation-delay:.15s} .dot:nth-child(3){animation-delay:.3s}
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0);background:var(--pink-dim)} 30%{transform:translateY(-4px);background:var(--pink)} }
+
+  /* 번역중 */
+  .translating { font-size:11px; font-weight:600; color:var(--pink); text-align:center; padding:4px 0; display:none; }
+  .translating.show { display:block; }
+
+  /* 빠른답장 */
+  .quick-wrap { display:flex; gap:8px; overflow-x:auto; padding:0 16px 8px; scrollbar-width:none; flex-shrink:0; }
+  .quick-wrap::-webkit-scrollbar { display:none; }
+  .q-btn { background:var(--white); border:1px solid var(--line); border-radius:50px; padding:7px 13px; font-size:11.5px; font-weight:600; color:var(--ink); white-space:nowrap; cursor:pointer; font-family:'Noto Sans KR',sans-serif; transition:all .15s; flex-shrink:0; }
+  .q-btn:hover { background:var(--pink-soft); border-color:var(--pink-dim); }
+  .q-btn:active { transform:scale(.95); }
+
+  /* 입력창 */
+  .input-area { background:var(--white); padding:10px 12px 22px; display:flex; align-items:flex-end; gap:10px; border-top:1px solid var(--line); flex-shrink:0; }
+  .input-wrap { flex:1; background:var(--paper); border-radius:18px; border:1.5px solid var(--line); padding:9px 14px; transition:border-color .15s; }
+  .input-wrap:focus-within { border-color:var(--pink); }
+  .msg-input { width:100%; border:none; background:transparent; font-size:13.5px; font-weight:500; color:var(--ink); font-family:'Noto Sans KR',sans-serif; outline:none; resize:none; max-height:100px; line-height:1.5; }
+  .msg-input::placeholder { color:#C9C2BC; }
+  .send-btn { width:36px; height:36px; border-radius:50%; background:var(--pink); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; transition:opacity .15s, transform .15s; }
+  .send-btn:hover { opacity:.92; }
+  .send-btn:active { transform:scale(.9); }
+  .send-btn:disabled { opacity:.4; cursor:default; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <div class="top-bar">
+    <a class="back-btn" href="roomting-response-v2.html">←</a>
+    <div class="agent-info">
+      <div class="agent-name" id="agentName">홍대 으뜸 공인중개사</div>
+      <div class="agent-meta"><span class="online-dot"></span><span id="agentMeta">온라인 · 홍대입구역 도보 5분</span></div>
+    </div>
+    <div class="lang-box" id="langBox">
+      <button class="lang-btn" onclick="toggleLang()"><span id="lf">🇯🇵</span></button>
+      <div class="lang-dd" id="ldd">
+        <div onclick="setLang('ko','🇰🇷')">🇰🇷 한국어</div>
+        <div onclick="setLang('ja','🇯🇵')">🇯🇵 日本語</div>
+        <div onclick="setLang('zh','🇨🇳')">🇨🇳 中文</div>
+        <div onclick="setLang('en','🌐')">🌐 English</div>
+      </div>
+    </div>
+    <div class="translate-badge" id="tBadge">🌐 自動翻訳 ON</div>
+  </div>
+
+  <div class="banner">
+    <span style="font-size:15px;">✨</span>
+    <div class="banner-text" id="bannerText">メッセージは自動翻訳されます。母国語で気軽にお話しください！</div>
+  </div>
+
+  <div class="chat-area" id="chatArea"></div>
+
+  <div class="translating" id="translating">🌐 翻訳中...</div>
+
+  <div class="quick-wrap" id="quickWrap"></div>
+
+  <div class="input-area">
+    <div class="input-wrap">
+      <textarea class="msg-input" id="msgInput" rows="1"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    </div>
+    <button class="send-btn" id="sendBtn" onclick="sendMsg()">➤</button>
+  </div>
+
+</div>
+<script>
+const T = {
+  ko: {
+    badge:'🌐 자동번역 ON', banner:'메시지가 자동으로 번역돼요. 편하게 모국어로 대화하세요!',
+    agentName:'홍대 으뜸 공인중개사', agentMeta:'온라인 · 홍대입구역 도보 5분',
+    today:'오늘', transLabel:'번역', translating:'🌐 번역 중...',
+    placeholder:'메시지를 입력하세요...', userLang:'Korean',
+    quick:['사진 보내주세요 📸','언제 방문 가능한가요?','계약 조건이 어떻게 되나요?','주변 편의시설이 있나요?'],
+    initMsgs:[
+      { text:'안녕하세요! 룸팅을 통해 연락 주셨군요 😊 조건에 맞는 좋은 매물 준비했어요!', trans:'' },
+      { text:'월세 45만원, 보증금 300만원 원룸이에요. 전입신고도 가능하고요! 사진 보내드릴게요 📸', trans:'' },
+    ],
+  },
+  ja: {
+    badge:'🌐 自動翻訳 ON', banner:'メッセージは自動翻訳されます。母国語で気軽にお話しください！',
+    agentName:'ウットゥム仲介業者', agentMeta:'オンライン · 弘大入口駅 徒歩5分',
+    today:'今日', transLabel:'翻訳', translating:'🌐 翻訳中...',
+    placeholder:'メッセージを入力...', userLang:'Japanese',
+    quick:['写真を送ってください📸','いつ内見できますか？','契約条件を教えてください','周辺の施設はありますか？'],
+    initMsgs:[
+      { text:'안녕하세요! 룸팅을 통해 연락 주셨군요 😊 조건에 맞는 좋은 매물 준비했어요!', trans:'こんにちは！ルームティングからご連絡いただきありがとうございます😊条件にぴったりの物件を用意しました！' },
+      { text:'월세 45만원, 보증금 300만원 원룸이에요. 전입신고도 가능하고요! 사진 보내드릴게요 📸', trans:'月45万ウォン、保証金300万ウォンのワンルームです。転入届も可能です！写真をお送りします📸' },
+    ],
+  },
+  zh: {
+    badge:'🌐 自动翻译 ON', banner:'消息会自动翻译。请用您的母语轻松交流！',
+    agentName:'으뜸中介', agentMeta:'在线 · 弘大入口站步行5分钟',
+    today:'今天', transLabel:'翻译', translating:'🌐 翻译中...',
+    placeholder:'输入消息...', userLang:'Chinese',
+    quick:['请发照片📸','什么时候可以看房？','合同条件是什么？','周边有什么设施？'],
+    initMsgs:[
+      { text:'안녕하세요! 룸팅을 통해 연락 주셨군요 😊 조건에 맞는 좋은 매물 준비했어요!', trans:'你好！感谢通过룸팅联系我😊我已经准备好了符合条件的房源！' },
+      { text:'월세 45만원, 보증금 300만원 원룸이에요. 전입신고도 가능하고요! 사진 보내드릴게요 📸', trans:'月租45万韩元，押金300万韩元的单间。也可以办理迁入登记！给您发照片📸' },
+    ],
+  },
+  en: {
+    badge:'🌐 Auto-translate ON', banner:'Messages are auto-translated. Chat freely in your language!',
+    agentName:'Eutteum Agency', agentMeta:'Online · 5 min walk from Hongdae Stn.',
+    today:'Today', transLabel:'Translation', translating:'🌐 Translating...',
+    placeholder:'Type a message...', userLang:'English',
+    quick:['Please send photos 📸','When can I visit?','What are the contract terms?','What\'s nearby?'],
+    initMsgs:[
+      { text:'안녕하세요! 룸팅을 통해 연락 주셨군요 😊 조건에 맞는 좋은 매물 준비했어요!', trans:'Hello! Thanks for reaching out via Roomting 😊 I have a great listing that matches your needs!' },
+      { text:'월세 45만원, 보증금 300만원 원룸이에요. 전입신고도 가능하고요! 사진 보내드릴게요 📸', trans:'Studio at ₩450k/month, ₩3M deposit. Address registration possible! I\'ll send photos 📸' },
+    ],
+  },
+};
+
+let lang = localStorage.getItem('roomting_lang') || 'ja';
+let busy = false;
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+
+function now(){
+  const d=new Date();
+  const h=d.getHours(), m=String(d.getMinutes()).padStart(2,'0');
+  return (lang==='en'||lang==='zh') ? `${h}:${m}` : `오후 ${h}:${m}`;
+}
+
+function render(){
+
+  const _flagMap = { ko:'🇰🇷', ja:'🇯🇵', zh:'🇨🇳', en:'🌐' };
+  const _labelMap = { ko:'한국어', ja:'日本語', zh:'中文', en:'English' };
+  document.getElementById('lf').textContent = _flagMap[lang];
+  const t = T[lang];
+  document.getElementById('tBadge').textContent   = t.badge;
+  document.getElementById('bannerText').textContent = t.banner;
+  document.getElementById('agentName').textContent  = t.agentName;
+  document.getElementById('agentMeta').textContent  = t.agentMeta;
+  document.getElementById('translating').textContent = t.translating;
+  document.getElementById('msgInput').placeholder   = t.placeholder;
+
+  const area = document.getElementById('chatArea');
+  area.innerHTML = '';
+
+  area.innerHTML += `<div class="date-divider"><div class="date-line"></div><div class="date-text">${t.today}</div><div class="date-line"></div></div>`;
+
+  t.initMsgs.forEach((m, i) => {
+    const transHtml = m.trans
+      ? `<div class="translation"><div class="trans-label">🌐 ${t.transLabel}</div>${esc(m.trans)}</div>`
+      : '';
+    area.innerHTML += `
+      <div class="msg-row">
+        <div class="avatar">🏢</div>
+        <div class="msg-col">
+          ${i===0 ? `<div class="msg-sender">${t.agentName}</div>` : ''}
+          <div class="bubble">${esc(m.text)}</div>
+          ${transHtml}
+          <div class="msg-time">${i===0?'14:34':'14:35'}</div>
+        </div>
+      </div>`;
+  });
+
+  const qw = document.getElementById('quickWrap');
+  qw.innerHTML = '';
+  t.quick.forEach(q => {
+    const btn = document.createElement('button');
+    btn.className = 'q-btn';
+    btn.textContent = q;
+    btn.onclick = () => { document.getElementById('msgInput').value = q; sendMsg(); };
+    qw.appendChild(btn);
+  });
+
+  scrollBottom();
+}
+
+function addAgentBubble(korean, translated){
+  const t = T[lang];
+  const transHtml = translated
+    ? `<div class="translation"><div class="trans-label">🌐 ${t.transLabel}</div>${esc(translated)}</div>`
+    : '';
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+  row.innerHTML = `
+    <div class="avatar">🏢</div>
+    <div class="msg-col">
+      <div class="bubble">${esc(korean)}</div>
+      ${transHtml}
+      <div class="msg-time">${now()}</div>
+    </div>`;
+  document.getElementById('chatArea').appendChild(row);
+  scrollBottom();
+}
+
+function addUserBubble(text){
+  const row = document.createElement('div');
+  row.className = 'msg-row user';
+  row.innerHTML = `
+    <div class="msg-col">
+      <div class="bubble">${esc(text)}</div>
+      <div class="msg-time">${now()}</div>
+    </div>`;
+  document.getElementById('chatArea').appendChild(row);
+  scrollBottom();
+}
+
+function addTyping(){
+  const id = 'typing-'+Date.now();
+  const row = document.createElement('div');
+  row.className = 'typing-row'; row.id = id;
+  row.innerHTML = `<div class="avatar">🏢</div><div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  document.getElementById('chatArea').appendChild(row);
+  scrollBottom();
+  return id;
+}
+
+async function sendMsg(){
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if (!text || busy) return;
+  input.value = ''; autoResize(input);
+
+  addUserBubble(text);
+  busy = true;
+  document.getElementById('sendBtn').disabled = true;
+  const tid = addTyping();
+  document.getElementById('translating').classList.add('show');
+
+  const t = T[lang];
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:`You are a Korean real estate agent for Roomting. The user speaks ${t.userLang}.
+Respond ONLY in JSON: {"agent_korean":"한국어 응답","agent_translated":"${t.userLang} translation"}
+Be friendly, concise (1-3 sentences), helpful about room rental near Hongdae, Seoul.`,
+        messages:[{role:'user', content:`User says in ${t.userLang}: "${text}"`}],
+      }),
+    });
+    const data = await res.json();
+    const parsed = JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
+    document.getElementById(tid)?.remove();
+    document.getElementById('translating').classList.remove('show');
+    addAgentBubble(parsed.agent_korean, lang !== 'ko' ? parsed.agent_translated : null);
+  } catch(e) {
+    document.getElementById(tid)?.remove();
+    document.getElementById('translating').classList.remove('show');
+    const fallback = {ko:'잠시 후 다시 시도해주세요.', ja:'少し後でもう一度お試しください。', zh:'请稍后再试。', en:'Please try again in a moment.'};
+    addAgentBubble('죄송해요, 잠시 후 다시 시도해주세요.', lang!=='ko' ? fallback[lang] : null);
+  }
+
+  busy = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function toggleLang(){
+  document.getElementById('ldd').classList.toggle('open');
+}
+function setLang(code, flag){
+  lang = code;
+  localStorage.setItem('roomting_lang', code);
+  document.getElementById('lf').textContent = flag;
+  document.getElementById('ldd').classList.remove('open');
+  render();
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('langBox').contains(e.target))
+    document.getElementById('ldd').classList.remove('open');
+});
+
+function scrollBottom(){ const a=document.getElementById('chatArea'); setTimeout(()=>a.scrollTop=a.scrollHeight,50); }
+function autoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+function handleKey(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();} }
+
+render();
+</script>
+</body>
+</html>

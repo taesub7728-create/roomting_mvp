@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Roomting — 시작하기</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #E8547A;
+    --pink-soft: #FDEEF1;
+    --pink-dim: #F8D6DE;
+    --ink: #1C1A19;
+    --ink-soft: #6B6562;
+    --line: #ECE7E3;
+    --paper: #FBFAF8;
+    --white: #fff;
+    --radius: 16px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    font-family: 'Noto Sans KR', 'Manrope', sans-serif;
+    background: #ECE6E2;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    color: var(--ink);
+  }
+
+  .frame {
+    width: 100%; max-width: 430px; min-height: 100vh;
+    background: var(--paper);
+    display: flex; flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* subtle ambient texture */
+  .ambient {
+    position: absolute; pointer-events: none; z-index: 0;
+    border-radius: 50%;
+  }
+  .amb-1 {
+    width: 320px; height: 320px; top: -140px; right: -120px;
+    background: radial-gradient(circle, rgba(232,84,122,0.07) 0%, transparent 70%);
+  }
+  .amb-2 {
+    width: 280px; height: 280px; bottom: -100px; left: -140px;
+    background: radial-gradient(circle, rgba(232,84,122,0.05) 0%, transparent 70%);
+  }
+
+  /* ── STEP INDICATOR ── */
+  .step-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 24px 24px 0;
+    position: relative; z-index: 1;
+  }
+  .step-dot {
+    width: 6px; height: 6px; border-radius: 3px;
+    background: var(--line);
+    transition: all .3s ease;
+  }
+  .step-dot.active { width: 20px; background: var(--pink); }
+  .step-dot.done { background: var(--pink-dim); }
+
+  /* ── LOGO ── */
+  .top-logo {
+    display: flex; align-items: center; gap: 8px;
+    padding: 18px 24px 0;
+    position: relative; z-index: 1;
+  }
+  .logo-mark { width: 24px; height: 24px; }
+  .logo-mark svg { width: 100%; height: 100%; }
+  .logo-name {
+    font-family: 'Manrope', sans-serif;
+    font-size: 15px; font-weight: 800; color: var(--ink-soft);
+    letter-spacing: -0.2px;
+  }
+  .logo-divider {
+    width: 1px; height: 12px; background: var(--line);
+    margin: 0 1px;
+  }
+  .logo-tagline {
+    font-size: 12px; font-weight: 600; color: #B5ADA7;
+    letter-spacing: -0.1px;
+  }
+
+  /* ── SLIDES ── */
+  .slides-wrap { flex: 1; overflow: hidden; position: relative; min-height: 0; z-index: 1; }
+  .slides { display: flex; width: 300%; min-height: 100%; transition: transform .4s cubic-bezier(.4,0,.2,1); }
+  .slide {
+    width: calc(100% / 3); min-height: calc(100vh - 200px);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 20px 26px 130px; flex-shrink: 0;
+  }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .slide-content { animation: fadeUp .45s both; }
+
+  .step-visual {
+    width: 52px; height: 52px; border-radius: 16px;
+    background: var(--pink-soft);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 20px;
+  }
+
+  .slide-eyebrow {
+    font-size: 12px; font-weight: 700; color: var(--pink);
+    margin-bottom: 10px; letter-spacing: 0.2px;
+  }
+  .slide-title {
+    font-size: 19px; font-weight: 800; color: var(--ink);
+    line-height: 1.35; letter-spacing: -0.3px; margin-bottom: 6px;
+  }
+  .slide-sub {
+    font-size: 13px; font-weight: 500; color: var(--ink-soft);
+    line-height: 1.6; margin-bottom: 22px;
+  }
+
+  /* ── SOCIAL BUTTONS ── */
+  .social-btns { display: flex; flex-direction: column; gap: 10px; }
+  .social-btn {
+    width: 100%; padding: 15px 18px;
+    border-radius: 13px; border: 1px solid var(--line); cursor: pointer;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 14.5px; font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: border-color .15s, background .15s;
+    background: var(--white);
+  }
+  .social-btn:hover { background: #faf8f6; }
+  .social-btn:active { transform: scale(0.99); }
+  .btn-kakao { background: #FEE500; border-color: #FEE500; color: #191919; }
+  .btn-kakao:hover { background: #FCDC00; }
+  .btn-email { color: var(--ink-soft); }
+  .social-icon { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+
+  .divider { display: flex; align-items: center; gap: 12px; margin: 14px 0 4px; }
+  .divider-line { flex: 1; height: 1px; background: var(--line); }
+  .divider-text { font-size: 11.5px; font-weight: 600; color: #B5ADA7; }
+
+  .terms {
+    font-size: 11px; color: #B5ADA7; font-weight: 500;
+    margin-top: 18px; line-height: 1.6;
+  }
+  .terms a { color: var(--pink); font-weight: 700; text-decoration: none; }
+
+  /* ── NICKNAME INPUT ── */
+  .input-wrap { width: 100%; }
+  .input-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; display: block; }
+  .nick-input {
+    width: 100%; background: var(--white);
+    border: 1.5px solid var(--line); border-radius: 13px;
+    padding: 15px 16px; font-size: 16px; font-weight: 700;
+    color: var(--ink); font-family: 'Noto Sans KR', sans-serif;
+    outline: none; transition: border-color .15s;
+  }
+  .nick-input:focus { border-color: var(--pink); }
+  .nick-input::placeholder { color: #C9C2BC; font-weight: 500; }
+  .nick-hint { font-size: 12px; font-weight: 600; margin-top: 8px; }
+  .nick-hint .ok { color: #2A9D5C; }
+  .nick-hint .err { color: var(--pink); }
+
+  /* ── LANG GRID ── */
+  .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .lang-card {
+    background: var(--white); border: 1.5px solid var(--line);
+    border-radius: 13px; padding: 16px 14px; cursor: pointer;
+    display: flex; align-items: center; gap: 11px;
+    transition: border-color .15s;
+  }
+  .lang-card:hover { border-color: #DDD5D0; }
+  .lang-card.selected { border-color: var(--pink); background: var(--pink-soft); }
+  .lang-card-flag { font-size: 22px; }
+  .lang-card-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .lang-card.selected .lang-card-name { color: var(--pink); }
+
+  .lang-hint {
+    font-size: 12px; font-weight: 500; color: var(--ink-soft);
+    margin-top: 16px; line-height: 1.5;
+  }
+
+  /* ── BOTTOM AREA ── */
+  .bottom-area {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    padding: 14px 24px 32px;
+    background: linear-gradient(to top, var(--paper) 75%, transparent);
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 10;
+  }
+  .next-btn {
+    width: 100%; background: var(--pink); color: white; border: none;
+    border-radius: 14px; padding: 16px; font-size: 15px; font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+    transition: opacity .15s, transform .15s;
+  }
+  .next-btn:hover { opacity: 0.92; }
+  .next-btn:active { transform: scale(.98); }
+  .next-btn:disabled { opacity: 0.3; cursor: default; }
+
+  .skip-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
+    font-family: 'Noto Sans KR', sans-serif; padding: 4px; text-align: center;
+  }
+  .skip-btn:hover { color: var(--ink); }
+
+  /* ── DONE OVERLAY ── */
+  .done-overlay {
+    display: none; position: fixed; inset: 0; background: var(--paper);
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px; z-index: 100;
+  }
+  .done-overlay.show { display: flex; }
+  .done-icon-wrap {
+    width: 72px; height: 72px; border-radius: 20px;
+    background: var(--pink-soft);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px;
+    animation: fadeUp .5s cubic-bezier(.34,1.4,.64,1);
+  }
+  .done-icon-wrap img { width: 36px; height: 36px; object-fit: contain; }
+  .done-title { font-size: 22px; font-weight: 800; color: var(--ink); text-align:center; line-height:1.35; margin-bottom: 10px; letter-spacing: -0.4px; }
+  .done-title .accent { color: var(--pink); }
+  .done-sub { font-size: 13.5px; font-weight: 500; color: var(--ink-soft); text-align:center; line-height: 1.65; margin-bottom: 36px; }
+  .done-btn {
+    width: 100%; background: var(--pink); color: white; border: none;
+    border-radius: 14px; padding: 16px; font-size: 15px; font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+  }
+  .done-btn-secondary {
+    width: 100%; background: var(--white); color: var(--ink); border: 1.5px solid var(--line);
+    border-radius: 14px; padding: 16px; font-size: 15px; font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="frame" id="app">
+  <div class="ambient amb-1"></div>
+  <div class="ambient amb-2"></div>
+
+  <div class="top-logo">
+    <div class="logo-mark">
+      <img src="roomting-logo-symbol.png" style="width:100%;height:100%;object-fit:contain;" alt="roomting">
+    </div>
+    <span class="logo-name">roomting</span>
+    <div class="logo-divider"></div>
+    <span class="logo-tagline" id="logoTagline">한국 생활의 첫 단추</span>
+  </div>
+
+  <div class="step-bar" id="stepBar">
+    <div class="step-dot active" id="dot0"></div>
+    <div class="step-dot" id="dot1"></div>
+    <div class="step-dot" id="dot2"></div>
+  </div>
+
+  <div class="slides-wrap">
+    <div class="slides" id="slides">
+
+      <!-- STEP 1: 언어 선택 -->
+      <div class="slide">
+        <div class="slide-content">
+          <div class="slide-eyebrow" id="t1eyebrow">먼저</div>
+          <div class="slide-title" id="t1">사용할 언어를<br>선택해주세요</div>
+          <div class="slide-sub" id="sub1">언제든지 앱 내에서 변경할 수 있어요</div>
+
+          <div class="lang-grid">
+            <div class="lang-card" onclick="selectLang('ko',this)">
+              <span class="lang-card-flag">🇰🇷</span>
+              <span class="lang-card-name">한국어</span>
+            </div>
+            <div class="lang-card selected" onclick="selectLang('ja',this)">
+              <span class="lang-card-flag">🇯🇵</span>
+              <span class="lang-card-name">日本語</span>
+            </div>
+            <div class="lang-card" onclick="selectLang('zh',this)">
+              <span class="lang-card-flag">🇨🇳</span>
+              <span class="lang-card-name">中文</span>
+            </div>
+            <div class="lang-card" onclick="selectLang('en',this)">
+              <span class="lang-card-flag">🌐</span>
+              <span class="lang-card-name">English</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- STEP 2: 소셜 로그인 -->
+      <div class="slide">
+        <div class="slide-content">
+          <div class="slide-eyebrow" id="t2eyebrow">계정</div>
+          <div class="slide-title" id="t2">3초면 시작할 수 있어요</div>
+          <div class="slide-sub" id="sub2">계정 하나로 모든 기능을 사용할 수 있어요</div>
+
+          <div class="social-btns">
+            <button class="social-btn" onclick="socialLogin('google')">
+              <div class="social-icon">
+                <svg width="18" height="18" viewBox="0 0 48 48">
+                  <path fill="#EA4335" d="M24 9.5c3.5 0 6.3 1.2 8.5 3.2l6.3-6.3C34.8 3 29.7 1 24 1 14.8 1 7 6.7 3.6 14.6l7.4 5.7C12.7 13.5 17.9 9.5 24 9.5z"/>
+                  <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-16.9z"/>
+                  <path fill="#FBBC05" d="M11 28.3c-.6-1.7-.9-3.5-.9-5.3s.3-3.6.9-5.3l-7.4-5.7C1.3 15.1 0 19.4 0 24s1.3 8.9 3.6 12l7.4-5.7z"/>
+                  <path fill="#34A853" d="M24 47c5.7 0 10.5-1.9 14-5.1l-7.4-5.7c-2 1.3-4.5 2.1-6.6 2.1-6.1 0-11.3-4-13-9.5l-7.4 5.7C7 41.3 14.8 47 24 47z"/>
+                </svg>
+              </div>
+              <span id="googleLabel">Google로 계속하기</span>
+            </button>
+
+            <button class="social-btn btn-kakao" onclick="socialLogin('kakao')">
+              <div class="social-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#191919">
+                  <path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.74 1.56 5.15 3.93 6.6-.17.6-.62 2.18-.71 2.52-.11.42.15.41.32.3.13-.09 2.07-1.4 2.9-1.97.5.07 1.02.11 1.56.11 5.52 0 10-3.48 10-7.8S17.52 3 12 3z"/>
+                </svg>
+              </div>
+              <span id="kakaoLabel">카카오로 계속하기</span>
+            </button>
+
+            <div class="divider">
+              <div class="divider-line"></div>
+              <div class="divider-text" id="orLabel">또는</div>
+              <div class="divider-line"></div>
+            </div>
+
+            <button class="social-btn btn-email" onclick="socialLogin('email')">
+              <div class="social-icon">✉️</div>
+              <span id="emailLabel">이메일로 계속하기</span>
+            </button>
+          </div>
+
+          <div class="terms" id="termsText">
+            계속하면 <a href="#">이용약관</a> 및 <a href="#">개인정보처리방침</a>에 동의하는 것으로 간주합니다
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: 닉네임 -->
+      <div class="slide">
+        <div class="slide-content">
+          <div class="slide-eyebrow" id="t3eyebrow">마지막으로</div>
+          <div class="slide-title" id="t3">어떻게 불러드릴까요?</div>
+          <div class="slide-sub" id="sub3">룸팅에서 사용할 닉네임을 입력해주세요</div>
+
+          <div class="input-wrap">
+            <label class="input-label" id="nickLabel">닉네임</label>
+            <input class="nick-input" id="nickInput" type="text"
+              maxlength="16" autocomplete="off" spellcheck="false"
+              oninput="checkNick()" />
+            <div class="nick-hint" id="nickHint"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="bottom-area" id="bottomArea">
+    <button class="next-btn" id="nextBtn" onclick="nextStep()">다음</button>
+  </div>
+
+  <div class="done-overlay" id="doneOverlay">
+    <div class="done-icon-wrap">
+      <img src="roomting-logo-symbol.png" alt="roomting" />
+    </div>
+    <div class="done-title" id="doneTitle">환영해요,<br><span class="accent" id="doneNick"></span>님</div>
+    <div class="done-sub" id="doneSub">이제 룸팅에서<br>나에게 맞는 방을 찾아볼까요?</div>
+    <button class="done-btn" id="doneBtnPrimary" onclick="location.href='roomting-landing-v5.html'">룸팅 시작하기</button>
+  </div>
+
+</div>
+
+<script>
+const T = {
+  ko: {
+    tagline: '한국 생활의 첫 단추',
+    t1eyebrow: '먼저', t1: '사용할 언어를<br>선택해주세요', sub1: '언제든지 앱 내에서 변경할 수 있어요',
+    t2eyebrow: '계정', t2: '3초면 시작할 수 있어요', sub2: '계정 하나로 모든 기능을 사용할 수 있어요',
+    google: 'Google로 계속하기', kakao: '카카오로 계속하기', email: '이메일로 계속하기', or: '또는',
+    terms: '계속하면 <a href="#">이용약관</a> 및 <a href="#">개인정보처리방침</a>에 동의하는 것으로 간주합니다',
+    t3eyebrow: '마지막으로', t3: '어떻게 불러드릴까요?', sub3: '룸팅에서 사용할 닉네임을 입력해주세요',
+    nickLabel: '닉네임', nickPlaceholder: '예) Yuki, 민준, 小明',
+    nickOk: '사용 가능한 닉네임이에요', nickShort: '2글자 이상 입력해주세요', nickLong: '16글자 이하로 입력해주세요',
+    next: '다음', start: '시작하기',
+    doneTitle: (nick) => `환영해요,<br><span class="accent">${nick}</span>님`,
+    doneSub: '이제 룸팅에서<br>나에게 맞는 방을 찾아볼까요?',
+    doneBtnPrimary: '룸팅 시작하기',
+  },
+  ja: {
+    tagline: '韓国生活の最初の一歩',
+    t1eyebrow: 'まず', t1: '使用する言語を<br>選んでください', sub1: 'アプリ内でいつでも変更できます',
+    t2eyebrow: 'アカウント', t2: '3秒で始められます', sub2: '一つのアカウントですべての機能が使えます',
+    google: 'Googleで続ける', kakao: 'Kakaoで続ける', email: 'メールで続ける', or: 'または',
+    terms: '続けることで<a href="#">利用規約</a>と<a href="#">プライバシーポリシー</a>に同意したものとみなします',
+    t3eyebrow: '最後に', t3: 'なんとお呼びしましょうか？', sub3: 'ルームティングで使うニックネームを入力してください',
+    nickLabel: 'ニックネーム', nickPlaceholder: '例）Yuki、민준、小明',
+    nickOk: '使用できるニックネームです', nickShort: '2文字以上入力してください', nickLong: '16文字以下で入力してください',
+    next: '次へ', start: 'スタート',
+    doneTitle: (nick) => `ようこそ、<br><span class="accent">${nick}</span>さん`,
+    doneSub: 'さあ、ルームティングで<br>ぴったりのお部屋を探しましょう',
+    doneBtnPrimary: 'ルームティングを始める',
+  },
+  zh: {
+    tagline: '韩国生活的第一步',
+    t1eyebrow: '首先', t1: '请选择<br>使用的语言', sub1: '随时可以在应用内更改',
+    t2eyebrow: '账号', t2: '3秒即可开始', sub2: '一个账号即可使用所有功能',
+    google: '用Google继续', kakao: '用Kakao继续', email: '用邮箱继续', or: '或',
+    terms: '继续即表示您同意<a href="#">服务条款</a>和<a href="#">隐私政策</a>',
+    t3eyebrow: '最后', t3: '我该怎么称呼您？', sub3: '请输入您在Roomting使用的昵称',
+    nickLabel: '昵称', nickPlaceholder: '例）Yuki、민준、小明',
+    nickOk: '可以使用此昵称', nickShort: '请输入2个字以上', nickLong: '请输入16个字以内',
+    next: '下一步', start: '开始',
+    doneTitle: (nick) => `欢迎，<br><span class="accent">${nick}</span>`,
+    doneSub: '现在让我们在Roomting<br>找到属于您的房间吧',
+    doneBtnPrimary: '开始使用Roomting',
+  },
+  en: {
+    tagline: 'Your first step in Korea',
+    t1eyebrow: 'First', t1: 'Choose your language', sub1: 'You can change this anytime in settings',
+    t2eyebrow: 'Account', t2: 'Get started in seconds', sub2: 'One account for everything on Roomting',
+    google: 'Continue with Google', kakao: 'Continue with Kakao', email: 'Continue with Email', or: 'or',
+    terms: 'By continuing, you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>',
+    t3eyebrow: 'Last step', t3: 'What should we call you?', sub3: 'Enter a nickname to use on Roomting',
+    nickLabel: 'Nickname', nickPlaceholder: 'e.g. Yuki, Minjun, Xiao Ming',
+    nickOk: 'Nickname is available', nickShort: 'Please enter at least 2 characters', nickLong: 'Please enter 16 characters or less',
+    next: 'Next', start: 'Get Started',
+    doneTitle: (nick) => `Welcome,<br><span class="accent">${nick}</span>`,
+    doneSub: "Let's find your perfect room\non Roomting",
+    doneBtnPrimary: 'Start using Roomting',
+  },
+};
+
+let currentStep = 0;
+let uiLang = 'ja';
+let nickValid = false;
+
+function renderLang() {
+  const t = T[uiLang];
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.innerHTML = val; };
+  set('logoTagline', t.tagline);
+  set('t1eyebrow', t.t1eyebrow); set('t1', t.t1); set('sub1', t.sub1);
+  set('t2eyebrow', t.t2eyebrow); set('t2', t.t2); set('sub2', t.sub2);
+  set('googleLabel', t.google); set('kakaoLabel', t.kakao); set('emailLabel', t.email); set('orLabel', t.or);
+  set('termsText', t.terms);
+  set('t3eyebrow', t.t3eyebrow); set('t3', t.t3); set('sub3', t.sub3);
+  document.getElementById('nickLabel').textContent = t.nickLabel;
+  document.getElementById('nickInput').placeholder = t.nickPlaceholder;
+  updateBottomBar();
+  checkNick();
+}
+
+function goToStep(n) {
+  currentStep = n;
+  document.getElementById('slides').style.transform = `translateX(-${n * 100/3}%)`;
+  for(let i=0;i<3;i++){
+    const dot = document.getElementById(`dot${i}`);
+    dot.className = 'step-dot' + (i<n?' done':i===n?' active':'');
+  }
+  updateBottomBar();
+  if(n===2) setTimeout(()=>document.getElementById('nickInput').focus(),500);
+}
+
+function nextStep() {
+  if(currentStep===0){ goToStep(1); return; }
+  if(currentStep===1){ goToStep(2); return; }
+  if(currentStep===2){ finish(); }
+}
+function updateBottomBar() {
+  const t = T[uiLang];
+  const btn = document.getElementById('nextBtn');
+  if(currentStep===0){
+    btn.style.display='block'; btn.textContent=t.next; btn.disabled=false;
+  } else if(currentStep===1){
+    btn.style.display='none';
+  } else if(currentStep===2){
+    btn.style.display='block'; btn.textContent=t.start; btn.disabled=!nickValid;
+  }
+}
+
+function socialLogin(provider) { goToStep(2); }
+
+function checkNick() {
+  const t = T[uiLang];
+  const val = document.getElementById('nickInput').value.trim();
+  const hint = document.getElementById('nickHint');
+  if(val.length===0){ hint.innerHTML=''; nickValid=false; }
+  else if(val.length<2){ hint.innerHTML=`<span class="err">${t.nickShort}</span>`; nickValid=false; }
+  else if(val.length>16){ hint.innerHTML=`<span class="err">${t.nickLong}</span>`; nickValid=false; }
+  else { hint.innerHTML=`<span class="ok">${t.nickOk}</span>`; nickValid=true; }
+  updateBottomBar();
+}
+
+function selectLang(code, el) {
+  uiLang = code;
+  localStorage.setItem('roomting_lang', code);
+  document.querySelectorAll('.lang-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  renderLang();
+}
+
+function finish() {
+  const t = T[uiLang];
+  const nick = document.getElementById('nickInput').value.trim() || '친구';
+  localStorage.setItem('roomting_nickname', nick);
+  localStorage.setItem('roomting_lang', uiLang);
+  document.getElementById('doneTitle').innerHTML = t.doneTitle(nick);
+  document.getElementById('doneSub').innerHTML = t.doneSub;
+  document.getElementById('doneBtnPrimary').textContent = t.doneBtnPrimary;
+  document.getElementById('doneOverlay').classList.add('show');
+}
+function goHome() { window.location.href = 'roomting-landing-v5.html'; }
+
+renderLang();
+document.querySelectorAll('.lang-card').forEach(c=>c.classList.remove('selected'));
+document.querySelectorAll('.lang-card')[1].classList.add('selected');
+</script>
+</body>
+</html>

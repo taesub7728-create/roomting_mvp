@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Roomting — 마이페이지</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #E8547A; --pink-soft: #FDEEF1; --pink-dim: #F8D6DE;
+    --ink: #1C1A19; --ink-soft: #6B6562; --line: #ECE7E3;
+    --paper: #FBFAF8; --white: #fff; --radius: 16px; --green: #2A9D5C;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'Noto Sans KR','Manrope',sans-serif; background:#ECE6E2; min-height:100vh; display:flex; justify-content:center; color:var(--ink); }
+  .frame { width:100%; max-width:430px; min-height:100vh; background:var(--paper); display:flex; flex-direction:column; overflow-x:hidden; }
+
+  /* ── HEADER ── */
+  .top-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px 0;
+  }
+  .header-title { font-size: 16px; font-weight: 800; color: var(--ink); }
+  .lang-box { position: relative; }
+  .lang-trigger {
+    background: var(--white); border: 1px solid var(--line);
+    border-radius: 20px; padding: 6px 11px;
+    font-size: 12px; font-weight: 600; color: var(--ink);
+    cursor: pointer; display: flex; align-items: center; gap: 5px;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  .lang-dd {
+    display: none; position: absolute; top: calc(100%+8px); right: 0;
+    background: white; border-radius: 14px; border: 1px solid var(--line);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden; min-width: 130px; z-index: 100;
+  }
+  .lang-dd.open { display: block; }
+  .lang-dd div { padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); }
+  .lang-dd div:hover { background: var(--pink-soft); }
+
+  /* ── PROFILE ── */
+  .profile-section { padding: 22px 22px 0; }
+  .profile-row { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .avatar {
+    width: 56px; height: 56px; border-radius: 16px;
+    background: var(--pink-soft); border: 1.5px solid var(--pink-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 800; color: var(--pink);
+    font-family: 'Manrope', sans-serif;
+  }
+  .profile-info { flex: 1; }
+  .profile-name { font-size: 18px; font-weight: 800; color: var(--ink); letter-spacing: -0.3px; }
+  .profile-sub { font-size: 12.5px; font-weight: 500; color: var(--ink-soft); margin-top: 2px; }
+  .profile-edit {
+    background: var(--white); border: 1px solid var(--line); border-radius: 11px;
+    padding: 7px 13px; font-size: 12px; font-weight: 700; color: var(--ink);
+    cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  }
+
+  .stats-row {
+    display: grid; grid-template-columns: repeat(3,1fr);
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  }
+  .stat-item { padding: 14px 8px; text-align: center; border-right: 1px solid var(--line); }
+  .stat-item:last-child { border-right: none; }
+  .stat-num { font-family: 'Manrope', sans-serif; font-size: 19px; font-weight: 800; color: var(--pink); }
+  .stat-label { font-size: 10.5px; font-weight: 600; color: var(--ink-soft); margin-top: 2px; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex; margin-top: 22px;
+    border-bottom: 1px solid var(--line);
+  }
+  .tab {
+    flex: 1; padding: 12px 8px; text-align: center;
+    font-size: 13px; font-weight: 700; color: var(--ink-soft);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all .15s; border: none; background: none;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  .tab.active { color: var(--pink); border-bottom-color: var(--pink); }
+
+  .tab-content { display: none; padding: 18px 22px 100px; flex-direction: column; gap: 12px; }
+  .tab-content.active { display: flex; }
+
+  /* ── REQUEST CARD ── */
+  .request-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 16px 18px; border: 1px solid var(--line);
+  }
+  .request-card.active-req { border-color: var(--pink-dim); }
+  .req-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .req-status { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-dot.active { background: var(--green); animation: pulse 1.5s infinite; }
+  .status-dot.closed { background: #C9C2BC; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .req-date { font-size: 11px; font-weight: 500; color: var(--ink-soft); }
+  .req-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .req-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 50px; padding: 4px 10px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+
+  .req-responses { background: var(--pink-soft); border-radius: 11px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
+  .req-responses.closed { background: #F3F0ED; }
+  .req-resp-count { font-size: 12.5px; font-weight: 700; color: var(--pink); }
+  .req-resp-count.closed { color: var(--ink-soft); }
+  .req-resp-btn { background: var(--pink); color: white; border: none; border-radius: 9px; padding: 6px 13px; font-size: 11.5px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; }
+  .req-resp-btn.closed { background: var(--ink-soft); }
+  .req-timer { font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-top: 8px; }
+
+  .new-req-btn {
+    width: 100%; background: var(--white); border: 1.5px dashed var(--pink-dim);
+    border-radius: var(--radius); padding: 16px; font-size: 13.5px; font-weight: 700;
+    color: var(--pink); cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  }
+
+  /* ── SAVED CARD ── */
+  .saved-card {
+    background: var(--white); border-radius: var(--radius); overflow: hidden;
+    display: flex; cursor: pointer; border: 1px solid var(--line);
+  }
+  .saved-img { width: 86px; flex-shrink: 0; background: var(--pink-soft); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  .saved-info { flex: 1; padding: 12px 14px; }
+  .saved-price { font-size: 15px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
+  .saved-meta { font-size: 11.5px; font-weight: 500; color: var(--ink-soft); margin-bottom: 6px; }
+  .saved-badges { display: flex; gap: 5px; }
+  .saved-badge { border-radius: 50px; padding: 3px 8px; font-size: 10px; font-weight: 700; }
+  .saved-remove { padding: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: var(--ink-soft); background: none; border: none; }
+
+  /* ── SETTINGS ── */
+  .settings-title { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); padding: 0 2px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .settings-card { background: var(--white); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); }
+  .settings-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; border-bottom: 1px solid var(--line); transition: background .15s; }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row:hover { background: var(--pink-soft); }
+  .settings-icon { width: 32px; height: 32px; border-radius: 10px; background: var(--pink-soft); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .settings-text { flex: 1; }
+  .settings-label { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .settings-sub { font-size: 11.5px; font-weight: 500; color: var(--ink-soft); margin-top: 1px; }
+  .settings-arrow { font-size: 15px; color: #D8D2CD; }
+
+  .toggle-switch { width: 40px; height: 22px; border-radius: 11px; background: var(--line); position: relative; transition: background .2s; flex-shrink: 0; cursor: pointer; }
+  .toggle-switch::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+  .toggle-switch.on { background: var(--pink); }
+  .toggle-switch.on::after { transform: translateX(18px); }
+
+  /* ── BOTTOM TAB BAR ── */
+  .tab-bar {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: white; border-top: 1px solid var(--line);
+    display: flex; z-index: 40;
+  }
+  .tab-bar-btn { flex: 1; padding: 10px 4px 14px; border: none; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; }
+  .tab-bar-icon { font-size: 20px; opacity: 0.45; }
+  .tab-bar-label { font-size: 10px; font-weight: 700; color: var(--ink-soft); }
+  .tab-bar-btn.active .tab-bar-label { color: var(--pink); }
+  .tab-bar-btn.active .tab-bar-icon { opacity: 1; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { text-align: center; padding: 36px 20px; }
+  .empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.5; }
+  .empty-title { font-size: 14.5px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+  .empty-sub { font-size: 12.5px; font-weight: 500; color: var(--ink-soft); line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="frame" id="app">
+
+  <div class="top-header">
+    <div class="header-title" id="headerTitle">마이페이지</div>
+    <div class="lang-box" id="langBox">
+      <button class="lang-trigger" onclick="toggleLang()">
+        <span id="lf">🇯🇵</span><span id="ll">日本語</span>
+      </button>
+      <div class="lang-dd" id="ldd">
+        <div onclick="setLang('ko','🇰🇷','한국어')">🇰🇷 한국어</div>
+        <div onclick="setLang('ja','🇯🇵','日本語')">🇯🇵 日本語</div>
+        <div onclick="setLang('zh','🇨🇳','中文')">🇨🇳 中文</div>
+        <div onclick="setLang('en','🌐','English')">🌐 English</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <div class="profile-row">
+      <div class="avatar">Y</div>
+      <div class="profile-info">
+        <div class="profile-name" id="profileName">Yuki</div>
+        <div class="profile-sub" id="profileSub">일본 · 워킹홀리데이</div>
+      </div>
+      <button class="profile-edit" id="editBtn">편집</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-num">2</div>
+        <div class="stat-label" id="statLabel1">요청서</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">5</div>
+        <div class="stat-label" id="statLabel2">받은 응답</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">3</div>
+        <div class="stat-label" id="statLabel3">찜한 매물</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab0" onclick="switchTab(0)"><span id="tabLabel0">요청서</span></button>
+    <button class="tab" id="tab1" onclick="switchTab(1)"><span id="tabLabel1">찜목록</span></button>
+    <button class="tab" id="tab2" onclick="switchTab(2)"><span id="tabLabel2">설정</span></button>
+  </div>
+
+  <!-- 탭 0: 요청서 -->
+  <div class="tab-content active" id="tabContent0">
+    <div class="request-card active-req">
+      <div class="req-header">
+        <div class="req-status"><div class="status-dot active"></div><span id="statusActive" style="color:var(--green);">응답 대기 중</span></div>
+        <div class="req-date">2025.06.04</div>
+      </div>
+      <div class="req-chips" id="reqChips1"></div>
+      <div class="req-responses">
+        <div class="req-resp-count" id="respCount1">응답 2개 도착</div>
+        <button class="req-resp-btn" id="respBtn1" onclick="location.href='roomting-response-v2.html'">확인하기</button>
+      </div>
+      <div class="req-timer" id="reqTimer">종료까지 22시간 47분</div>
+    </div>
+
+    <div class="request-card">
+      <div class="req-header">
+        <div class="req-status"><div class="status-dot closed"></div><span id="statusClosed" style="color:var(--ink-soft);">종료됨</span></div>
+        <div class="req-date">2025.05.20</div>
+      </div>
+      <div class="req-chips" id="reqChips2"></div>
+      <div class="req-responses closed">
+        <div class="req-resp-count closed" id="respCount2">응답 3개 받음</div>
+        <button class="req-resp-btn closed" id="respBtn2">내역 보기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 참고: 요청서가 0개인 경우에만 아래처럼 빈 상태(empty state)로 대체됩니다 -->
+  <!--
+  <div class="tab-content" id="tabContent0Empty">
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">아직 요청서가 없어요</div>
+      <div class="empty-sub">조건을 입력하면 부동산에서<br>제안을 받아볼 수 있어요</div>
+      <button class="new-req-btn" onclick="location.href='roomting-request-v4.html'" style="margin-top:18px;">+ 새 요청서 작성하기</button>
+    </div>
+  </div>
+  -->
+
+  <!-- 탭 1: 찜목록 -->
+  <div class="tab-content" id="tabContent1">
+    <div class="saved-card" onclick="location.href='roomting-detail-v2.html'">
+      <div class="saved-img">🏠</div>
+      <div class="saved-info">
+        <div class="saved-price" id="saved1Price">월 45만원</div>
+        <div class="saved-meta" id="saved1Meta">원룸 · 20㎡ · 홍대입구역 5분</div>
+        <div class="saved-badges">
+          <span class="saved-badge" style="background:var(--pink);color:white;">원룸</span>
+          <span class="saved-badge" style="background:#EAF7EE;color:#2A9D5C;">전입가능</span>
+        </div>
+      </div>
+      <button class="saved-remove" onclick="event.stopPropagation()">✕</button>
+    </div>
+
+    <div class="saved-card" onclick="location.href='roomting-detail-v2.html'">
+      <div class="saved-img">🏘️</div>
+      <div class="saved-info">
+        <div class="saved-price" id="saved2Price">월 38만원</div>
+        <div class="saved-meta" id="saved2Meta">고시원 · 9㎡ · 신촌역 3분</div>
+        <div class="saved-badges">
+          <span class="saved-badge" style="background:#5B7BCC;color:white;">고시원</span>
+          <span class="saved-badge" style="background:#F3F0ED;color:var(--ink-soft);">전입불가</span>
+        </div>
+      </div>
+      <button class="saved-remove" onclick="event.stopPropagation()">✕</button>
+    </div>
+
+    <div class="saved-card" onclick="location.href='roomting-detail-v2.html'">
+      <div class="saved-img">🏡</div>
+      <div class="saved-info">
+        <div class="saved-price" id="saved3Price">월 60만원</div>
+        <div class="saved-meta" id="saved3Meta">원룸 · 25㎡ · 상수역 3분</div>
+        <div class="saved-badges">
+          <span class="saved-badge" style="background:var(--pink);color:white;">원룸</span>
+          <span class="saved-badge" style="background:#EAF7EE;color:#2A9D5C;">전입가능</span>
+        </div>
+      </div>
+      <button class="saved-remove" onclick="event.stopPropagation()">✕</button>
+    </div>
+  </div>
+
+  <!-- 탭 2: 설정 -->
+  <div class="tab-content" id="tabContent2" style="gap:18px;">
+    <div>
+      <div class="settings-title" id="settingsTitle1">계정</div>
+      <div class="settings-card" style="margin-top:8px;">
+        <div class="settings-row">
+          <div class="settings-icon">😊</div>
+          <div class="settings-text"><div class="settings-label" id="setNickLabel">닉네임</div><div class="settings-sub">Yuki</div></div>
+          <span class="settings-arrow">›</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-icon">🌐</div>
+          <div class="settings-text"><div class="settings-label" id="setLangLabel">언어 설정</div><div class="settings-sub" id="setLangVal">한국어</div></div>
+          <span class="settings-arrow">›</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-icon">🇯🇵</div>
+          <div class="settings-text"><div class="settings-label" id="setNationLabel">국적</div><div class="settings-sub" id="setNationVal">일본</div></div>
+          <span class="settings-arrow">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="settings-title" id="settingsTitle2">알림</div>
+      <div class="settings-card" style="margin-top:8px;">
+        <div class="settings-row">
+          <div class="settings-icon">🔔</div>
+          <div class="settings-text"><div class="settings-label" id="setPushLabel">푸시 알림</div><div class="settings-sub" id="setPushSub">부동산 응답 알림</div></div>
+          <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-icon">💬</div>
+          <div class="settings-text"><div class="settings-label" id="setChatLabel">채팅 알림</div><div class="settings-sub" id="setChatSub">새 메시지 알림</div></div>
+          <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="settings-title" id="settingsTitle3">서비스</div>
+      <div class="settings-card" style="margin-top:8px;">
+        <div class="settings-row">
+          <div class="settings-icon">📋</div>
+          <div class="settings-text"><div class="settings-label" id="setTermsLabel">이용약관</div></div>
+          <span class="settings-arrow">›</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-icon">🔒</div>
+          <div class="settings-text"><div class="settings-label" id="setPrivacyLabel">개인정보처리방침</div></div>
+          <span class="settings-arrow">›</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-icon">💌</div>
+          <div class="settings-text"><div class="settings-label" id="setContactLabel">고객센터</div><div class="settings-sub">roomting@gmail.com</div></div>
+          <span class="settings-arrow">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-row" id="logoutRow" style="cursor:pointer;border-bottom:none;" onclick="if(confirm('로그아웃 하시겠어요?')) location.href='roomting-landing-v5.html'">
+        <div class="settings-icon">🚪</div>
+        <div class="settings-text"><div class="settings-label" style="color:var(--pink);" id="setLogoutLabel">로그아웃</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 탭바 -->
+  <div class="tab-bar">
+    <button class="tab-bar-btn" onclick="location.href='roomting-landing-v5.html'">
+      <span class="tab-bar-icon">🏠</span><span class="tab-bar-label" id="tabBarHome">홈</span>
+    </button>
+    <button class="tab-bar-btn" onclick="location.href='roomting-map-v2.html'">
+      <span class="tab-bar-icon">🗺️</span><span class="tab-bar-label" id="tabBarMap">지도</span>
+    </button>
+    <button class="tab-bar-btn" onclick="location.href='roomting-request-v4.html'">
+      <span class="tab-bar-icon">📋</span><span class="tab-bar-label" id="tabBarReq">요청서</span>
+    </button>
+    <button class="tab-bar-btn active">
+      <span class="tab-bar-icon">👤</span><span class="tab-bar-label" id="tabBarMy">MY</span>
+    </button>
+  </div>
+
+</div>
+<script>
+const T = {
+  ko: {
+    headerTitle:'마이페이지', profileSub:'일본 · 워킹홀리데이', editBtn:'편집',
+    statLabel1:'요청서', statLabel2:'받은 응답', statLabel3:'찜한 매물',
+    tabLabel0:'요청서', tabLabel1:'찜목록', tabLabel2:'설정',
+    statusActive:'응답 대기 중', statusClosed:'종료됨',
+    reqChips1:['홍대입구','월 50만원 이하','원룸','전입신고 가능'],
+    reqChips2:['신촌','월 40만원 이하','고시원'],
+    respCount1:'응답 2개 도착', respBtn1:'확인하기',
+    respCount2:'응답 3개 받음', respBtn2:'내역 보기',
+    reqTimer:'종료까지 22시간 47분', newReqBtn:'+ 새 요청서 작성하기',
+    saved1Price:'월 45만원', saved1Meta:'원룸 · 20㎡ · 홍대입구역 5분',
+    saved2Price:'월 38만원', saved2Meta:'고시원 · 9㎡ · 신촌역 3분',
+    saved3Price:'월 60만원', saved3Meta:'원룸 · 25㎡ · 상수역 3분',
+    settingsTitle1:'계정', settingsTitle2:'알림', settingsTitle3:'서비스',
+    setNickLabel:'닉네임', setLangLabel:'언어 설정', setLangVal:'한국어',
+    setNationLabel:'국적', setNationVal:'일본',
+    setPushLabel:'푸시 알림', setPushSub:'부동산 응답 알림',
+    setChatLabel:'채팅 알림', setChatSub:'새 메시지 알림',
+    setTermsLabel:'이용약관', setPrivacyLabel:'개인정보처리방침',
+    setContactLabel:'고객센터', setLogoutLabel:'로그아웃',
+    tabBarHome:'홈', tabBarMap:'지도', tabBarReq:'요청서', tabBarMy:'MY',
+    logoutConfirm:'로그아웃 하시겠어요?',
+  },
+  ja: {
+    headerTitle:'マイページ', profileSub:'日本 · ワーキングホリデー', editBtn:'編集',
+    statLabel1:'リクエスト', statLabel2:'受け取った返答', statLabel3:'お気に入り',
+    tabLabel0:'リクエスト', tabLabel1:'お気に入り', tabLabel2:'設定',
+    statusActive:'返答待ち', statusClosed:'終了',
+    reqChips1:['弘大入口','月50万W以下','ワンルーム','転入届可'],
+    reqChips2:['新村','月40万W以下','コシウォン'],
+    respCount1:'返答2件が届きました', respBtn1:'確認する',
+    respCount2:'返答3件を受け取りました', respBtn2:'履歴を見る',
+    reqTimer:'終了まで22時間47分', newReqBtn:'+ 新しいリクエストを作成',
+    saved1Price:'月45万ウォン', saved1Meta:'ワンルーム · 20㎡ · 弘大入口駅5分',
+    saved2Price:'月38万ウォン', saved2Meta:'コシウォン · 9㎡ · 新村駅3分',
+    saved3Price:'月60万ウォン', saved3Meta:'ワンルーム · 25㎡ · 上水駅3分',
+    settingsTitle1:'アカウント', settingsTitle2:'通知', settingsTitle3:'サービス',
+    setNickLabel:'ニックネーム', setLangLabel:'言語設定', setLangVal:'日本語',
+    setNationLabel:'国籍', setNationVal:'日本',
+    setPushLabel:'プッシュ通知', setPushSub:'不動産からの返答通知',
+    setChatLabel:'チャット通知', setChatSub:'新しいメッセージ通知',
+    setTermsLabel:'利用規約', setPrivacyLabel:'プライバシーポリシー',
+    setContactLabel:'カスタマーサポート', setLogoutLabel:'ログアウト',
+    tabBarHome:'ホーム', tabBarMap:'地図', tabBarReq:'リクエスト', tabBarMy:'MY',
+    logoutConfirm:'ログアウトしますか？',
+  },
+  zh: {
+    headerTitle:'我的页面', profileSub:'日本 · 打工度假', editBtn:'编辑',
+    statLabel1:'请求', statLabel2:'收到的回复', statLabel3:'收藏',
+    tabLabel0:'请求', tabLabel1:'收藏', tabLabel2:'设置',
+    statusActive:'等待回复', statusClosed:'已结束',
+    reqChips1:['弘大入口','月租50万以下','单间','可迁入登记'],
+    reqChips2:['新村','月租40万以下','考试院'],
+    respCount1:'收到2个回复', respBtn1:'查看',
+    respCount2:'收到3个回复', respBtn2:'查看记录',
+    reqTimer:'距结束还有22小时47分', newReqBtn:'+ 新建请求',
+    saved1Price:'月租45万', saved1Meta:'单间 · 20㎡ · 弘大入口站5分钟',
+    saved2Price:'月租38万', saved2Meta:'考试院 · 9㎡ · 新村站3分钟',
+    saved3Price:'月租60万', saved3Meta:'单间 · 25㎡ · 上水站3分钟',
+    settingsTitle1:'账号', settingsTitle2:'通知', settingsTitle3:'服务',
+    setNickLabel:'昵称', setLangLabel:'语言设置', setLangVal:'中文',
+    setNationLabel:'国籍', setNationVal:'日本',
+    setPushLabel:'推送通知', setPushSub:'中介回复通知',
+    setChatLabel:'聊天通知', setChatSub:'新消息通知',
+    setTermsLabel:'服务条款', setPrivacyLabel:'隐私政策',
+    setContactLabel:'客服', setLogoutLabel:'退出登录',
+    tabBarHome:'首页', tabBarMap:'地图', tabBarReq:'请求', tabBarMy:'MY',
+    logoutConfirm:'确定要退出登录吗？',
+  },
+  en: {
+    headerTitle:'My Page', profileSub:'Japan · Working Holiday', editBtn:'Edit',
+    statLabel1:'Requests', statLabel2:'Responses', statLabel3:'Saved',
+    tabLabel0:'Requests', tabLabel1:'Saved', tabLabel2:'Settings',
+    statusActive:'Awaiting responses', statusClosed:'Closed',
+    reqChips1:['Hongdae','Max ₩500k/mo','Studio','Address Reg.'],
+    reqChips2:['Sinchon','Max ₩400k/mo','Goshiwon'],
+    respCount1:'2 responses arrived', respBtn1:'View',
+    respCount2:'Received 3 responses', respBtn2:'View History',
+    reqTimer:'22hrs 47min remaining', newReqBtn:'+ Create New Request',
+    saved1Price:'₩450k / month', saved1Meta:'Studio · 20㎡ · 5min from Hongdae',
+    saved2Price:'₩380k / month', saved2Meta:'Goshiwon · 9㎡ · 3min from Sinchon',
+    saved3Price:'₩600k / month', saved3Meta:'Studio · 25㎡ · 3min from Sangsu',
+    settingsTitle1:'Account', settingsTitle2:'Notifications', settingsTitle3:'Service',
+    setNickLabel:'Nickname', setLangLabel:'Language', setLangVal:'English',
+    setNationLabel:'Nationality', setNationVal:'Japan',
+    setPushLabel:'Push Notifications', setPushSub:'Agent response alerts',
+    setChatLabel:'Chat Notifications', setChatSub:'New message alerts',
+    setTermsLabel:'Terms of Service', setPrivacyLabel:'Privacy Policy',
+    setContactLabel:'Customer Support', setLogoutLabel:'Log Out',
+    tabBarHome:'Home', tabBarMap:'Map', tabBarReq:'Request', tabBarMy:'MY',
+    logoutConfirm:'Are you sure you want to log out?',
+  },
+};
+
+let lang = localStorage.getItem('roomting_lang') || 'ja';
+
+function render() {
+
+  const _flagMap = { ko:'🇰🇷', ja:'🇯🇵', zh:'🇨🇳', en:'🌐' };
+  const _labelMap = { ko:'한국어', ja:'日本語', zh:'中文', en:'English' };
+  document.getElementById('lf').textContent = _flagMap[lang];
+  if(document.getElementById('ll')) document.getElementById('ll').textContent = _labelMap[lang];
+  const t = T[lang];
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+
+  const nick = localStorage.getItem('roomting_nickname') || 'Yuki';
+  set('profileName', nick);
+  const avatarEl = document.querySelector('.avatar');
+  if(avatarEl) avatarEl.textContent = nick.charAt(0).toUpperCase();
+
+  set('headerTitle', t.headerTitle); set('profileSub', t.profileSub); set('editBtn', t.editBtn);
+  set('statLabel1', t.statLabel1); set('statLabel2', t.statLabel2); set('statLabel3', t.statLabel3);
+  set('tabLabel0', t.tabLabel0); set('tabLabel1', t.tabLabel1); set('tabLabel2', t.tabLabel2);
+  set('statusActive', t.statusActive); set('statusClosed', t.statusClosed);
+  set('respCount1', t.respCount1); set('respBtn1', t.respBtn1);
+  set('respCount2', t.respCount2); set('respBtn2', t.respBtn2);
+  set('reqTimer', t.reqTimer);
+  set('saved1Price', t.saved1Price); set('saved1Meta', t.saved1Meta);
+  set('saved2Price', t.saved2Price); set('saved2Meta', t.saved2Meta);
+  set('saved3Price', t.saved3Price); set('saved3Meta', t.saved3Meta);
+  set('settingsTitle1', t.settingsTitle1); set('settingsTitle2', t.settingsTitle2); set('settingsTitle3', t.settingsTitle3);
+  set('setNickLabel', t.setNickLabel); set('setLangLabel', t.setLangLabel); set('setLangVal', t.setLangVal);
+  set('setNationLabel', t.setNationLabel); set('setNationVal', t.setNationVal);
+  set('setPushLabel', t.setPushLabel); set('setPushSub', t.setPushSub);
+  set('setChatLabel', t.setChatLabel); set('setChatSub', t.setChatSub);
+  set('setTermsLabel', t.setTermsLabel); set('setPrivacyLabel', t.setPrivacyLabel);
+  set('setContactLabel', t.setContactLabel); set('setLogoutLabel', t.setLogoutLabel);
+  set('tabBarHome', t.tabBarHome); set('tabBarMap', t.tabBarMap);
+  set('tabBarReq', t.tabBarReq); set('tabBarMy', t.tabBarMy);
+
+  const c1 = document.getElementById('reqChips1');
+  if(c1) c1.innerHTML = t.reqChips1.map(c=>`<span class="req-chip">${c}</span>`).join('');
+  const c2 = document.getElementById('reqChips2');
+  if(c2) c2.innerHTML = t.reqChips2.map(c=>`<span class="req-chip">${c}</span>`).join('');
+
+  document.getElementById('logoutRow').setAttribute('onclick', `if(confirm('${t.logoutConfirm}')) location.href='roomting-landing-v5.html'`);
+}
+
+function switchTab(idx) {
+  for(let i=0;i<3;i++){
+    document.getElementById(`tab${i}`).classList.toggle('active', i===idx);
+    document.getElementById(`tabContent${i}`).classList.toggle('active', i===idx);
+  }
+}
+
+function toggleLang() { document.getElementById('ldd').classList.toggle('open'); }
+function setLang(code, flag, label) {
+  lang = code;
+  localStorage.setItem('roomting_lang', code);
+  document.getElementById('lf').textContent = flag;
+  document.getElementById('ldd').classList.remove('open');
+  render();
+}
+document.addEventListener('click', e => {
+  if(!document.getElementById('langBox').contains(e.target))
+    document.getElementById('ldd').classList.remove('open');
+});
+
+render();
+</script>
+</body>
+</html>

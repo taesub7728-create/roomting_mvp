@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Roomting — 매물 상세</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #E8547A; --pink-soft: #FDEEF1; --pink-dim: #F8D6DE;
+    --ink: #1C1A19; --ink-soft: #6B6562; --line: #ECE7E3;
+    --paper: #FBFAF8; --white: #fff; --radius: 16px; --green: #2A9D5C;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'Noto Sans KR','Manrope',sans-serif; background:#ECE6E2; min-height:100vh; display:flex; justify-content:center; color:var(--ink); }
+  .frame { width:100%; max-width:430px; min-height:100vh; background:var(--paper); display:flex; flex-direction:column; position:relative; overflow-x:hidden; }
+
+  /* ── 사진 갤러리 ── */
+  .gallery { position:relative; width:100%; height:260px; background:#F3EFEB; overflow:hidden; flex-shrink:0; }
+  .gallery-slides { display:flex; height:100%; transition:transform .35s cubic-bezier(.4,0,.2,1); }
+  .gallery-slide { min-width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:64px; flex-shrink:0; }
+  .gallery-dots { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:6px; }
+  .gallery-dot { width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,0.5); transition:all .2s; }
+  .gallery-dot.active { width:16px; border-radius:3px; background:white; }
+
+  .gallery-top { position:absolute; top:0; left:0; right:0; display:flex; align-items:center; justify-content:space-between; padding:16px; }
+  .gallery-btn { width:36px; height:36px; border-radius:11px; background:rgba(255,255,255,0.92); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; text-decoration:none; color:var(--ink); }
+  .gallery-btn-heart { font-size:18px; }
+
+  .gallery-counter { position:absolute; bottom:12px; right:16px; background:rgba(28,26,25,0.55); color:white; border-radius:50px; padding:3px 10px; font-size:10.5px; font-weight:700; }
+
+  /* ── 콘텐츠 ── */
+  .content { padding:20px 22px 120px; display:flex; flex-direction:column; gap:14px; }
+
+  /* ── 가격 섹션 ── */
+  .price-section { background:var(--white); border-radius:var(--radius); padding:18px; border:1px solid var(--line); }
+  .price-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+  .price-main { font-size:22px; font-weight:800; color:var(--ink); letter-spacing:-0.5px; }
+  .price-deposit { font-size:12px; font-weight:500; color:var(--ink-soft); margin-top:3px; }
+  .badges { display:flex; gap:6px; flex-wrap:wrap; }
+  .badge { border-radius:50px; padding:4px 10px; font-size:10.5px; font-weight:700; }
+  .badge-type { background:var(--ink); color:white; }
+  .badge-jeonip-y { background:var(--white); color:var(--green); border:1px solid #B4EFD0; }
+  .badge-jeonip-n { background:#F3F0ED; color:var(--ink-soft); }
+  .badge-new { background:var(--pink-soft); color:var(--pink); border:1px solid var(--pink-dim); }
+
+  .price-meta { display:flex; gap:7px; flex-wrap:wrap; margin-top:10px; }
+  .meta-chip { background:#F3EFEB; border-radius:50px; padding:4px 11px; font-size:11.5px; font-weight:600; color:var(--ink); }
+
+  /* ── 섹션 카드 ── */
+  .section-card { background:var(--white); border-radius:var(--radius); padding:16px 18px; border:1px solid var(--line); }
+  .section-title { font-size:13.5px; font-weight:800; color:var(--ink); margin-bottom:12px; letter-spacing:-0.2px; display:flex; align-items:center; gap:7px; }
+  .section-title-icon { font-size:15px; }
+
+  /* ── 위치 ── */
+  .map-placeholder { width:100%; height:120px; border-radius:13px; background:#F3EFEB; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px; margin-bottom:10px; position:relative; overflow:hidden; border:1px solid var(--line); }
+  .map-grid { position:absolute; inset:0; background:repeating-linear-gradient(0deg, transparent, transparent 19px, #E5DFD8 19px, #E5DFD8 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, #E5DFD8 19px, #E5DFD8 20px); opacity:0.5; }
+  .map-pin-icon { font-size:24px; position:relative; z-index:1; }
+  .map-label { font-size:11.5px; font-weight:700; color:var(--pink); position:relative; z-index:1; }
+  .location-text { font-size:12.5px; font-weight:700; color:var(--ink); }
+  .location-sub { font-size:11.5px; font-weight:500; color:var(--ink-soft); margin-top:3px; }
+
+  /* ── 옵션 그리드 ── */
+  .option-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .option-item { background:#F3EFEB; border-radius:11px; padding:10px 8px; text-align:center; font-size:10.5px; font-weight:700; color:var(--ink); display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .option-item.off { opacity:0.4; }
+  .option-icon { font-size:18px; }
+
+  /* ── 중개사 ── */
+  .agency-row { display:flex; align-items:center; gap:12px; }
+  .agency-avatar { width:44px; height:44px; border-radius:13px; background:var(--pink-soft); display:flex; align-items:center; justify-content:center; font-size:21px; flex-shrink:0; }
+  .agency-info { flex:1; }
+  .agency-name { font-size:14px; font-weight:800; color:var(--ink); }
+  .agency-sub { font-size:11.5px; font-weight:500; color:var(--ink-soft); margin-top:2px; }
+  .agency-badges { display:flex; gap:5px; margin-top:6px; }
+  .agency-badge { background:#F3EFEB; border-radius:50px; padding:3px 9px; font-size:10.5px; font-weight:700; color:var(--ink-soft); }
+  .agency-contact { width:36px; height:36px; border-radius:11px; background:#F3EFEB; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:17px; }
+
+  /* ── 계약 정보 ── */
+  .info-rows { display:flex; flex-direction:column; gap:10px; }
+  .info-row { display:flex; align-items:center; justify-content:space-between; }
+  .info-label { font-size:12.5px; font-weight:600; color:var(--ink-soft); }
+  .info-value { font-size:12.5px; font-weight:800; color:var(--ink); }
+
+  /* ── 하단 CTA ── */
+  .bottom-cta { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; padding:14px 22px 32px; background:linear-gradient(to top, var(--paper) 75%, transparent); z-index:30; display:flex; gap:10px; }
+  .btn-heart { width:52px; height:52px; border-radius:15px; background:var(--white); border:1.5px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; flex-shrink:0; transition:all .15s; }
+  .btn-heart.liked { background:var(--pink-soft); border-color:var(--pink-dim); }
+  .btn-heart:active { transform:scale(.93); }
+  .btn-chat { flex:1; background:var(--pink); color:white; border:none; border-radius:15px; padding:15px; font-size:14.5px; font-weight:700; font-family:'Noto Sans KR',sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity .15s, transform .15s; }
+  .btn-chat:hover { opacity:.92; }
+  .btn-chat:active { transform:scale(.97); }
+
+  /* 언어 */
+  .lang-box { position:relative; }
+  .lang-trigger { background:rgba(255,255,255,.92); border:none; border-radius:11px; width:36px; height:36px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .lang-dd { display:none; position:absolute; top:calc(100%+6px); right:0; background:white; border-radius:14px; border:1px solid var(--line); box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; min-width:130px; z-index:100; }
+  .lang-dd.open { display:block; }
+  .lang-dd div { padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; color:var(--ink); }
+  .lang-dd div:hover { background:var(--pink-soft); }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .content > * { animation:fadeUp .4s both; }
+  .content > *:nth-child(1){animation-delay:.05s} .content > *:nth-child(2){animation-delay:.1s}
+  .content > *:nth-child(3){animation-delay:.15s} .content > *:nth-child(4){animation-delay:.2s}
+  .content > *:nth-child(5){animation-delay:.25s} .content > *:nth-child(6){animation-delay:.3s}
+</style>
+</head>
+<body>
+<div class="frame" id="app">
+
+  <div class="gallery" id="gallery">
+    <div class="gallery-slides" id="slides">
+      <div class="gallery-slide" style="background:#F3EFEB;">🛏️</div>
+      <div class="gallery-slide" style="background:#EDEEEB;">🚿</div>
+      <div class="gallery-slide" style="background:#F0EFE9;">🍳</div>
+      <div class="gallery-slide" style="background:#F4F0EA;">🪟</div>
+    </div>
+
+    <div class="gallery-top">
+      <a class="gallery-btn" href="roomting-map-v2.html">←</a>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="lang-box" id="langBox">
+          <button class="lang-trigger" onclick="toggleLang()"><span id="lf">🇰🇷</span></button>
+          <div class="lang-dd" id="ldd">
+            <div onclick="setLang('ko','🇰🇷')">🇰🇷 한국어</div>
+            <div onclick="setLang('ja','🇯🇵')">🇯🇵 日本語</div>
+            <div onclick="setLang('zh','🇨🇳')">🇨🇳 中文</div>
+            <div onclick="setLang('en','🌐')">🌐 English</div>
+          </div>
+        </div>
+        <button class="gallery-btn gallery-btn-heart" id="heartBtn" onclick="toggleHeart()">♡</button>
+      </div>
+    </div>
+
+    <div class="gallery-dots" id="dots"></div>
+    <div class="gallery-counter" id="counter">1 / 4</div>
+  </div>
+
+  <div class="content">
+
+    <div class="price-section">
+      <div class="price-top">
+        <div>
+          <div class="price-main" id="priceMain">월 45만원</div>
+          <div class="price-deposit" id="priceDeposit">보증금 300만원</div>
+        </div>
+        <div class="badges" id="badges"></div>
+      </div>
+      <div class="price-meta" id="priceMeta"></div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><span class="section-title-icon">📍</span><span id="locTitle">위치</span></div>
+      <div class="map-placeholder">
+        <div class="map-grid"></div>
+        <div class="map-pin-icon">📍</div>
+        <div class="map-label" id="mapLabel">홍대입구역 도보 5분</div>
+      </div>
+      <div class="location-text" id="locText">서울 마포구 서교동</div>
+      <div class="location-sub" id="locSub">2호선 홍대입구역 5번 출구에서 도보 5분</div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><span class="section-title-icon">📋</span><span id="contractTitle">계약 정보</span></div>
+      <div class="info-rows" id="infoRows"></div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><span class="section-title-icon">✨</span><span id="optionTitle">옵션</span></div>
+      <div class="option-grid" id="optionGrid"></div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><span class="section-title-icon">🏢</span><span id="agencyTitle">중개사 정보</span></div>
+      <div class="agency-row">
+        <div class="agency-avatar">🏢</div>
+        <div class="agency-info">
+          <div class="agency-name" id="agencyName">홍대 으뜸 공인중개사</div>
+          <div class="agency-sub" id="agencySub">홍대입구역 도보 3분 · 외국인 전문</div>
+          <div class="agency-badges" id="agencyBadges"></div>
+        </div>
+        <button class="agency-contact" onclick="goChat()">💬</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom-cta">
+    <button class="btn-heart" id="bottomHeart" onclick="toggleHeart()">♡</button>
+    <button class="btn-chat" onclick="goChat()">
+      <span>💬</span><span id="chatBtnLabel">중개사에게 문의하기</span>
+    </button>
+  </div>
+
+</div>
+<script>
+const T = {
+  ko: {
+    priceMain:'월 45만원', priceDeposit:'보증금 300만원',
+    badges:['원룸','전입신고 가능','NEW'],
+    priceMeta:['20㎡','6개월 계약','즉시 입주'],
+    locTitle:'위치', mapLabel:'홍대입구역 도보 5분',
+    locText:'서울 마포구 서교동', locSub:'2호선 홍대입구역 5번 출구에서 도보 5분',
+    contractTitle:'계약 정보',
+    infoRows:[['월세','45만원'],['보증금','300만원'],['계약기간','6개월 이상'],['입주가능일','즉시 입주'],['전입신고','가능'],['관리비','5만원 (수도/전기 별도)']],
+    optionTitle:'옵션',
+    options:[{icon:'🧺',label:'세탁기',on:true},{icon:'❄️',label:'에어컨',on:true},{icon:'🔥',label:'냉장고',on:true},{icon:'📺',label:'TV',on:true},{icon:'🛋️',label:'침대',on:true},{icon:'🅿️',label:'주차',on:false},{icon:'🐾',label:'반려동물',on:false},{icon:'🏋️',label:'헬스장',on:false},{icon:'🔒',label:'보안카메라',on:true}],
+    agencyTitle:'중개사 정보', agencyName:'홍대 으뜸 공인중개사', agencySub:'홍대입구역 도보 3분 · 외국인 전문',
+    agencyBadges:['일본어 가능','영어 가능','5년 경력'], chatBtnLabel:'중개사에게 문의하기',
+  },
+  ja: {
+    priceMain:'月45万ウォン', priceDeposit:'保証金300万ウォン',
+    badges:['ワンルーム','転入届可','NEW'],
+    priceMeta:['20㎡','6ヶ月契約','即入居可'],
+    locTitle:'場所', mapLabel:'弘大入口駅 徒歩5分',
+    locText:'ソウル麻浦区西橋洞', locSub:'2号線 弘大入口駅 5番出口から徒歩5分',
+    contractTitle:'契約情報',
+    infoRows:[['家賃','45万ウォン'],['保証金','300万ウォン'],['契約期間','6ヶ月以上'],['入居可能日','即入居可'],['転入届','可能'],['管理費','5万ウォン (水道/電気別途)']],
+    optionTitle:'オプション',
+    options:[{icon:'🧺',label:'洗濯機',on:true},{icon:'❄️',label:'エアコン',on:true},{icon:'🔥',label:'冷蔵庫',on:true},{icon:'📺',label:'TV',on:true},{icon:'🛋️',label:'ベッド',on:true},{icon:'🅿️',label:'駐車場',on:false},{icon:'🐾',label:'ペット可',on:false},{icon:'🏋️',label:'ジム',on:false},{icon:'🔒',label:'防犯カメラ',on:true}],
+    agencyTitle:'仲介業者情報', agencyName:'ウットゥム仲介業者', agencySub:'弘大入口駅 徒歩3分 · 外国人専門',
+    agencyBadges:['日本語対応','英語対応','経験5年'], chatBtnLabel:'仲介業者に問い合わせる',
+  },
+  zh: {
+    priceMain:'月租45万韩元', priceDeposit:'押金300万韩元',
+    badges:['单间','可迁入登记','NEW'],
+    priceMeta:['20㎡','6个月合约','即可入住'],
+    locTitle:'位置', mapLabel:'弘大入口站步行5分钟',
+    locText:'首尔麻浦区西桥洞', locSub:'2号线弘大入口站5号出口步行5分钟',
+    contractTitle:'合约信息',
+    infoRows:[['月租','45万韩元'],['押金','300万韩元'],['合约期限','6个月以上'],['入住日期','即可入住'],['迁入登记','可以'],['管理费','5万韩元 (水电另计)']],
+    optionTitle:'配置',
+    options:[{icon:'🧺',label:'洗衣机',on:true},{icon:'❄️',label:'空调',on:true},{icon:'🔥',label:'冰箱',on:true},{icon:'📺',label:'电视',on:true},{icon:'🛋️',label:'床',on:true},{icon:'🅿️',label:'停车场',on:false},{icon:'🐾',label:'可养宠物',on:false},{icon:'🏋️',label:'健身房',on:false},{icon:'🔒',label:'监控摄像',on:true}],
+    agencyTitle:'中介信息', agencyName:'弘大으뜸中介', agencySub:'弘大入口站步行3分钟 · 外国人专属',
+    agencyBadges:['日语服务','英语服务','5年经验'], chatBtnLabel:'联系中介',
+  },
+  en: {
+    priceMain:'₩450k / month', priceDeposit:'Deposit ₩3M',
+    badges:['Studio','Address Reg. OK','NEW'],
+    priceMeta:['20㎡','6-month lease','Move in now'],
+    locTitle:'Location', mapLabel:'5 min walk from Hongdae Stn.',
+    locText:'Seogyo-dong, Mapo-gu, Seoul', locSub:'5 min walk from Exit 5, Hongdae Stn. (Line 2)',
+    contractTitle:'Contract Info',
+    infoRows:[['Monthly Rent','₩450,000'],['Deposit','₩3,000,000'],['Lease Term','6 months+'],['Move-in','Immediately'],['Address Reg.','Available'],['Maintenance','₩50k (utilities extra)']],
+    optionTitle:'Options',
+    options:[{icon:'🧺',label:'Washer',on:true},{icon:'❄️',label:'A/C',on:true},{icon:'🔥',label:'Fridge',on:true},{icon:'📺',label:'TV',on:true},{icon:'🛋️',label:'Bed',on:true},{icon:'🅿️',label:'Parking',on:false},{icon:'🐾',label:'Pets',on:false},{icon:'🏋️',label:'Gym',on:false},{icon:'🔒',label:'CCTV',on:true}],
+    agencyTitle:'Agent Info', agencyName:'Hongdae Eutteum Agency', agencySub:'3 min walk from Hongdae Stn. · Foreign specialist',
+    agencyBadges:['Japanese OK','English OK','5yrs exp.'], chatBtnLabel:'Chat with Agent',
+  },
+};
+
+let lang = localStorage.getItem('roomting_lang') || 'ko';
+let liked = false;
+let currentSlide = 0;
+const totalSlides = 4;
+
+function render() {
+
+  const _flagMap = { ko:'🇰🇷', ja:'🇯🇵', zh:'🇨🇳', en:'🌐' };
+  const _labelMap = { ko:'한국어', ja:'日本語', zh:'中文', en:'English' };
+  document.getElementById('lf').textContent = _flagMap[lang];
+  const t = T[lang];
+  document.getElementById('priceMain').textContent = t.priceMain;
+  document.getElementById('priceDeposit').textContent = t.priceDeposit;
+
+  const badgeClasses = ['badge-type', 'badge-jeonip-y', 'badge-new'];
+  document.getElementById('badges').innerHTML = t.badges
+    .map((b,i) => `<span class="badge ${badgeClasses[i]}">${b}</span>`).join('');
+
+  document.getElementById('priceMeta').innerHTML = t.priceMeta
+    .map(m => `<span class="meta-chip">${m}</span>`).join('');
+
+  document.getElementById('locTitle').textContent = t.locTitle;
+  document.getElementById('mapLabel').textContent = t.mapLabel;
+  document.getElementById('locText').textContent = t.locText;
+  document.getElementById('locSub').textContent = t.locSub;
+
+  document.getElementById('contractTitle').textContent = t.contractTitle;
+  document.getElementById('infoRows').innerHTML = t.infoRows
+    .map(([label, value]) => `<div class="info-row"><span class="info-label">${label}</span><span class="info-value">${value}</span></div>`).join('');
+
+  document.getElementById('optionTitle').textContent = t.optionTitle;
+  document.getElementById('optionGrid').innerHTML = t.options
+    .map(o => `<div class="option-item ${o.on ? '' : 'off'}"><span class="option-icon">${o.icon}</span><span>${o.label}</span></div>`).join('');
+
+  document.getElementById('agencyTitle').textContent = t.agencyTitle;
+  document.getElementById('agencyName').textContent = t.agencyName;
+  document.getElementById('agencySub').textContent = t.agencySub;
+  document.getElementById('agencyBadges').innerHTML = t.agencyBadges
+    .map(b => `<span class="agency-badge">${b}</span>`).join('');
+  document.getElementById('chatBtnLabel').textContent = t.chatBtnLabel;
+}
+
+function initGallery() {
+  const dots = document.getElementById('dots');
+  dots.innerHTML = '';
+  for (let i = 0; i < totalSlides; i++) {
+    const d = document.createElement('div');
+    d.className = 'gallery-dot' + (i === 0 ? ' active' : '');
+    dots.appendChild(d);
+  }
+  let startX = 0;
+  const gallery = document.getElementById('gallery');
+  gallery.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+  gallery.addEventListener('touchend', e => {
+    const diff = startX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) goSlide(diff > 0 ? 1 : -1);
+  });
+}
+
+function goSlide(dir) {
+  currentSlide = (currentSlide + dir + totalSlides) % totalSlides;
+  document.getElementById('slides').style.transform = `translateX(-${currentSlide * 100}%)`;
+  document.getElementById('counter').textContent = `${currentSlide + 1} / ${totalSlides}`;
+  document.querySelectorAll('.gallery-dot').forEach((d, i) => d.classList.toggle('active', i === currentSlide));
+}
+
+function toggleHeart() {
+  liked = !liked;
+  const icon = liked ? '♥' : '♡';
+  document.getElementById('heartBtn').textContent = icon;
+  document.getElementById('bottomHeart').textContent = icon;
+  document.getElementById('bottomHeart').classList.toggle('liked', liked);
+}
+
+function goChat() { window.location.href = 'roomting-chat-v2.html'; }
+
+function toggleLang() { document.getElementById('ldd').classList.toggle('open'); }
+function setLang(code, flag) {
+  lang = code;
+  localStorage.setItem('roomting_lang', code);
+  document.getElementById('lf').textContent = flag;
+  document.getElementById('ldd').classList.remove('open');
+  render();
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('langBox').contains(e.target))
+    document.getElementById('ldd').classList.remove('open');
+});
+
+initGallery();
+render();
+</script>
+</body>
+</html>

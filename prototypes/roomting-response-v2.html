@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Roomting — 요청 응답</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #E8547A; --pink-soft: #FDEEF1; --pink-dim: #F8D6DE;
+    --ink: #1C1A19; --ink-soft: #6B6562; --line: #ECE7E3;
+    --paper: #FBFAF8; --white: #fff; --radius: 16px; --green: #2A9D5C;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'Noto Sans KR','Manrope',sans-serif; background:#ECE6E2; min-height:100vh; display:flex; justify-content:center; color:var(--ink); }
+  .frame { width:100%; max-width:430px; min-height:100vh; background:var(--paper); display:flex; flex-direction:column; position:relative; overflow-x:hidden; }
+
+  /* ── TOP BAR ── */
+  .top-bar { display:flex; align-items:center; gap:12px; padding:18px 22px 0; position:sticky; top:0; background:var(--paper); z-index:20; }
+  .back-btn { width:36px; height:36px; border-radius:11px; background:var(--white); border:1px solid var(--line); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--ink); text-decoration:none; flex-shrink:0; }
+  .top-title { font-size:16px; font-weight:800; color:var(--ink); letter-spacing:-0.3px; }
+
+  .lang-box { margin-left:auto; position:relative; }
+  .lang-trigger { background:var(--white); border:1px solid var(--line); border-radius:20px; padding:6px 11px; font-size:12px; font-weight:600; color:var(--ink); cursor:pointer; display:flex; align-items:center; gap:5px; font-family:'Noto Sans KR',sans-serif; }
+  .lang-dd { display:none; position:absolute; top:calc(100%+8px); right:0; background:white; border-radius:14px; border:1px solid var(--line); box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; min-width:130px; z-index:100; }
+  .lang-dd.open { display:block; }
+  .lang-dd div { padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; color:var(--ink); }
+  .lang-dd div:hover { background:var(--pink-soft); }
+
+  /* ── BODY ── */
+  .body { padding:20px 22px 110px; display:flex; flex-direction:column; gap:16px; }
+
+  /* ── 요청 요약 카드 ── */
+  .request-card { background:var(--white); border-radius:var(--radius); padding:16px 18px; border:1px solid var(--line); }
+  .request-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .request-label { font-size:11.5px; font-weight:700; color:var(--pink); background:var(--pink-soft); border-radius:50px; padding:4px 10px; }
+  .request-status { display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:var(--green); }
+  .status-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .request-summary { display:flex; flex-wrap:wrap; gap:7px; }
+  .summary-chip { background:var(--paper); border:1px solid var(--line); border-radius:50px; padding:5px 11px; font-size:11.5px; font-weight:600; color:var(--ink); }
+
+  /* ── 타이머 카드 ── */
+  .timer-card { background:var(--white); border:1.5px solid var(--pink-dim); border-radius:var(--radius); padding:20px; text-align:center; }
+  .timer-label { font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:14px; }
+  .timer-display { display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:10px; }
+  .timer-block { display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .timer-num { background:var(--pink-soft); border-radius:11px; padding:8px 13px; font-size:24px; font-weight:800; color:var(--pink); font-family:'Manrope',sans-serif; letter-spacing:-0.5px; min-width:48px; text-align:center; }
+  .timer-unit { font-size:10.5px; font-weight:700; color:var(--ink-soft); }
+  .timer-colon { font-size:22px; font-weight:800; color:#D8D2CD; margin-bottom:14px; }
+  .timer-sub { font-size:11.5px; font-weight:500; color:var(--ink-soft); }
+
+  /* ── 섹션 헤더 ── */
+  .section-header { display:flex; align-items:center; justify-content:space-between; padding:0 2px; }
+  .section-title { font-size:15px; font-weight:800; color:var(--ink); letter-spacing:-0.2px; }
+  .section-count { font-size:11.5px; font-weight:700; color:var(--pink); background:var(--pink-soft); border-radius:50px; padding:3px 9px; }
+
+  /* ── 응답 카드 ── */
+  .response-card { background:var(--white); border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); transition:border-color .15s; }
+  .response-card.new-response { border-color:var(--pink-dim); }
+
+  .resp-img { width:100%; height:140px; display:flex; align-items:center; justify-content:center; font-size:44px; position:relative; background:#F3EFEB; }
+  .new-badge { position:absolute; top:11px; left:11px; background:var(--green); color:white; border-radius:50px; padding:4px 10px; font-size:10.5px; font-weight:700; }
+  .resp-type-badge { position:absolute; top:11px; right:11px; background:var(--ink); color:white; border-radius:50px; padding:4px 10px; font-size:10.5px; font-weight:700; }
+  .jeonip-badge { position:absolute; bottom:11px; left:11px; background:white; color:var(--green); border:1px solid #B4EFD0; border-radius:50px; padding:4px 10px; font-size:10.5px; font-weight:700; }
+  .jeonip-badge.no { color:var(--ink-soft); border-color:var(--line); }
+
+  .resp-body { padding:14px 16px; }
+  .resp-agency { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .agency-avatar { width:30px; height:30px; border-radius:10px; background:var(--pink-soft); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+  .agency-name { font-size:12.5px; font-weight:800; color:var(--ink); }
+  .agency-dist { font-size:11px; font-weight:500; color:var(--ink-soft); margin-top:1px; }
+
+  .resp-price { font-size:19px; font-weight:800; color:var(--ink); letter-spacing:-0.4px; margin-bottom:5px; }
+  .resp-price .deposit { font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-left:6px; }
+
+  .resp-meta { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .resp-meta span { font-size:11.5px; font-weight:600; color:var(--ink-soft); background:var(--paper); border:1px solid var(--line); border-radius:50px; padding:3px 10px; }
+
+  .resp-message { background:var(--paper); border-radius:11px; padding:10px 12px; font-size:12.5px; font-weight:500; color:var(--ink); line-height:1.6; margin-bottom:12px; border-left:2.5px solid var(--pink-dim); }
+
+  .resp-actions { display:flex; gap:8px; }
+  .resp-btn { flex:1; padding:11px; border-radius:12px; border:none; cursor:pointer; font-size:13px; font-weight:700; font-family:'Noto Sans KR',sans-serif; transition:opacity .15s, transform .15s; }
+  .resp-btn:active { transform:scale(.96); }
+  .btn-secondary { background:var(--white); color:var(--ink); border:1px solid var(--line); }
+  .btn-primary { background:var(--pink); color:white; }
+  .btn-primary:hover { opacity:.92; }
+
+  /* 대기 중 카드 */
+  .waiting-card { background:var(--white); border-radius:var(--radius); padding:24px 18px; text-align:center; border:1.5px dashed var(--line); }
+  .waiting-emoji { font-size:28px; margin-bottom:8px; opacity:0.6; }
+  .waiting-text { font-size:12.5px; font-weight:600; color:var(--ink-soft); line-height:1.6; }
+
+  /* ── 하단 버튼 ── */
+  .bottom-cta { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; padding:14px 22px 32px; background:linear-gradient(to top, var(--paper) 75%, transparent); z-index:30; }
+  .end-btn { width:100%; background:var(--white); color:var(--pink); border:1.5px solid var(--pink-dim); border-radius:14px; padding:15px; font-size:14px; font-weight:700; font-family:'Noto Sans KR',sans-serif; cursor:pointer; transition:background .15s; }
+  .end-btn:hover { background:var(--pink-soft); }
+</style>
+</head>
+<body>
+<div class="frame" id="app">
+
+  <div class="top-bar">
+    <a class="back-btn" href="roomting-request-v4.html">←</a>
+    <div class="top-title" id="topTitle">요청 응답 현황</div>
+    <div class="lang-box" id="langBox">
+      <button class="lang-trigger" onclick="toggleLang()">
+        <span id="lf">🇯🇵</span><span id="ll">日本語</span>
+      </button>
+      <div class="lang-dd" id="ldd">
+        <div onclick="setLang('ko','🇰🇷')">🇰🇷 한국어</div>
+        <div onclick="setLang('ja','🇯🇵')">🇯🇵 日本語</div>
+        <div onclick="setLang('zh','🇨🇳')">🇨🇳 中文</div>
+        <div onclick="setLang('en','🌐')">🌐 English</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- 요청 요약 -->
+    <div class="request-card">
+      <div class="request-card-header">
+        <span class="request-label" id="reqLabel">내 요청서</span>
+        <div class="request-status"><div class="status-dot"></div><span id="reqStatus">응답 대기 중</span></div>
+      </div>
+      <div class="request-summary" id="reqSummary"></div>
+    </div>
+
+    <!-- 타이머 -->
+    <div class="timer-card">
+      <div class="timer-label" id="timerLabel">요청 종료까지 남은 시간</div>
+      <div class="timer-display">
+        <div class="timer-block"><div class="timer-num" id="timerH">22</div><div class="timer-unit" id="unitH">시간</div></div>
+        <div class="timer-colon">:</div>
+        <div class="timer-block"><div class="timer-num" id="timerM">47</div><div class="timer-unit" id="unitM">분</div></div>
+        <div class="timer-colon">:</div>
+        <div class="timer-block"><div class="timer-num" id="timerS">33</div><div class="timer-unit" id="unitS">초</div></div>
+      </div>
+      <div class="timer-sub" id="timerSub">24시간 안에 부동산에서 응답이 도착해요</div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title" id="sectionTitle">부동산 응답</div>
+      <div class="section-count">2</div>
+    </div>
+
+    <!-- 응답 카드 1 -->
+    <div class="response-card new-response">
+      <div class="resp-img">
+        🏠
+        <div class="new-badge" id="newBadge">NEW</div>
+        <div class="resp-type-badge" id="type1">원룸</div>
+        <div class="jeonip-badge" id="jeonip1">전입신고 가능</div>
+      </div>
+      <div class="resp-body">
+        <div class="resp-agency">
+          <div class="agency-avatar">🏢</div>
+          <div>
+            <div class="agency-name" id="agency1Name">홍대 으뜸 공인중개사</div>
+            <div class="agency-dist" id="agency1Dist">홍대입구역 도보 5분</div>
+          </div>
+        </div>
+        <div class="resp-price" id="price1">월 45만원<span class="deposit" id="deposit1">보증금 300만원</span></div>
+        <div class="resp-meta" id="meta1"></div>
+        <div class="resp-message" id="msg1">안녕하세요! 조건에 딱 맞는 매물 찾았어요. 햇빛 잘 들고 역세권이에요.</div>
+        <div class="resp-actions">
+          <button class="resp-btn btn-secondary" id="detailBtn1" onclick="location.href='roomting-detail-v2.html'">상세 보기</button>
+          <button class="resp-btn btn-primary" id="chatBtn1" onclick="location.href='roomting-chat-v2.html'">방문 예약</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 응답 카드 2 -->
+    <div class="response-card">
+      <div class="resp-img">
+        🏘️
+        <div class="resp-type-badge" id="type2">고시원</div>
+        <div class="jeonip-badge no" id="jeonip2">전입신고 불가</div>
+      </div>
+      <div class="resp-body">
+        <div class="resp-agency">
+          <div class="agency-avatar">🏠</div>
+          <div>
+            <div class="agency-name" id="agency2Name">신촌 외국인 전문 에이전트</div>
+            <div class="agency-dist" id="agency2Dist">신촌역 도보 3분</div>
+          </div>
+        </div>
+        <div class="resp-price" id="price2">월 38만원<span class="deposit" id="deposit2">보증금 없음</span></div>
+        <div class="resp-meta" id="meta2"></div>
+        <div class="resp-message" id="msg2">보증금 없이 바로 입주 가능해요! 일본어 가능한 직원이 있어요.</div>
+        <div class="resp-actions">
+          <button class="resp-btn btn-secondary" id="detailBtn2" onclick="location.href='roomting-detail-v2.html'">상세 보기</button>
+          <button class="resp-btn btn-primary" id="chatBtn2" onclick="location.href='roomting-chat-v2.html'">방문 예약</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 대기 중 -->
+    <div class="waiting-card">
+      <div class="waiting-emoji">⏳</div>
+      <div class="waiting-text" id="waitingText">더 많은 부동산이 응답 중이에요<br>조금만 기다려주세요</div>
+    </div>
+
+  </div>
+
+  <div class="bottom-cta">
+    <button class="end-btn" id="endBtn" onclick="confirmEnd()">요청 종료하기</button>
+  </div>
+
+</div>
+
+<script>
+const T = {
+  ko: {
+    topTitle:'요청 응답 현황', reqLabel:'내 요청서', reqStatus:'응답 대기 중',
+    reqSummary:['📍 홍대입구','💰 월 70만원 이하','🏠 원룸','✅ 전입신고 가능'],
+    timerLabel:'요청 종료까지 남은 시간', unitH:'시간', unitM:'분', unitS:'초',
+    timerSub:'24시간 안에 부동산에서 응답이 도착해요',
+    sectionTitle:'부동산 응답', newBadge:'NEW',
+    type1:'원룸', jeonip1:'전입신고 가능',
+    agency1Name:'홍대 으뜸 공인중개사', agency1Dist:'홍대입구역 도보 5분',
+    price1:'월 45만원', deposit1:'보증금 300만원',
+    meta1:['원룸 · 20㎡','6개월 계약','즉시 입주'],
+    msg1:'안녕하세요! 조건에 딱 맞는 매물 찾았어요. 햇빛 잘 들고 역세권이에요.',
+    type2:'고시원', jeonip2:'전입신고 불가',
+    agency2Name:'신촌 외국인 전문 에이전트', agency2Dist:'신촌역 도보 3분',
+    price2:'월 38만원', deposit2:'보증금 없음',
+    meta2:['고시원 · 9㎡','1개월~ 계약'],
+    msg2:'보증금 없이 바로 입주 가능해요! 일본어 가능한 직원이 있어요.',
+    detailBtn:'상세 보기', chatBtn:'방문 예약',
+    waitingText:'더 많은 부동산이 응답 중이에요<br>조금만 기다려주세요',
+    endBtn:'요청 종료하기',
+    confirmMsg:'정말 요청을 종료할까요?\n아직 응답이 더 올 수 있어요!',
+  },
+  ja: {
+    topTitle:'リクエスト応答状況', reqLabel:'マイリクエスト', reqStatus:'応答待ち',
+    reqSummary:['📍 弘大入口','💰 月70万W以下','🏠 ワンルーム','✅ 転入届可'],
+    timerLabel:'リクエスト終了まで', unitH:'時間', unitM:'分', unitS:'秒',
+    timerSub:'24時間以内に不動産から返答が届きます',
+    sectionTitle:'不動産からの返答', newBadge:'NEW',
+    type1:'ワンルーム', jeonip1:'転入届可',
+    agency1Name:'弘大ウットゥム仲介業者', agency1Dist:'弘大入口駅 徒歩5分',
+    price1:'月45万ウォン', deposit1:'保証金300万ウォン',
+    meta1:['ワンルーム · 20㎡','6ヶ月契約','即入居可'],
+    msg1:'こんにちは！条件にぴったりの物件を見つけました。日当たりよく駅近です。',
+    type2:'コシウォン', jeonip2:'転入届不可',
+    agency2Name:'新村外国人専門エージェント', agency2Dist:'新村駅 徒歩3分',
+    price2:'月38万ウォン', deposit2:'保証金なし',
+    meta2:['コシウォン · 9㎡','1ヶ月~契約'],
+    msg2:'保証金なしですぐ入居可能です！日本語対応スタッフがいます。',
+    detailBtn:'詳細を見る', chatBtn:'内見予約',
+    waitingText:'もっと多くの不動産が返答中です<br>少々お待ちください',
+    endBtn:'リクエストを終了する',
+    confirmMsg:'リクエストを終了しますか？\nまだ返答が来るかもしれません！',
+  },
+  zh: {
+    topTitle:'请求响应状态', reqLabel:'我的请求', reqStatus:'等待回复',
+    reqSummary:['📍 弘大入口','💰 月租70万以下','🏠 单间','✅ 可迁入登记'],
+    timerLabel:'请求结束倒计时', unitH:'小时', unitM:'分', unitS:'秒',
+    timerSub:'24小时内将收到中介的回复',
+    sectionTitle:'中介回复', newBadge:'NEW',
+    type1:'单间', jeonip1:'可迁入登记',
+    agency1Name:'弘大首席中介', agency1Dist:'弘大入口站步行5分钟',
+    price1:'月租45万', deposit1:'押金300万',
+    meta1:['单间 · 20㎡','6个月合约','即可入住'],
+    msg1:'你好！找到了完全符合条件的房源。采光好，靠近地铁站。',
+    type2:'考试院', jeonip2:'不可迁入登记',
+    agency2Name:'新村外国人专属中介', agency2Dist:'新村站步行3分钟',
+    price2:'月租38万', deposit2:'无押金',
+    meta2:['考试院 · 9㎡','1个月起合约'],
+    msg2:'无押金即可入住！有日语工作人员。',
+    detailBtn:'查看详情', chatBtn:'预约看房',
+    waitingText:'更多中介正在回复中<br>请稍等片刻',
+    endBtn:'结束请求',
+    confirmMsg:'确定要结束请求吗？\n可能还有更多回复！',
+  },
+  en: {
+    topTitle:'Request Responses', reqLabel:'My Request', reqStatus:'Awaiting',
+    reqSummary:['📍 Hongdae','💰 Max ₩700k/mo','🏠 Studio','✅ Address Reg.'],
+    timerLabel:'Time remaining', unitH:'hrs', unitM:'min', unitS:'sec',
+    timerSub:'Agents will respond within 24 hours',
+    sectionTitle:'Agent Responses', newBadge:'NEW',
+    type1:'Studio', jeonip1:'Address Reg. OK',
+    agency1Name:'Hongdae Top Agency', agency1Dist:'5 min walk from Hongdae Stn.',
+    price1:'₩450k/mo', deposit1:'Dep. ₩3M',
+    meta1:['Studio · 20㎡','6-month lease','Move in now'],
+    msg1:'Hello! Found a perfect match for your needs. Great sunlight, close to subway.',
+    type2:'Goshiwon', jeonip2:'No Address Reg.',
+    agency2Name:'Sinchon Foreign Agent', agency2Dist:'3 min walk from Sinchon Stn.',
+    price2:'₩380k/mo', deposit2:'No deposit',
+    meta2:['Goshiwon · 9㎡','From 1 month'],
+    msg2:'Move in right away with no deposit! Japanese-speaking staff available.',
+    detailBtn:'Details', chatBtn:'Book Visit',
+    waitingText:'More agents are responding<br>Please wait a moment',
+    endBtn:'End Request',
+    confirmMsg:'End this request?\nMore responses may still be coming!',
+  },
+};
+
+let lang = localStorage.getItem('roomting_lang') || 'ja';
+let totalSec = 22*3600 + 47*60 + 33;
+
+function render() {
+
+  const _flagMap = { ko:'🇰🇷', ja:'🇯🇵', zh:'🇨🇳', en:'🌐' };
+  const _labelMap = { ko:'한국어', ja:'日本語', zh:'中文', en:'English' };
+  document.getElementById('lf').textContent = _flagMap[lang];
+  if(document.getElementById('ll')) document.getElementById('ll').textContent = _labelMap[lang];
+  const t = T[lang];
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+
+  set('topTitle', t.topTitle); set('reqLabel', t.reqLabel); set('reqStatus', t.reqStatus);
+  document.getElementById('reqSummary').innerHTML = t.reqSummary.map(s=>`<span class="summary-chip">${s}</span>`).join('');
+  set('timerLabel', t.timerLabel); set('unitH', t.unitH); set('unitM', t.unitM); set('unitS', t.unitS);
+  set('timerSub', t.timerSub); set('sectionTitle', t.sectionTitle); set('newBadge', t.newBadge);
+
+  set('type1', t.type1); set('jeonip1', t.jeonip1);
+  set('agency1Name', t.agency1Name); set('agency1Dist', t.agency1Dist);
+  document.getElementById('price1').innerHTML = `${t.price1}<span class="deposit">${t.deposit1}</span>`;
+  document.getElementById('meta1').innerHTML = t.meta1.map(m=>`<span>${m}</span>`).join('');
+  set('msg1', t.msg1); set('detailBtn1', t.detailBtn); set('chatBtn1', t.chatBtn);
+
+  set('type2', t.type2); set('jeonip2', t.jeonip2);
+  set('agency2Name', t.agency2Name); set('agency2Dist', t.agency2Dist);
+  document.getElementById('price2').innerHTML = `${t.price2}<span class="deposit">${t.deposit2}</span>`;
+  document.getElementById('meta2').innerHTML = t.meta2.map(m=>`<span>${m}</span>`).join('');
+  set('msg2', t.msg2); set('detailBtn2', t.detailBtn); set('chatBtn2', t.chatBtn);
+
+  document.getElementById('waitingText').innerHTML = t.waitingText;
+  set('endBtn', t.endBtn);
+}
+
+function updateTimer() {
+  if (totalSec <= 0) return;
+  totalSec--;
+  const h = Math.floor(totalSec/3600), m = Math.floor((totalSec%3600)/60), s = totalSec%60;
+  document.getElementById('timerH').textContent = String(h).padStart(2,'0');
+  document.getElementById('timerM').textContent = String(m).padStart(2,'0');
+  document.getElementById('timerS').textContent = String(s).padStart(2,'0');
+}
+setInterval(updateTimer, 1000);
+
+function confirmEnd() {
+  if (confirm(T[lang].confirmMsg)) window.location.href = 'roomting-landing-v5.html';
+}
+
+function toggleLang() { document.getElementById('ldd').classList.toggle('open'); }
+function setLang(code, flag) {
+  lang = code;
+  localStorage.setItem('roomting_lang', code);
+  document.getElementById('lf').textContent = flag;
+  document.getElementById('ll').textContent = code==='ko'?'한국어':code==='ja'?'日本語':code==='zh'?'中文':'English';
+  document.getElementById('ldd').classList.remove('open');
+  render();
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('langBox').contains(e.target))
+    document.getElementById('ldd').classList.remove('open');
+});
+
+render();
+</script>
+</body>
+</html>

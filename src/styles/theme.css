@@ -1,0 +1,138 @@
+/* 룸팅 전체 화면에서 공통으로 쓰는 색상/간격 값과 기본 리셋
+   프로토타입(roomting-*.html)의 :root 변수 값을 그대로 가져옴 - 디자인 톤 유지 */
+:root {
+  --pink: #E8547A;
+  --pink-soft: #FDEEF1;
+  --pink-dim: #F8D6DE;
+  --ink: #1C1A19;
+  --ink-soft: #6B6562;
+  --line: #ECE7E3;
+  --paper: #FBFAF8;
+  --white: #fff;
+  --radius: 16px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Noto Sans KR', 'Manrope', sans-serif;
+  background: #ECE6E2;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  color: var(--ink);
+}
+
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* 모바일 앱처럼 보이도록 화면을 430px 폭 프레임 안에 가두는 공통 컨테이너 */
+.frame {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* 로고 (헤더에서 반복 사용) */
+.rt-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rt-logo-mark {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.rt-logo-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.rt-logo-name {
+  font-family: 'Manrope', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  letter-spacing: -0.2px;
+}
+.rt-logo-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--line);
+  margin: 0 1px;
+}
+.rt-logo-tagline {
+  font-size: 12px;
+  font-weight: 600;
+  color: #B5ADA7;
+  letter-spacing: -0.1px;
+}
+
+/* 여러 화면에서 재사용하는 기본 버튼 */
+.rt-btn-primary {
+  width: 100%;
+  background: var(--pink);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif;
+  cursor: pointer;
+  transition: opacity .15s, transform .15s;
+}
+.rt-btn-primary:hover { opacity: 0.92; }
+.rt-btn-primary:active { transform: scale(.98); }
+.rt-btn-primary:disabled { opacity: 0.3; cursor: default; }
+
+.rt-btn-secondary {
+  width: 100%;
+  background: var(--white);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif;
+  cursor: pointer;
+}
+
+.rt-input {
+  width: 100%;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: 13px;
+  padding: 15px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  font-family: 'Noto Sans KR', sans-serif;
+  outline: none;
+  transition: border-color .15s;
+}
+.rt-input:focus { border-color: var(--pink); }
+.rt-input::placeholder { color: #C9C2BC; font-weight: 500; }
+
+/* 화면 하단에 고정되는 안내 문구용 에러 메시지 (Supabase 등 외부 요청 실패 시 표시) */
+.rt-error-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--pink);
+  margin-top: 8px;
+  line-height: 1.5;
+}

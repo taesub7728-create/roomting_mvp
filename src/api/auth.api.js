@@ -15,11 +15,42 @@ export async function signUpWithEmail({ email, password, nickname, role, preferr
   return { data, error: null }
 }
 
-// 소셜 로그인. provider: 'google' (카카오/라인은 Supabase에 커스텀 OAuth 프로바이더 설정 후 사용 가능 - 별도 단계에서 안내)
-export async function signInWithOAuth(provider) {
-  const { data, error } = await supabase.auth.signInWithOAuth({ provider })
+// 소셜 로그인. provider: 'google' | 'kakao' | 'line'
+// 클릭하면 브라우저가 해당 로그인 페이지로 이동했다가, 로그인 후 redirectTo 주소로 돌아옴
+// 각 provider는 Supabase 대시보드 Authentication > Providers에서 활성화해야 실제로 동작함 (별도 단계에서 설정)
+export async function signInWithOAuth(provider, redirectTo) {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo },
+  })
   if (error) return { data: null, error: toFriendlyError(error) }
   return { data, error: null }
+}
+
+// 소셜 로그인으로 돌아온 직후, profiles에 자동으로 채워진 임시 닉네임/언어를
+// 사용자가 실제로 고른 값으로 다시 채워넣을 때 사용
+export async function updateOwnProfile({ nickname, preferredLanguage }) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: '로그인 상태를 확인할 수 없습니다.' }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ nickname, preferred_language: preferredLanguage })
+    .eq('id', user.id)
+    .select()
+    .single()
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
+// 현재 로그인 세션이 있는지만 빠르게 확인 (소셜 로그인 후 돌아왔는지 판단할 때 사용)
+export async function getSession() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  return session
 }
 
 export async function signOut() {
