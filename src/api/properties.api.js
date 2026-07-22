@@ -23,6 +23,38 @@ export async function createPropertyResponse({ requestId, title, address, descri
     .select()
     .single()
 
+  if (error) {
+    if (error.code === '23505') return { data: null, error: '이미 이 요청서에 응답을 보내셨어요. 같은 요청에는 한 번만 응답할 수 있습니다.' }
+    return { data: null, error: toFriendlyError(error) }
+  }
+  return { data, error: null }
+}
+
+// 매물 하나의 상세 정보 (채팅방 맨 위에 어떤 매물 얘기인지 보여줄 때 사용)
+export async function getPropertyById(propertyId) {
+  const { data, error } = await supabase
+    .from('properties')
+    .select('*, property_images(image_url, sort_order)')
+    .eq('id', propertyId)
+    .single()
+
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
+// 공인중개사 본인이 지금까지 보낸 매물 응답 목록 (어떤 요청서에 보냈는지도 함께 표시)
+export async function listMyPropertyResponses() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: '로그인이 필요합니다.' }
+
+  const { data, error } = await supabase
+    .from('properties')
+    .select('*, requests(region_text)')
+    .eq('realtor_id', user.id)
+    .order('created_at', { ascending: false })
+
   if (error) return { data: null, error: toFriendlyError(error) }
   return { data, error: null }
 }

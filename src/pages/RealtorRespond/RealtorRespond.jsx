@@ -26,6 +26,7 @@ export default function RealtorRespond() {
   const [imageWarning, setImageWarning] = useState(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [createdPropertyId, setCreatedPropertyId] = useState(null)
 
   function handlePhotoChange(e) {
     setPhotoFiles(Array.from(e.target.files || []))
@@ -63,6 +64,7 @@ export default function RealtorRespond() {
     }
 
     setLoading(false)
+    setCreatedPropertyId(created.id)
     setSuccess(true)
   }
 
@@ -81,8 +83,11 @@ export default function RealtorRespond() {
         <div className="rr-header"><div className="rr-title">완료</div></div>
         <div className="rr-summary">이 요청서에 매물 응답을 등록했어요.</div>
         {imageWarning && <div className="rt-error-text" style={{ margin: '0 20px 16px' }}>{imageWarning}</div>}
-        <div style={{ padding: '0 20px' }}>
-          <Link to="/realtor" className="rt-btn-primary" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>목록으로 돌아가기</Link>
+        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {createdPropertyId && (
+            <Link to={`/chat/${createdPropertyId}`} className="rt-btn-primary" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>고객과 채팅하기</Link>
+          )}
+          <Link to="/realtor" className="rt-btn-secondary" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>목록으로 돌아가기</Link>
         </div>
       </div>
     )

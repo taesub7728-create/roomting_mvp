@@ -84,6 +84,7 @@ export default function Landing() {
                 {(profile.nickname || '?').charAt(0).toUpperCase()}
               </button>
               <div className={`profile-dd${profileOpen ? ' open' : ''}`}>
+                <Link to="/mypage" onClick={() => setProfileOpen(false)}>👤 {t.mypage}</Link>
                 <div className="dd-logout" onClick={handleLogout}>🚪 {t.logout}</div>
               </div>
             </div>

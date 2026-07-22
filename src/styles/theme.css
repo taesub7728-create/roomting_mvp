@@ -10,6 +10,7 @@
   --paper: #FBFAF8;
   --white: #fff;
   --radius: 16px;
+  --danger: #E8547A; /* 에러 메시지 색 */
 }
 
 * {
@@ -146,7 +147,7 @@ body {
 .rt-error-text {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--pink);
+  color: var(--danger);
   margin-top: 8px;
   line-height: 1.5;
 }

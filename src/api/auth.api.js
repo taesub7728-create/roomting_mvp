@@ -52,6 +52,18 @@ export async function updateOwnProfile({ nickname, preferredLanguage }) {
   return { data, error: null }
 }
 
+// 화면 언어 선택 버튼을 바꿀 때, 로그인 중이면 실제 번역 기준 언어(preferred_language)도 같이 업데이트
+export async function updatePreferredLanguage(preferredLanguage) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: null } // 로그인 안 한 상태면 그냥 무시 (화면 언어만 바뀌면 됨)
+
+  const { error } = await supabase.from('profiles').update({ preferred_language: preferredLanguage }).eq('id', user.id)
+  if (error) return { error: toFriendlyError(error) }
+  return { error: null }
+}
+
 // 현재 로그인 세션이 있는지만 빠르게 확인 (소셜 로그인 후 돌아왔는지 판단할 때 사용)
 export async function getSession() {
   const {

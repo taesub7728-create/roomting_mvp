@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { signInWithEmail, signInWithOAuth } from '../../api/auth.api'
+import { signInWithEmail, signInWithOAuth, getCurrentProfile } from '../../api/auth.api'
 import logo from '../../assets/roomting-logo-symbol.png'
 import './Login.css'
 
@@ -15,9 +15,16 @@ export default function Login() {
     setError(null)
     setLoading(true)
     const { error: loginError } = await signInWithEmail({ email: email.trim(), password })
+    if (loginError) { setLoading(false); setError(loginError); return }
+
+    // 공인중개사/에이전트 계정이 실수로 일반 로그인으로 들어온 경우, 알맞은 화면으로 보내줌
+    const { data: profile } = await getCurrentProfile()
     setLoading(false)
-    if (loginError) { setError(loginError); return }
-    navigate('/')
+    if (profile?.role === 'realtor' || profile?.role === 'care_agent') {
+      navigate('/realtor')
+    } else {
+      navigate('/')
+    }
   }
 
   async function handleOAuth(provider) {
@@ -82,6 +89,9 @@ export default function Login() {
 
         <div className="login-signup-link">
           계정이 없으신가요? <Link to="/signup">가입하기</Link>
+        </div>
+        <div className="login-signup-link">
+          공인중개사·에이전트이신가요? <Link to="/partner/login">파트너 로그인</Link>
         </div>
       </div>
     </div>
