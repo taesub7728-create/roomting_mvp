@@ -30,6 +30,7 @@ export default function SignUp() {
   const [done, setDone] = useState(false) // 가입 완료 (바로 로그인된 상태)
   const [awaitingEmailConfirm, setAwaitingEmailConfirm] = useState(false) // 이메일 인증 대기
   const [pendingRequestError, setPendingRequestError] = useState(null)
+  const [submittedRequestId, setSubmittedRequestId] = useState(null)
 
   // 로그인 없이 조건 요청서를 작성하다가 가입하러 온 경우, 가입이 끝나자마자 그 내용을 이어서 제출
   async function submitPendingRequestIfAny() {
@@ -38,8 +39,9 @@ export default function SignUp() {
     localStorage.removeItem(PENDING_REQUEST_KEY)
     try {
       const payload = JSON.parse(raw)
-      const { error } = await createRequest(payload)
+      const { data, error } = await createRequest(payload)
       if (error) setPendingRequestError(error)
+      else setSubmittedRequestId(data.id)
     } catch {
       // 저장된 내용을 읽지 못하면 조용히 무시 (가입 자체는 이미 성공한 상태이므로)
     }
@@ -282,7 +284,7 @@ export default function SignUp() {
           <div className="done-title">{t.doneTitle}<br /><span className="accent">{nickTrimmed}</span></div>
           <div className="done-sub">{t.doneSub}</div>
           {pendingRequestError && <div className="rt-error-text" style={{ marginBottom: 12 }}>{pendingRequestError}</div>}
-          <button className="rt-btn-primary" onClick={() => navigate('/')}>{t.doneBtn}</button>
+          <button className="rt-btn-primary" onClick={() => navigate(submittedRequestId ? `/requests/${submittedRequestId}` : '/')}>{t.doneBtn}</button>
         </div>
       )}
 

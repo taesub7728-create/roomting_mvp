@@ -27,6 +27,7 @@ export default function RequestWizard() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [newRequestId, setNewRequestId] = useState(null)
 
   function toggleRoomType(code) {
     setRoomTypes((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]))
@@ -68,9 +69,10 @@ export default function RequestWizard() {
       return
     }
 
-    const { error: submitError } = await createRequest(payload)
+    const { data: created, error: submitError } = await createRequest(payload)
     setLoading(false)
     if (submitError) { setError(submitError); return }
+    setNewRequestId(created.id)
     setSuccess(true)
   }
 
@@ -229,7 +231,7 @@ export default function RequestWizard() {
           <div className="success-icon-wrap"><img src={logo} alt="roomting" /></div>
           <div className="success-title">{t.successTitle}</div>
           <div className="success-desc">{t.successDesc}</div>
-          <button className="rt-btn-secondary" onClick={() => navigate('/')}>{t.successClose}</button>
+          <button className="rt-btn-secondary" onClick={() => navigate(newRequestId ? `/requests/${newRequestId}` : '/')}>{t.successClose}</button>
         </div>
       )}
     </div>

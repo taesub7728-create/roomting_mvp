@@ -129,6 +129,20 @@ body {
 .rt-input::placeholder { color: #C9C2BC; font-weight: 500; }
 
 /* 화면 하단에 고정되는 안내 문구용 에러 메시지 (Supabase 등 외부 요청 실패 시 표시) */
+/* 화면 상단 뒤로가기 바 (조건입력/응답현황/채팅 등 여러 화면에서 공통 사용) */
+.top-bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px 20px 0; position: sticky; top: 0;
+  background: var(--paper); z-index: 20;
+}
+.back-btn {
+  width: 36px; height: 36px; border-radius: 11px;
+  background: var(--white); border: 1px solid var(--line);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--ink); text-decoration: none; flex-shrink: 0;
+}
+.top-title { font-size: 16px; font-weight: 800; color: var(--ink); letter-spacing: -0.3px; }
+
 .rt-error-text {
   font-size: 12.5px;
   font-weight: 600;
@@ -136,3 +150,27 @@ body {
   margin-top: 8px;
   line-height: 1.5;
 }
+
+.input-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; display: block; }
+
+/* 소셜 로그인 버튼 (회원가입/로그인 화면에서 공통 사용) */
+.social-btns { display: flex; flex-direction: column; gap: 10px; }
+.social-btn {
+  width: 100%; padding: 15px 18px; border-radius: 13px; border: 1px solid var(--line); cursor: pointer;
+  display: flex; align-items: center; gap: 12px; font-size: 14.5px; font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif; transition: border-color .15s, background .15s;
+  background: var(--white);
+}
+.social-btn:hover { background: #faf8f6; }
+.social-btn:active { transform: scale(0.99); }
+.social-btn:disabled { opacity: .6; cursor: default; }
+.btn-kakao { background: #FEE500; border-color: #FEE500; color: #191919; }
+.btn-kakao:hover { background: #FCDC00; }
+.btn-line { background: #06C755; border-color: #06C755; color: #fff; }
+.btn-line:hover { background: #05b34c; }
+.btn-email { color: var(--ink-soft); }
+.social-icon { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+
+.divider { display: flex; align-items: center; gap: 12px; margin: 14px 0 4px; }
+.divider-line { flex: 1; height: 1px; background: var(--line); }
+.divider-text { font-size: 11.5px; font-weight: 600; color: #B5ADA7; }

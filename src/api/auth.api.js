@@ -15,6 +15,13 @@ export async function signUpWithEmail({ email, password, nickname, role, preferr
   return { data, error: null }
 }
 
+// 이미 가입된 계정으로 이메일/비밀번호 로그인
+export async function signInWithEmail({ email, password }) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
 // 소셜 로그인. provider: 'google' | 'kakao' | 'line'
 // 클릭하면 브라우저가 해당 로그인 페이지로 이동했다가, 로그인 후 redirectTo 주소로 돌아옴
 // 각 provider는 Supabase 대시보드 Authentication > Providers에서 활성화해야 실제로 동작함 (별도 단계에서 설정)
