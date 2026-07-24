@@ -70,7 +70,7 @@ export default function SignUp() {
   async function handleOAuth(provider) {
     setError(null)
     setLoading(true)
-    const redirectTo = `${window.location.origin}/signup`
+    const redirectTo = `${window.location.origin}/signup/customer`
     const { error } = await signInWithOAuth(provider, redirectTo)
     // 성공하면 브라우저가 그대로 로그인 페이지로 이동하므로 이 아래 코드는 실패했을 때만 실행됨
     if (error) {

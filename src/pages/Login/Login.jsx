@@ -20,8 +20,10 @@ export default function Login() {
     // 공인중개사/에이전트 계정이 실수로 일반 로그인으로 들어온 경우, 알맞은 화면으로 보내줌
     const { data: profile } = await getCurrentProfile()
     setLoading(false)
-    if (profile?.role === 'realtor' || profile?.role === 'care_agent') {
+    if (profile?.role === 'realtor' || profile?.role === 'care_agent' || profile?.role === 'pending_realtor') {
       navigate('/realtor')
+    } else if (profile?.role === 'admin') {
+      navigate('/admin')
     } else {
       navigate('/')
     }

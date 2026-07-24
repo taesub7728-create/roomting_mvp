@@ -1,0 +1,17 @@
+.rsu-wrap { padding: 20px 26px 40px; display: flex; flex-direction: column; gap: 14px; }
+
+.rsu-field label { margin-bottom: 8px; }
+.rsu-file-name { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+
+.rsu-link { text-align: center; font-size: 12.5px; color: var(--ink-soft); font-weight: 600; margin-top: 16px; }
+.rsu-link a { color: var(--pink); font-weight: 700; text-decoration: none; }
+
+.rsu-done {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px; text-align: center; gap: 14px;
+}
+.rsu-done-icon-wrap { width: 56px; height: 56px; }
+.rsu-done-icon-wrap img { width: 100%; height: 100%; object-fit: contain; }
+.rsu-done-title { font-size: 18px; font-weight: 800; color: var(--ink); }
+.rsu-done-sub { font-size: 13px; color: var(--ink-soft); line-height: 1.6; white-space: pre-line; max-width: 300px; }
+.rsu-done .rt-btn-primary { max-width: 260px; margin-top: 6px; }

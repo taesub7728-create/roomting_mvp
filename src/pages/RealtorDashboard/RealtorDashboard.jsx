@@ -2,12 +2,20 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getCurrentProfile, signOut } from '../../api/auth.api'
 import { listOpenRequests } from '../../api/requests.api'
-import { listMyPropertyResponses } from '../../api/properties.api'
+import {
+  listMyPropertyResponses,
+  listMyPublicListings,
+  createPublicProperty,
+  updateListingStatus,
+  uploadPropertyImages,
+} from '../../api/properties.api'
+import { searchAddressCandidates } from '../../lib/kakaoMaps'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { roomTypeLabels } from './roomTypeLabels'
 import './RealtorDashboard.css'
 
 const ROOM_TYPE_FILTERS = ['one_room', 'two_room', 'goshiwon', 'share_house', 'officetel', 'apartment']
+const LISTING_STATUS_LABELS = { active: '판매중', completed: '거래완료', hidden: '미노출' }
 
 function thumbnailUrl(property) {
   if (!property.property_images?.length) return null
@@ -27,14 +35,31 @@ export default function RealtorDashboard() {
   const navigate = useNavigate()
   const isDesktop = useIsDesktop(900)
   const [profile, setProfile] = useState(undefined) // undefined = 로딩중, null = 미로그인
-  const [tab, setTab] = useState('open') // 'open' | 'mine'
+  const [tab, setTab] = useState('open') // 'open' | 'mine' | 'listings'
   const [requests, setRequests] = useState([])
   const [myResponses, setMyResponses] = useState([])
+  const [listings, setListings] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const [searchText, setSearchText] = useState('')
   const [roomTypeFilter, setRoomTypeFilter] = useState(null)
+
+  // 공개 매물(지도) 등록 폼 상태 - 담당 부동산은 항상 로그인한 본인이라 별도 선택 없음
+  const [listingTitle, setListingTitle] = useState('')
+  const [listingRoomType, setListingRoomType] = useState('')
+  const [listingDeposit, setListingDeposit] = useState('')
+  const [listingMonthlyRent, setListingMonthlyRent] = useState('')
+  const [listingDescription, setListingDescription] = useState('')
+  const [listingStatus, setListingStatus] = useState('active')
+  const [addressPublic, setAddressPublic] = useState(true)
+  const [photoFiles, setPhotoFiles] = useState([])
+  const [address, setAddress] = useState('') // 후보 목록에서 선택된 최종 주소
+  const [coords, setCoords] = useState(null) // 선택된 주소의 좌표
+  const [addressQuery, setAddressQuery] = useState('')
+  const [addressCandidates, setAddressCandidates] = useState([])
+  const [addressSearching, setAddressSearching] = useState(false)
+  const [submittingListing, setSubmittingListing] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -43,16 +68,40 @@ export default function RealtorDashboard() {
       setProfile(profileData)
 
       if (profileData?.role === 'realtor') {
-        const [openResult, mineResult] = await Promise.all([listOpenRequests(), listMyPropertyResponses()])
+        const [openResult, mineResult, listingsResult] = await Promise.all([
+          listOpenRequests(),
+          listMyPropertyResponses(),
+          listMyPublicListings(),
+        ])
         if (openResult.error) setError(openResult.error)
         else setRequests(openResult.data)
         if (mineResult.error) setError(mineResult.error)
         else setMyResponses(mineResult.data)
+        if (listingsResult.error) setError(listingsResult.error)
+        else setListings(listingsResult.data)
       }
       setLoading(false)
     }
     load()
   }, [])
+
+  useEffect(() => {
+    const query = addressQuery.trim()
+    if (query.length < 2) { setAddressCandidates([]); return }
+
+    setAddressSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchAddressCandidates(query)
+        setAddressCandidates(results)
+      } catch (err) {
+        setError(err.message)
+      }
+      setAddressSearching(false)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [addressQuery])
 
   // 이미 내가 응답을 보낸 요청서는 "받을 수 있는 요청" 목록에서 제외 (같은 고객에게 중복 응답 방지)
   const respondedRequestIds = useMemo(() => new Set(myResponses.map((p) => p.request_id)), [myResponses])
@@ -76,8 +125,71 @@ export default function RealtorDashboard() {
     navigate('/partner/login')
   }
 
+  function handleSelectAddress(candidate) {
+    setAddress(candidate.label)
+    setCoords({ lat: candidate.lat, lng: candidate.lng })
+    setAddressQuery('')
+    setAddressCandidates([])
+  }
+
+  function handleChangeAddress() {
+    setAddress('')
+    setCoords(null)
+  }
+
+  const canSubmitListing = listingTitle.trim() && address.trim() && listingDeposit !== '' && listingMonthlyRent !== '' && listingRoomType && coords
+
+  async function handleCreateListing() {
+    setError(null)
+    setSubmittingListing(true)
+    const { data: created, error: createError } = await createPublicProperty({
+      title: listingTitle.trim(),
+      address: address.trim(),
+      description: listingDescription,
+      deposit: Number(listingDeposit),
+      monthlyRent: Number(listingMonthlyRent),
+      roomType: listingRoomType,
+      lat: coords.lat,
+      lng: coords.lng,
+      listingStatus,
+      addressPublic,
+    })
+    if (createError) { setSubmittingListing(false); setError(createError); return }
+
+    if (photoFiles.length > 0) {
+      const { error: imageError } = await uploadPropertyImages(created.id, photoFiles)
+      if (imageError) setError(imageError)
+    }
+
+    const { data: refreshed, error: refreshError } = await listMyPublicListings()
+    if (!refreshError) setListings(refreshed)
+
+    setSubmittingListing(false)
+    setListingTitle(''); setAddress(''); setListingDescription('')
+    setListingDeposit(''); setListingMonthlyRent(''); setListingRoomType(''); setListingStatus('active'); setAddressPublic(true)
+    setPhotoFiles([]); setCoords(null)
+  }
+
+  async function handleListingStatusChange(propertyId, newStatus) {
+    const { error: updateError } = await updateListingStatus(propertyId, newStatus)
+    if (updateError) { setError(updateError); return }
+    setListings((prev) => prev.map((p) => (p.id === propertyId ? { ...p, listing_status: newStatus } : p)))
+  }
+
   if (loading) {
     return <div className="frame"><div className="rd-guard">불러오는 중...</div></div>
+  }
+
+  if (profile?.role === 'pending_realtor') {
+    return (
+      <div className="frame">
+        <div className="rd-guard">
+          <div style={{ fontSize: 32 }}>⏳</div>
+          <p style={{ fontWeight: 700 }}>아직 심사 중이에요</p>
+          <p style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>승인되면 안내드릴게요. 조금만 기다려주세요</p>
+        </div>
+      </div>
+    )
   }
 
   if (!profile || profile.role !== 'realtor') {
@@ -111,8 +223,10 @@ export default function RealtorDashboard() {
         <div className="rd-tabs">
           <button className={`rd-tab${tab === 'open' ? ' active' : ''}`} onClick={() => setTab('open')}>받을 수 있는 요청</button>
           <button className={`rd-tab${tab === 'mine' ? ' active' : ''}`} onClick={() => setTab('mine')}>내가 보낸 응답</button>
+          <button className={`rd-tab${tab === 'listings' ? ' active' : ''}`} onClick={() => setTab('listings')}>공개 매물</button>
         </div>
 
+        {tab !== 'listings' && (
         <div className="rd-filter-bar">
           <input
             className="rd-search-input"
@@ -137,6 +251,7 @@ export default function RealtorDashboard() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {error && <div className="rt-error-text" style={{ padding: '0 20px' }}>{error}</div>}
@@ -275,6 +390,123 @@ export default function RealtorDashboard() {
             ))}
           </div>
         )
+      )}
+
+      {tab === 'listings' && (
+        <div className="rd-listings-body">
+          <div className="rd-form-card">
+            <div className="rd-form-title">공개 매물 등록</div>
+
+            <div className="rd-field">
+              <label>매물 제목</label>
+              <input className="rt-input" type="text" value={listingTitle} onChange={(e) => setListingTitle(e.target.value)} placeholder="예) 합정역 도보 5분 신축 원룸" />
+            </div>
+
+            <div className="rd-field">
+              <label>방 타입</label>
+              <div className="rd-form-chip-group">
+                {ROOM_TYPE_FILTERS.map((code) => (
+                  <div key={code} className={`rd-form-chip${listingRoomType === code ? ' active' : ''}`} onClick={() => setListingRoomType(code)}>
+                    {roomTypeLabels[code]}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rd-two-col">
+              <div className="rd-field">
+                <label>보증금 (만원)</label>
+                <input className="rt-input" type="number" value={listingDeposit} onChange={(e) => setListingDeposit(e.target.value)} placeholder="1000" />
+              </div>
+              <div className="rd-field">
+                <label>월세 (만원)</label>
+                <input className="rt-input" type="number" value={listingMonthlyRent} onChange={(e) => setListingMonthlyRent(e.target.value)} placeholder="55" />
+              </div>
+            </div>
+
+            <div className="rd-field">
+              <label>주소</label>
+              {address ? (
+                <div className="rd-address-selected">
+                  <span>{address}</span>
+                  <button className="rd-address-change" onClick={handleChangeAddress}>변경</button>
+                </div>
+              ) : (
+                <div className="rd-address-search">
+                  <input
+                    className="rt-input"
+                    type="text"
+                    value={addressQuery}
+                    onChange={(e) => setAddressQuery(e.target.value)}
+                    placeholder="예) 서교동 336-7 (2글자 이상 입력하면 검색돼요)"
+                  />
+                  {addressSearching && <div className="rd-address-hint">검색 중...</div>}
+                  {!addressSearching && addressQuery.trim().length >= 2 && addressCandidates.length === 0 && (
+                    <div className="rd-address-hint">일치하는 주소가 없어요</div>
+                  )}
+                  {addressCandidates.length > 0 && (
+                    <div className="rd-address-dropdown">
+                      {addressCandidates.map((c, i) => (
+                        <div key={i} className="rd-address-option" onClick={() => handleSelectAddress(c)}>{c.label}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="rd-field">
+              <label className="rd-checkbox-label">
+                <input type="checkbox" checked={!addressPublic} onChange={(e) => setAddressPublic(!e.target.checked)} />
+                상세주소 비공개 (지도에는 동 단위 주소 + 근처 위치로만 표시돼요)
+              </label>
+            </div>
+
+            <div className="rd-field">
+              <label>상세 설명</label>
+              <textarea className="rd-textarea" value={listingDescription} onChange={(e) => setListingDescription(e.target.value)} placeholder="매물 특징을 적어주세요" />
+            </div>
+
+            <div className="rd-field">
+              <label>노출 상태</label>
+              <select className="rt-input" value={listingStatus} onChange={(e) => setListingStatus(e.target.value)}>
+                {Object.entries(LISTING_STATUS_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+              </select>
+            </div>
+
+            <div className="rd-field">
+              <label>매물 사진 (여러 장 선택 가능)</label>
+              <input type="file" accept="image/*" multiple onChange={(e) => setPhotoFiles(Array.from(e.target.files || []))} />
+              {photoFiles.length > 0 && <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 6 }}>{photoFiles.length}장 선택됨</div>}
+            </div>
+
+            <button className="rt-btn-primary" disabled={!canSubmitListing || submittingListing} onClick={handleCreateListing}>
+              {submittingListing ? '등록하는 중...' : '매물 등록하기'}
+            </button>
+          </div>
+
+          <div className="rd-list-title">등록한 공개 매물 ({listings.length})</div>
+          {listings.length === 0 ? (
+            <div className="rd-empty">아직 등록한 공개 매물이 없어요</div>
+          ) : (
+            <div className="rd-list">
+              {listings.map((p) => (
+                <div key={p.id} className="rd-listing-row">
+                  <div className="rd-thumb">
+                    {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : '🏠'}
+                  </div>
+                  <div className="rd-listing-info">
+                    <div className="rd-listing-title">{p.title}</div>
+                    <div className="rd-listing-sub">{p.address} · 보증금 {Number(p.deposit ?? 0).toLocaleString()}만원 / 월세 {p.monthly_rent ?? 0}만원</div>
+                  </div>
+                  <select className="rt-input" style={{ width: 110 }} value={p.listing_status} onChange={(e) => handleListingStatusChange(p.id, e.target.value)}>
+                    {Object.entries(LISTING_STATUS_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

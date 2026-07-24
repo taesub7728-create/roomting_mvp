@@ -21,7 +21,7 @@ export default function PartnerLogin() {
     const { data: profile } = await getCurrentProfile()
     setLoading(false)
 
-    if (profile?.role === 'realtor' || profile?.role === 'care_agent') {
+    if (profile?.role === 'realtor' || profile?.role === 'care_agent' || profile?.role === 'pending_realtor') {
       navigate('/realtor')
     } else {
       // 고객 계정이 실수로 파트너 로그인으로 들어온 경우

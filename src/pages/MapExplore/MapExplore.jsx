@@ -75,7 +75,7 @@ export default function MapExplore() {
 
     const bounds = new kakao.maps.LatLngBounds()
     properties.forEach((p) => {
-      const position = new kakao.maps.LatLng(p.lat, p.lng)
+      const position = new kakao.maps.LatLng(p.display_lat, p.display_lng)
       const marker = new kakao.maps.Marker({ position, map: mapRef.current })
       kakao.maps.event.addListener(marker, 'click', () => setSelected(p))
       markersRef.current.push(marker)
@@ -131,7 +131,7 @@ export default function MapExplore() {
           </div>
           <div className="me-sheet-body">
             <div className="me-sheet-title">{selected.title}</div>
-            <div className="me-sheet-addr">{selected.address}</div>
+            <div className="me-sheet-addr">{selected.display_address}</div>
             <div className="me-sheet-price">
               {t.rentLabel} {Number(selected.monthly_rent ?? 0).toLocaleString()}만원
               <span className="me-sheet-deposit">{t.depositLabel} {Number(selected.deposit ?? 0).toLocaleString()}만원</span>

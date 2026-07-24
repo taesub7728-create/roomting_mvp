@@ -76,6 +76,58 @@
 
 .rd-guard { padding: 60px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 
+/* 공개 매물(지도) 등록 탭 */
+.rd-listings-body { padding: 0 20px 40px; display: flex; flex-direction: column; gap: 20px; }
+
+.rd-form-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.rd-form-title { font-size: 15px; font-weight: 800; color: var(--ink); margin-bottom: 2px; }
+
+.rd-field label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
+.rd-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.rd-textarea {
+  width: 100%; background: var(--white); border: 1.5px solid var(--line); border-radius: 13px;
+  padding: 13px 15px; font-size: 14.5px; font-weight: 600; color: var(--ink);
+  font-family: 'Noto Sans KR', sans-serif; outline: none; resize: none; height: 86px; line-height: 1.6;
+  transition: border-color .15s;
+}
+.rd-textarea:focus { border-color: var(--pink); }
+.rd-textarea::placeholder { color: #ABA39C; font-weight: 500; }
+
+.rd-form-chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.rd-form-chip {
+  padding: 8px 14px; border-radius: 50px; border: 1.5px solid var(--line); background: var(--white);
+  font-size: 12.5px; font-weight: 700; color: var(--ink-soft); cursor: pointer;
+}
+.rd-form-chip.active { background: var(--ink); border-color: var(--ink); color: white; }
+
+.rd-address-search { position: relative; }
+.rd-address-hint { font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-top: 6px; }
+.rd-address-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 10;
+  background: var(--white); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08); overflow: hidden;
+}
+.rd-address-option { padding: 11px 14px; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.rd-address-option:hover { background: var(--pink-soft); }
+.rd-address-option + .rd-address-option { border-top: 1px solid var(--line); }
+
+.rd-address-selected {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--pink-soft); border: 1.5px solid var(--pink-dim); border-radius: 13px; padding: 13px 15px;
+}
+.rd-address-selected span { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.rd-address-change { background: none; border: none; color: var(--pink); font-weight: 700; font-size: 12.5px; cursor: pointer; flex-shrink: 0; }
+
+.rd-checkbox-label { display: flex !important; align-items: center; gap: 8px; font-size: 13px !important; font-weight: 600 !important; color: var(--ink) !important; cursor: pointer; }
+.rd-checkbox-label input { width: 16px; height: 16px; flex-shrink: 0; }
+
+.rd-list-title { font-size: 14px; font-weight: 800; color: var(--ink); }
+.rd-listing-row { display: flex; align-items: center; gap: 12px; background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.rd-listing-info { flex: 1; min-width: 0; }
+.rd-listing-title { font-size: 13.5px; font-weight: 800; color: var(--ink); }
+.rd-listing-sub { font-size: 11.5px; color: var(--ink-soft); font-weight: 500; margin-top: 2px; }
+
 /* 데스크톱(PC)에서는 매물을 표로 관리하는 화면으로 전환 - 폰 프레임 폭 제한을 풀고 넓게 사용 */
 @media (min-width: 900px) {
   .rd-root--desktop {

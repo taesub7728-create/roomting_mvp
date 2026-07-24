@@ -21,3 +21,29 @@ export function loadKakaoMaps() {
 
   return loadPromise
 }
+
+// 입력한 텍스트로 주소 후보를 검색 (운영자 페이지의 주소 자동완성에서 사용)
+// 일치하는 주소가 없으면 빈 배열을 반환 (검색 중 흔한 상황이라 에러로 취급하지 않음)
+export async function searchAddressCandidates(query) {
+  const kakao = await loadKakaoMaps()
+  return new Promise((resolve, reject) => {
+    const geocoder = new kakao.maps.services.Geocoder()
+    geocoder.addressSearch(query, (result, status) => {
+      if (status === kakao.maps.services.Status.ERROR) {
+        reject(new Error('주소 검색에 실패했어요.'))
+        return
+      }
+      if (status !== kakao.maps.services.Status.OK) {
+        resolve([])
+        return
+      }
+      resolve(
+        result.slice(0, 5).map((r) => ({
+          label: r.road_address?.address_name || r.address_name,
+          lat: Number(r.y),
+          lng: Number(r.x),
+        }))
+      )
+    })
+  })
+}

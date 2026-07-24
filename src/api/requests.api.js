@@ -77,6 +77,17 @@ export async function closeRequest(requestId) {
   return { data, error: null }
 }
 
+// 운영자가 보는 전체 요청서 목록(상태 무관) - 관리자 페이지 전용, RLS가 admin 역할에게만 전체를 허용해줌
+export async function listAllRequests() {
+  const { data, error } = await supabase
+    .from('requests')
+    .select('*, customer:profiles!customer_id(nickname)')
+    .order('created_at', { ascending: false })
+
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
 // 고객/에이전트가 보는 "내가 작성한 요청서와, 거기 달린 응답 개수" 목록
 export async function listMyRequests() {
   const {

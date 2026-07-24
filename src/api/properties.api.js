@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import { toFriendlyError } from './errors'
+import { safeFileName } from '../utils/safeFileName'
 
 // 공인중개사가 특정 요청서에 매물로 응답
 export async function createPropertyResponse({ requestId, title, address, description, deposit, monthlyRent, roomType }) {
@@ -61,14 +62,83 @@ export async function listMyPropertyResponses() {
 }
 
 // 지도에 표시할 공개 매물 목록 (좌표가 있고 노출 중인 것만)
+// DB 함수(get_public_listings)를 통해 조회 - 상세주소 비공개 매물은 여기서 이미 동 단위 주소/근사 좌표로 바뀐 값만 내려옴
 export async function listPublicProperties() {
+  const { data, error } = await supabase.rpc('get_public_listings')
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
+// 공인중개사 본인이 등록한 공개 매물 목록 (노출상태 무관)
+export async function listMyPublicListings() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: '로그인이 필요합니다.' }
+
   const { data, error } = await supabase
     .from('properties')
     .select('*, property_images(image_url, sort_order)')
     .eq('is_public', true)
-    .eq('listing_status', 'active')
-    .not('lat', 'is', null)
-    .not('lng', 'is', null)
+    .eq('realtor_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
+// 운영자 관리 페이지용: 노출상태 무관 전체 공개 매물 목록
+export async function listAllPublicListings() {
+  const { data, error } = await supabase
+    .from('properties')
+    .select('*, realtor:profiles!realtor_id(nickname), property_images(image_url, sort_order)')
+    .eq('is_public', true)
+    .order('created_at', { ascending: false })
+
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
+// 공인중개사 본인이 지도에 올릴 공개 매물을 직접 등록 (담당 부동산은 항상 로그인한 본인)
+export async function createPublicProperty({
+  title, address, description, deposit, monthlyRent, roomType, lat, lng, listingStatus, addressPublic,
+}) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: '로그인이 필요합니다.' }
+
+  const { data, error } = await supabase
+    .from('properties')
+    .insert({
+      realtor_id: user.id,
+      is_public: true,
+      title,
+      address,
+      description: description || null,
+      deposit,
+      monthly_rent: monthlyRent,
+      room_type: roomType,
+      lat,
+      lng,
+      listing_status: listingStatus || 'active',
+      address_public: addressPublic !== false,
+    })
+    .select()
+    .single()
+
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
+// 공개 매물의 노출상태(판매중/거래완료/미노출) 변경
+export async function updateListingStatus(propertyId, status) {
+  const { data, error } = await supabase
+    .from('properties')
+    .update({ listing_status: status })
+    .eq('id', propertyId)
+    .select()
+    .single()
 
   if (error) return { data: null, error: toFriendlyError(error) }
   return { data, error: null }
@@ -95,7 +165,7 @@ export async function uploadPropertyImages(propertyId, files) {
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
-    const path = `${propertyId}/${Date.now()}-${i}-${file.name}`
+    const path = `${propertyId}/${safeFileName(file)}`
 
     const { error: uploadError } = await supabase.storage.from('property-images').upload(path, file)
     if (uploadError) {

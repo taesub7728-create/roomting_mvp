@@ -65,7 +65,7 @@ export default function RequestWizard() {
       // 로그인 안 된 상태 - 입력한 내용을 저장해두고 회원가입 화면으로 이동
       // (가입 완료 직후 SignUp 화면에서 이 내용을 그대로 이어서 제출함)
       localStorage.setItem(PENDING_REQUEST_KEY, JSON.stringify(payload))
-      navigate('/signup')
+      navigate('/signup/customer')
       return
     }
 

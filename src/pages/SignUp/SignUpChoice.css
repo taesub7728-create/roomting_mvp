@@ -1,0 +1,14 @@
+.sc-wrap { flex: 1; padding: 20px 26px 40px; display: flex; flex-direction: column; justify-content: center; }
+
+.sc-choice-list { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+.sc-choice-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  width: 100%; text-align: left; background: var(--white); border: 1.5px solid var(--line);
+  border-radius: var(--radius); padding: 20px 18px; cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif; transition: border-color .15s, transform .15s;
+}
+.sc-choice-card:hover { border-color: var(--pink-dim); transform: translateY(-1px); }
+.sc-choice-card:active { transform: scale(0.99); }
+.sc-choice-emoji { font-size: 26px; }
+.sc-choice-title { font-size: 15px; font-weight: 800; color: var(--ink); }
+.sc-choice-desc { font-size: 12.5px; font-weight: 500; color: var(--ink-soft); }
