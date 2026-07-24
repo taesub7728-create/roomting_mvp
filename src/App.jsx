@@ -10,6 +10,7 @@ import RealtorRespond from './pages/RealtorRespond/RealtorRespond'
 import ResponseStatus from './pages/ResponseStatus/ResponseStatus'
 import Chat from './pages/Chat/Chat'
 import MyPage from './pages/MyPage/MyPage'
+import MapExplore from './pages/MapExplore/MapExplore'
 import ComingSoon from './pages/ComingSoon/ComingSoon'
 
 function App() {
@@ -26,10 +27,10 @@ function App() {
           <Route path="/realtor/respond/:requestId" element={<RealtorRespond />} />
           <Route path="/requests/:requestId" element={<ResponseStatus />} />
           <Route path="/mypage" element={<MyPage />} />
-          {/* 매물 상세 페이지, 지도 탐색 화면은 다음 단계에서 구현 예정 */}
+          {/* 매물 상세 페이지는 다음 단계에서 구현 예정 */}
           <Route path="/coming-soon" element={<ComingSoon />} />
           <Route path="/chat/:propertyId" element={<Chat />} />
-          <Route path="/map" element={<ComingSoon />} />
+          <Route path="/map" element={<MapExplore />} />
         </Routes>
       </BrowserRouter>
     </LanguageProvider>

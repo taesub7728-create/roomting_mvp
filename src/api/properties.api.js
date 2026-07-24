@@ -51,9 +51,24 @@ export async function listMyPropertyResponses() {
 
   const { data, error } = await supabase
     .from('properties')
-    .select('*, requests(region_text)')
+    .select('*, requests(region_text), property_images(image_url, sort_order)')
     .eq('realtor_id', user.id)
+    .not('request_id', 'is', null) // 공개 매물은 "요청서에 보낸 응답" 목록에서 제외
     .order('created_at', { ascending: false })
+
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
+// 지도에 표시할 공개 매물 목록 (좌표가 있고 노출 중인 것만)
+export async function listPublicProperties() {
+  const { data, error } = await supabase
+    .from('properties')
+    .select('*, property_images(image_url, sort_order)')
+    .eq('is_public', true)
+    .eq('listing_status', 'active')
+    .not('lat', 'is', null)
+    .not('lng', 'is', null)
 
   if (error) return { data: null, error: toFriendlyError(error) }
   return { data, error: null }

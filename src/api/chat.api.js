@@ -5,8 +5,14 @@ import { translateText } from './translate.api'
 // customer/realtor 양쪽의 닉네임과 선호 언어까지 함께 가져옴 (번역 대상 언어를 정할 때 필요)
 const ROOM_WITH_PARTICIPANTS = '*, customer:profiles!customer_id(id, nickname, preferred_language), realtor:profiles!realtor_id(id, nickname, preferred_language)'
 
-// 매물 응답(property) 하나당 채팅방 1개. 없으면 새로 만들고, 있으면 그걸 반환
+// 매물(property) 하나당, 문의하는 고객별로 채팅방 1개.
+// 요청서에 대한 응답 매물은 그 요청서 주인이 곧 고객이고, 공개 매물(지도)은 지금 로그인한 사람이 고객이 됨
 export async function getOrCreatePropertyChatRoom(propertyId) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: '로그인이 필요합니다.' }
+
   const { data: property, error: propertyError } = await supabase
     .from('properties')
     .select('realtor_id, requests(customer_id)')
@@ -14,10 +20,13 @@ export async function getOrCreatePropertyChatRoom(propertyId) {
     .single()
   if (propertyError) return { data: null, error: toFriendlyError(propertyError) }
 
+  const customerId = property.requests?.customer_id ?? user.id
+
   const { data: existing, error: existingError } = await supabase
     .from('chat_rooms')
     .select(ROOM_WITH_PARTICIPANTS)
     .eq('property_id', propertyId)
+    .eq('customer_id', customerId)
     .maybeSingle()
   if (existingError) return { data: null, error: toFriendlyError(existingError) }
   if (existing) return { data: existing, error: null }
@@ -26,7 +35,7 @@ export async function getOrCreatePropertyChatRoom(propertyId) {
     .from('chat_rooms')
     .insert({
       property_id: propertyId,
-      customer_id: property.requests.customer_id,
+      customer_id: customerId,
       realtor_id: property.realtor_id,
     })
     .select(ROOM_WITH_PARTICIPANTS)
@@ -39,6 +48,7 @@ export async function getOrCreatePropertyChatRoom(propertyId) {
         .from('chat_rooms')
         .select(ROOM_WITH_PARTICIPANTS)
         .eq('property_id', propertyId)
+        .eq('customer_id', customerId)
         .single()
       if (raceError) return { data: null, error: toFriendlyError(raceError) }
       return { data: raceExisting, error: null }
