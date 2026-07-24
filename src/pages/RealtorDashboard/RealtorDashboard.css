@@ -63,4 +63,52 @@
 
 .rd-empty { padding: 60px 20px; text-align: center; color: var(--ink-soft); font-size: 13.5px; }
 
+.rd-thumb {
+  width: 44px; height: 44px; border-radius: 10px; background: var(--pink-soft);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  overflow: hidden; flex-shrink: 0;
+}
+.rd-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.rd-card-mine { display: flex; gap: 12px; align-items: flex-start; }
+.rd-thumb-card { width: 56px; height: 56px; border-radius: 12px; font-size: 22px; }
+.rd-card-mine-body { flex: 1; min-width: 0; }
+
 .rd-guard { padding: 60px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+/* 데스크톱(PC)에서는 매물을 표로 관리하는 화면으로 전환 - 폰 프레임 폭 제한을 풀고 넓게 사용 */
+@media (min-width: 900px) {
+  .rd-root--desktop {
+    max-width: 1180px;
+    width: 100%;
+  }
+
+  .rd-root--desktop .rd-header { padding: 24px 32px 0; }
+  .rd-root--desktop .rd-profile-row { padding: 16px 32px 20px; }
+
+  .rd-root--desktop .rd-toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    padding: 0 32px 20px; flex-wrap: wrap;
+  }
+  .rd-root--desktop .rd-tabs { padding: 0; flex: none; }
+  .rd-root--desktop .rd-tab { padding: 9px 18px; }
+  .rd-root--desktop .rd-filter-bar { flex-direction: row; align-items: center; padding: 0; width: auto; flex: 1; justify-content: flex-end; }
+  .rd-root--desktop .rd-search-input { width: 220px; }
+  .rd-root--desktop .rd-filter-chips { flex-wrap: nowrap; }
+
+  .rd-table-wrap { padding: 0 32px 40px; overflow-x: auto; }
+  .rd-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rd-table th {
+    text-align: left; padding: 10px 14px; font-size: 11.5px; font-weight: 700;
+    color: var(--ink-soft); border-bottom: 1.5px solid var(--line); white-space: nowrap;
+  }
+  .rd-table td { padding: 14px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink); }
+  .rd-table tbody tr { transition: background .12s; }
+  .rd-table tbody tr:hover { background: var(--pink-soft); }
+  .rd-table tbody tr.rd-row-clickable { cursor: pointer; }
+  .rd-td-region { font-weight: 800; white-space: nowrap; }
+  .rd-td-region .rd-tag { margin-left: 6px; }
+  .rd-td-note { color: var(--ink-soft); max-width: 220px; }
+  .rd-table .rd-tags { margin-bottom: 0; }
+  .rd-table .rd-response-count { font-weight: 800; color: var(--pink); }
+}
