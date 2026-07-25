@@ -7,7 +7,8 @@ export const mapText = {
     noApiKey: '카카오맵 API 키가 설정되지 않았어요',
     emptyText: '아직 표시할 공개 매물이 없어요',
     rentLabel: '월세', depositLabel: '보증금',
-    contactBtn: '부동산에게 연락하기', connecting: '연결하는 중...',
+    nearby: '근처 매물', viewListBtn: '목록 보기',
+    locateMe: '현재 위치로 이동', locateError: '현재 위치를 가져올 수 없어요',
   },
   ja: {
     title: '地図で部屋を探す',
@@ -17,7 +18,8 @@ export const mapText = {
     noApiKey: 'カカオマップAPIキーが設定されていません',
     emptyText: '表示できる公開物件がまだありません',
     rentLabel: '家賃', depositLabel: '保証金',
-    contactBtn: '不動産に連絡する', connecting: '接続中...',
+    nearby: '近くの物件', viewListBtn: 'リスト表示',
+    locateMe: '現在地に移動', locateError: '現在地を取得できませんでした',
   },
   zh: {
     title: '在地图上找房',
@@ -27,7 +29,8 @@ export const mapText = {
     noApiKey: '尚未设置Kakao地图API密钥',
     emptyText: '暂无可显示的公开房源',
     rentLabel: '月租', depositLabel: '押金',
-    contactBtn: '联系中介', connecting: '连接中...',
+    nearby: '附近房源', viewListBtn: '列表查看',
+    locateMe: '移动到当前位置', locateError: '无法获取当前位置',
   },
   en: {
     title: 'Explore rooms on the map',
@@ -37,6 +40,7 @@ export const mapText = {
     noApiKey: 'Kakao Map API key is not set',
     emptyText: 'No public listings to show yet',
     rentLabel: 'Rent', depositLabel: 'Deposit',
-    contactBtn: 'Contact realtor', connecting: 'Connecting...',
+    nearby: 'Nearby Listings', viewListBtn: 'List View',
+    locateMe: 'Move to current location', locateError: 'Could not get your current location',
   },
 }

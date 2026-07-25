@@ -1,7 +1,10 @@
 /* 지도 화면은 스크롤 없이 화면 전체를 지도가 채워야 해서, 다른 화면과 달리 높이를 고정함 */
 .me-frame { height: 100vh; overflow: hidden; }
 
-.me-map { flex: 1; min-height: 0; position: relative; background: #E5E1DC; }
+/* 지도가 하단 탭바로 들어오는 메인 탭이 되면서, 뒤로가기 없는 최소 헤더로 교체 */
+.me-header { padding: 14px 20px; background: var(--paper); flex-shrink: 0; }
+
+.me-map { flex: 1; min-height: 0; position: relative; background: var(--line); }
 
 .me-overlay-badge {
   position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
@@ -13,32 +16,76 @@
 
 .me-guard { padding: 60px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 
-.me-sheet {
-  position: fixed; left: 50%; bottom: 0; transform: translateX(-50%);
-  width: 100%; max-width: 430px;
-  background: var(--white); border-radius: 20px 20px 0 0;
-  box-shadow: 0 -8px 24px rgba(0,0,0,.1);
-  display: flex; gap: 14px; padding: 18px 20px 26px;
-  z-index: 30;
+/* ── 현재 위치 버튼 ── */
+.locate-btn {
+  position: absolute; top: 16px; right: 16px;
+  width: 40px; height: 40px; background: var(--white); border: 1px solid var(--line); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 15; transition: transform .15s;
 }
-.me-sheet-close {
-  position: absolute; top: 10px; right: 14px; width: 26px; height: 26px; border-radius: 50%;
-  background: var(--paper); border: none; color: var(--ink-soft); font-size: 12px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
+.locate-btn:active { transform: scale(.93); }
+
+/* ── 리스트뷰 토글 ── */
+/* bottom: 하단 탭바(실측 69px) 위에 24px 여백을 두고 뜨도록 */
+.view-toggle {
+  position: absolute; bottom: 93px; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: white; border: none; border-radius: 50px;
+  padding: 10px 19px; font-size: 12.5px; font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+  display: flex; align-items: center; gap: 7px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25); z-index: 20; transition: transform .15s; white-space: nowrap;
 }
-.me-sheet-img {
-  width: 84px; height: 84px; border-radius: 14px; background: var(--paper);
-  display: flex; align-items: center; justify-content: center; font-size: 32px;
-  overflow: hidden; flex-shrink: 0;
+.view-toggle:active { transform: translateX(-50%) scale(.95); }
+
+/* ── 하단 카드 시트 ── */
+/* bottom: 하단 탭바(실측 69px)에 가려지지 않도록 그 위에 얹힘 */
+.bottom-sheet {
+  position: absolute; bottom: 69px; left: 0; right: 0; z-index: 40;
+  transition: transform .35s cubic-bezier(.4,0,.2,1); transform: translateY(100%);
 }
-.me-sheet-img img { width: 100%; height: 100%; object-fit: cover; }
-.me-sheet-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.me-sheet-title { font-size: 15px; font-weight: 800; color: var(--ink); }
-.me-sheet-addr { font-size: 11.5px; color: var(--ink-soft); font-weight: 500; }
-.me-sheet-price { font-size: 15px; font-weight: 800; color: var(--ink); margin-top: 2px; }
-.me-sheet-deposit { font-size: 11.5px; font-weight: 600; color: var(--ink-soft); margin-left: 6px; }
-.me-sheet-tag {
-  align-self: flex-start; background: var(--pink-soft); color: var(--pink);
-  border-radius: 50px; padding: 3px 10px; font-size: 10.5px; font-weight: 700; margin: 2px 0 6px;
+.bottom-sheet.show { transform: translateY(0); }
+
+.sheet-handle-area { display: flex; justify-content: center; padding: 10px 0 0; }
+.sheet-handle { width: 34px; height: 4px; background: #D8D2CD; border-radius: 2px; }
+
+.cards-wrap { background: var(--paper); border-radius: 22px 22px 0 0; padding: 8px 0 30px; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); }
+
+.cards-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 18px 12px; }
+.cards-title { font-size: 13.5px; font-weight: 800; color: var(--ink); }
+.cards-close {
+  width: 26px; height: 26px; background: var(--line); border: none; border-radius: 50%;
+  cursor: pointer; color: var(--ink); display: flex; align-items: center; justify-content: center;
 }
-.me-sheet-body .rt-btn-primary { padding: 11px; font-size: 13.5px; }
+
+.cards-scroll { display: flex; gap: 13px; overflow-x: auto; padding: 0 18px 4px; scrollbar-width: none; scroll-snap-type: x mandatory; }
+.cards-scroll::-webkit-scrollbar { display: none; }
+
+/* ── 매물 카드 ── */
+.listing-card {
+  background: var(--white); border-radius: var(--radius); overflow: hidden;
+  min-width: 230px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); scroll-snap-align: start;
+  cursor: pointer; transition: transform .18s, border-color .15s; flex-shrink: 0; border: 1px solid var(--line);
+}
+.listing-card:active { transform: scale(.97); }
+.listing-card.highlighted { border-color: var(--pink-dim); box-shadow: 0 4px 16px rgba(232,84,122,0.18); }
+
+.card-img { width: 100%; height: 130px; background: var(--line); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.card-img img { width: 100%; height: 100%; object-fit: cover; }
+
+.card-badges { position: absolute; top: 9px; left: 9px; display: flex; gap: 5px; }
+.badge { border-radius: 50px; padding: 4px 9px; font-size: 10px; font-weight: 800; }
+.badge-type { background: var(--ink); color: white; }
+
+.card-heart {
+  position: absolute; top: 9px; right: 9px; width: 26px; height: 26px;
+  background: var(--white); border: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1); color: var(--ink-soft); transition: transform .15s;
+}
+.card-heart:active { transform: scale(.85); }
+.card-heart.liked { color: var(--pink); }
+
+.card-info { padding: 11px 13px 13px; }
+.card-price { font-size: 15.5px; font-weight: 800; color: var(--ink); margin-bottom: 4px; letter-spacing: -0.3px; }
+.card-price .deposit { font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-left: 4px; }
+.card-location { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--pink); }

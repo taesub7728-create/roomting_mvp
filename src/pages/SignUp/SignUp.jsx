@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../../context/LanguageContext'
 import { signUpWithEmail, signInWithEmail, signInWithOAuth, updateOwnProfile, getSession, getCurrentProfile } from '../../api/auth.api'
 import { createRequest } from '../../api/requests.api'
@@ -11,7 +11,8 @@ import './SignUp.css'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export default function SignUp() {
+// mode: 'signup'(기본, /signup/customer) | 'login'(/login/customer - 로그인 전용 화면, 가입 유도 없음)
+export default function SignUp({ mode = 'signup' }) {
   const { lang } = useLanguage()
   const t = signupText[lang]
   const navigate = useNavigate()
@@ -144,12 +145,10 @@ export default function SignUp() {
         <div className="rt-logo">
           <div className="rt-logo-mark"><img src={logo} alt="roomting" /></div>
           <span className="rt-logo-name">roomting</span>
-          <div className="rt-logo-divider"></div>
-          <span className="rt-logo-tagline">{t.tagline}</span>
         </div>
       </div>
 
-      {!finalizeMode && (
+      {!finalizeMode && mode !== 'login' && (
         <div className="step-bar">
           <div className={`step-dot${step === 0 ? ' active' : step > 0 ? ' done' : ''}`}></div>
           <div className={`step-dot${step === 1 ? ' active' : ''}`}></div>
@@ -160,9 +159,9 @@ export default function SignUp() {
       {step === 0 && (
         <div className="slide-wrap">
           <div className="slide-content">
-            <div className="slide-eyebrow">{t.t2eyebrow}</div>
-            <div className="slide-title">{t.t2}</div>
-            <div className="slide-sub">{t.sub2}</div>
+            <div className="slide-eyebrow">{mode === 'login' ? t.loginEyebrow : t.t2eyebrow}</div>
+            <div className="slide-title">{mode === 'login' ? t.loginTitle : t.t2}</div>
+            <div className="slide-sub">{mode === 'login' ? t.loginSub : t.sub2}</div>
 
             <div className="social-btns">
               <button className="social-btn" disabled={loading} onClick={() => handleOAuth('google')}>
@@ -250,7 +249,16 @@ export default function SignUp() {
       )}
 
       <div className="bottom-area">
-        {step === 0 && authMethod === 'email' && (
+        {step === 0 && authMethod === 'email' && mode === 'login' && (
+          <button
+            className="rt-btn-primary"
+            disabled={!emailValid || !passwordValid || loading}
+            onClick={handleLogin}
+          >
+            {t.loginBtn}
+          </button>
+        )}
+        {step === 0 && authMethod === 'email' && mode !== 'login' && (
           <>
             <button
               className="rt-btn-primary"
@@ -272,6 +280,14 @@ export default function SignUp() {
           <button className="rt-btn-primary" disabled={!nickValid || loading} onClick={handleFinish}>
             {t.start}
           </button>
+        )}
+        {mode === 'login' && step === 0 && (
+          <>
+            <div className="signup-no-account">
+              {t.noAccount} <Link to="/signup" className="signup-inline-link">{t.signupLink}</Link>
+            </div>
+            <Link to="/login" className="signup-back-link">← 로그인 유형 다시 선택하기</Link>
+          </>
         )}
       </div>
 

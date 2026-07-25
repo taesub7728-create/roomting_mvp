@@ -1,0 +1,50 @@
+.pd-guard { padding: 60px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+.pd-gallery {
+  position: relative; width: 100%; height: 260px;
+  background: var(--line); overflow: hidden; flex-shrink: 0;
+}
+.pd-gallery img { width: 100%; height: 100%; object-fit: cover; }
+.pd-gallery-placeholder {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 56px;
+}
+.pd-back-btn {
+  position: absolute; top: 16px; left: 16px;
+  width: 36px; height: 36px; border-radius: 11px;
+  background: rgba(255,255,255,0.92); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: var(--ink);
+}
+
+.pd-content { padding: 20px 22px 110px; display: flex; flex-direction: column; gap: 14px; }
+
+.pd-price-section { background: var(--white); border-radius: var(--radius); padding: 18px; border: 1px solid var(--line); }
+.pd-price-main { font-size: 20px; font-weight: 800; color: var(--ink); letter-spacing: -0.4px; }
+.pd-price-deposit { font-size: 12.5px; font-weight: 500; color: var(--ink-soft); margin-top: 3px; }
+.pd-badge {
+  display: inline-block; margin-top: 10px; background: var(--pink-soft); color: var(--pink);
+  border-radius: 50px; padding: 4px 11px; font-size: 11px; font-weight: 700;
+}
+
+.pd-section-card { background: var(--white); border-radius: var(--radius); padding: 16px 18px; border: 1px solid var(--line); }
+.pd-section-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13.5px; font-weight: 800; color: var(--ink); margin-bottom: 10px;
+}
+.pd-location-text { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+.pd-description { font-size: 12.5px; font-weight: 500; color: var(--ink-soft); line-height: 1.6; white-space: pre-line; }
+
+.pd-bottom-cta {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 430px; padding: 14px 22px 32px;
+  background: linear-gradient(to top, var(--paper) 75%, transparent);
+  z-index: 30; display: flex; gap: 10px;
+}
+.pd-heart-btn {
+  width: 52px; height: 52px; border-radius: 15px; flex-shrink: 0;
+  background: var(--white); border: 1.5px solid var(--line); color: var(--ink-soft);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .15s;
+}
+.pd-heart-btn.liked { background: var(--pink-soft); border-color: var(--pink-dim); color: var(--pink); }
+.pd-heart-btn:active { transform: scale(.93); }
+.pd-chat-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; }

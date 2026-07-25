@@ -22,7 +22,23 @@
 
 .mp-section-title { font-size: 13px; font-weight: 800; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.5px; margin: 26px 22px 12px; }
 
-.mp-list { padding: 0 22px 100px; display: flex; flex-direction: column; gap: 12px; }
+.mp-list { padding: 0 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+.mp-list:last-child { padding-bottom: 100px; }
+
+.mp-fav-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--white); border-radius: var(--radius); padding: 12px; border: 1px solid var(--line);
+  text-decoration: none; transition: border-color .15s;
+}
+.mp-fav-card:hover { border-color: #DDD5D0; }
+.mp-fav-thumb {
+  width: 64px; height: 64px; border-radius: 12px; background: var(--paper);
+  display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
+}
+.mp-fav-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.mp-fav-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.mp-fav-title { font-size: 13.5px; font-weight: 800; color: var(--ink); }
+.mp-fav-price { font-size: 11.5px; font-weight: 600; color: var(--ink-soft); }
 
 .mp-req-card { background: var(--white); border-radius: var(--radius); padding: 16px 18px; border: 1px solid var(--line); }
 .mp-req-card.active-req { border-color: var(--pink-dim); }

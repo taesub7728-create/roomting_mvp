@@ -6,6 +6,7 @@ import {
   listMyPropertyResponses,
   listMyPublicListings,
   createPublicProperty,
+  updatePublicProperty,
   updateListingStatus,
   uploadPropertyImages,
 } from '../../api/properties.api'
@@ -60,6 +61,8 @@ export default function RealtorDashboard() {
   const [addressCandidates, setAddressCandidates] = useState([])
   const [addressSearching, setAddressSearching] = useState(false)
   const [submittingListing, setSubmittingListing] = useState(false)
+  const [editingId, setEditingId] = useState(null) // null = 신규 등록, 아니면 수정 중인 매물 id
+  const [editingImages, setEditingImages] = useState([]) // 수정 중인 매물의 기존 사진(읽기전용 표시용)
 
   useEffect(() => {
     async function load() {
@@ -137,12 +140,37 @@ export default function RealtorDashboard() {
     setCoords(null)
   }
 
+  function resetListingForm() {
+    setEditingId(null); setEditingImages([])
+    setListingTitle(''); setAddress(''); setListingDescription('')
+    setListingDeposit(''); setListingMonthlyRent(''); setListingRoomType(''); setListingStatus('active'); setAddressPublic(true)
+    setPhotoFiles([]); setCoords(null)
+  }
+
+  function handleStartEdit(property) {
+    setError(null)
+    setEditingId(property.id)
+    setEditingImages([...(property.property_images || [])].sort((a, b) => a.sort_order - b.sort_order))
+    setListingTitle(property.title || '')
+    setListingRoomType(property.room_type || '')
+    setListingDeposit(property.deposit != null ? String(property.deposit) : '')
+    setListingMonthlyRent(property.monthly_rent != null ? String(property.monthly_rent) : '')
+    setListingDescription(property.description || '')
+    setListingStatus(property.listing_status || 'active')
+    setAddressPublic(property.address_public !== false)
+    setAddress(property.address || '')
+    setCoords(property.lat != null && property.lng != null ? { lat: property.lat, lng: property.lng } : null)
+    setPhotoFiles([])
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const canSubmitListing = listingTitle.trim() && address.trim() && listingDeposit !== '' && listingMonthlyRent !== '' && listingRoomType && coords
 
-  async function handleCreateListing() {
+  async function handleSubmitListing() {
     setError(null)
     setSubmittingListing(true)
-    const { data: created, error: createError } = await createPublicProperty({
+
+    const payload = {
       title: listingTitle.trim(),
       address: address.trim(),
       description: listingDescription,
@@ -153,11 +181,15 @@ export default function RealtorDashboard() {
       lng: coords.lng,
       listingStatus,
       addressPublic,
-    })
-    if (createError) { setSubmittingListing(false); setError(createError); return }
+    }
+
+    const { data: saved, error: saveError } = editingId
+      ? await updatePublicProperty(editingId, payload)
+      : await createPublicProperty(payload)
+    if (saveError) { setSubmittingListing(false); setError(saveError); return }
 
     if (photoFiles.length > 0) {
-      const { error: imageError } = await uploadPropertyImages(created.id, photoFiles)
+      const { error: imageError } = await uploadPropertyImages(saved.id, photoFiles, editingImages.length)
       if (imageError) setError(imageError)
     }
 
@@ -165,9 +197,7 @@ export default function RealtorDashboard() {
     if (!refreshError) setListings(refreshed)
 
     setSubmittingListing(false)
-    setListingTitle(''); setAddress(''); setListingDescription('')
-    setListingDeposit(''); setListingMonthlyRent(''); setListingRoomType(''); setListingStatus('active'); setAddressPublic(true)
-    setPhotoFiles([]); setCoords(null)
+    resetListingForm()
   }
 
   async function handleListingStatusChange(propertyId, newStatus) {
@@ -395,7 +425,7 @@ export default function RealtorDashboard() {
       {tab === 'listings' && (
         <div className="rd-listings-body">
           <div className="rd-form-card">
-            <div className="rd-form-title">공개 매물 등록</div>
+            <div className="rd-form-title">{editingId ? '공개 매물 수정' : '공개 매물 등록'}</div>
 
             <div className="rd-field">
               <label>매물 제목</label>
@@ -475,14 +505,26 @@ export default function RealtorDashboard() {
             </div>
 
             <div className="rd-field">
-              <label>매물 사진 (여러 장 선택 가능)</label>
+              <label>매물 사진 {editingId ? '(새로 추가할 사진 선택)' : '(여러 장 선택 가능)'}</label>
+              {editingImages.length > 0 && (
+                <div className="rd-existing-photos">
+                  {editingImages.map((img, i) => (
+                    <div className="rd-existing-photo" key={i}><img src={img.image_url} alt="" /></div>
+                  ))}
+                </div>
+              )}
               <input type="file" accept="image/*" multiple onChange={(e) => setPhotoFiles(Array.from(e.target.files || []))} />
               {photoFiles.length > 0 && <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 6 }}>{photoFiles.length}장 선택됨</div>}
             </div>
 
-            <button className="rt-btn-primary" disabled={!canSubmitListing || submittingListing} onClick={handleCreateListing}>
-              {submittingListing ? '등록하는 중...' : '매물 등록하기'}
+            <button className="rt-btn-primary" disabled={!canSubmitListing || submittingListing} onClick={handleSubmitListing}>
+              {submittingListing ? (editingId ? '수정하는 중...' : '등록하는 중...') : (editingId ? '매물 수정하기' : '매물 등록하기')}
             </button>
+            {editingId && (
+              <button className="rt-btn-secondary" disabled={submittingListing} onClick={resetListingForm}>
+                취소하고 새로 등록하기
+              </button>
+            )}
           </div>
 
           <div className="rd-list-title">등록한 공개 매물 ({listings.length})</div>
@@ -499,9 +541,12 @@ export default function RealtorDashboard() {
                     <div className="rd-listing-title">{p.title}</div>
                     <div className="rd-listing-sub">{p.address} · 보증금 {Number(p.deposit ?? 0).toLocaleString()}만원 / 월세 {p.monthly_rent ?? 0}만원</div>
                   </div>
-                  <select className="rt-input" style={{ width: 110 }} value={p.listing_status} onChange={(e) => handleListingStatusChange(p.id, e.target.value)}>
-                    {Object.entries(LISTING_STATUS_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
-                  </select>
+                  <div className="rd-listing-actions">
+                    <select className="rt-input" style={{ width: 110 }} value={p.listing_status} onChange={(e) => handleListingStatusChange(p.id, e.target.value)}>
+                      {Object.entries(LISTING_STATUS_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+                    </select>
+                    <button className="rd-listing-edit-btn" onClick={() => handleStartEdit(p)}>수정</button>
+                  </div>
                 </div>
               ))}
             </div>

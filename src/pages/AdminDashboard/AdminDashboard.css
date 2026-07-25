@@ -1,8 +1,9 @@
 /* 운영자 전용 화면 - PC에서 쓰는 걸 기준으로 넉넉한 폭 고정 */
 .ad-frame { max-width: 900px; }
 
-.ad-header { padding: 20px 24px 0; }
+.ad-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 0; }
 .ad-title { font-size: 17px; font-weight: 800; color: var(--ink); }
+.ad-logout { background: none; border: none; color: var(--pink); font-weight: 700; font-size: 12.5px; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; }
 
 .ad-tabs { display: flex; gap: 8px; padding: 16px 24px; }
 .ad-tab {

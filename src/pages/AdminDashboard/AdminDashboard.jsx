@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { getCurrentProfile } from '../../api/auth.api'
+import { Link, useNavigate } from 'react-router-dom'
+import { getCurrentProfile, signOut } from '../../api/auth.api'
 import { listAllPublicListings, updateListingStatus } from '../../api/properties.api'
 import { listAllRequests, closeRequest } from '../../api/requests.api'
 import { listRealtorApplications, getApplicationDocumentUrl, approveRealtorApplication } from '../../api/realtorApplication.api'
@@ -27,6 +27,7 @@ function timeAgo(dateStr) {
 // 운영자 페이지: 매물 "등록"은 각 공인중개사 계정이 파트너 대시보드에서 직접 하고(realtor_id는 항상 본인),
 // 여기서는 전체 공개 매물 노출상태 관리와 요청서 전체 조회/강제종료만 함
 export default function AdminDashboard() {
+  const navigate = useNavigate()
   const [profile, setProfile] = useState(undefined) // undefined = 로딩중, null = 미로그인
   const [tab, setTab] = useState('listings')
 
@@ -41,7 +42,7 @@ export default function AdminDashboard() {
       const { data: profileData, error: profileError } = await getCurrentProfile()
       if (profileError) { setError(profileError); setProfile(null); return }
       setProfile(profileData)
-      if (profileData?.role !== 'admin') return
+      if (profileData?.role !== 'admin') { navigate('/', { replace: true }); return }
 
       const [listingsResult, requestsResult, applicationsResult] = await Promise.all([
         listAllPublicListings(),
@@ -56,7 +57,7 @@ export default function AdminDashboard() {
       else setApplications(applicationsResult.data)
     }
     load()
-  }, [])
+  }, [navigate])
 
   async function handleStatusChange(propertyId, newStatus) {
     const { error: updateError } = await updateListingStatus(propertyId, newStatus)
@@ -75,6 +76,11 @@ export default function AdminDashboard() {
     const { data: url, error: urlError } = await getApplicationDocumentUrl(path)
     if (urlError) { setError(urlError); return }
     window.open(url, '_blank')
+  }
+
+  async function handleLogout() {
+    await signOut()
+    navigate('/login/customer', { replace: true })
   }
 
   async function handleApprove(application) {
@@ -108,6 +114,7 @@ export default function AdminDashboard() {
     <div className="frame ad-frame">
       <div className="ad-header">
         <div className="ad-title">roomting admin</div>
+        <button className="ad-logout" onClick={handleLogout}>로그아웃</button>
       </div>
 
       <div className="ad-tabs">

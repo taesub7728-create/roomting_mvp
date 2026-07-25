@@ -9,10 +9,11 @@ import './RealtorSignUp.css'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export default function RealtorSignUp() {
+// initialMode: 'apply'(기본, /signup/realtor) | 'login'(/login/realtor - 로그인 화면으로 바로 진입)
+export default function RealtorSignUp({ initialMode = 'apply' }) {
   const navigate = useNavigate()
 
-  const [mode, setMode] = useState('apply') // 'apply' | 'login'
+  const [mode, setMode] = useState(initialMode) // 'apply' | 'login'
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginError, setLoginError] = useState(null)
@@ -133,6 +134,9 @@ export default function RealtorSignUp() {
             <span onClick={() => setMode('apply')} style={{ cursor: 'pointer', color: 'var(--pink)', fontWeight: 700 }}>
               아직 지원하지 않으셨나요? 지원서 작성하기
             </span>
+          </div>
+          <div className="login-signup-link">
+            <Link to="/login">← 로그인 유형 다시 선택하기</Link>
           </div>
         </div>
       </div>

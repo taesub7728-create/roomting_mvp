@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ClipboardList, Map, User, LogOut } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile, signOut } from '../../api/auth.api'
+import BottomTabBar from '../../components/BottomTabBar'
 import logo from '../../assets/roomting-logo-symbol.png'
 import { landingText, langOptions } from './translations'
 import './Landing.css'
@@ -12,7 +14,6 @@ export default function Landing() {
 
   const [langOpen, setLangOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [howTab, setHowTab] = useState(0)
   const [profile, setProfile] = useState(null)
   const [profileError, setProfileError] = useState(null)
   const langBoxRef = useRef(null)
@@ -51,16 +52,12 @@ export default function Landing() {
     setProfileOpen(false)
   }
 
-  const steps = howTab === 0 ? t.steps0 : t.steps1
-
   return (
     <div className="frame">
       <header className="landing-header">
         <div className="rt-logo">
           <div className="rt-logo-mark"><img src={logo} alt="roomting" /></div>
           <span className="rt-logo-name">roomting</span>
-          <div className="rt-logo-divider"></div>
-          <span className="rt-logo-tagline">{t.tagline}</span>
         </div>
 
         <div className="header-actions">
@@ -84,12 +81,15 @@ export default function Landing() {
                 {(profile.nickname || '?').charAt(0).toUpperCase()}
               </button>
               <div className={`profile-dd${profileOpen ? ' open' : ''}`}>
-                <Link to="/mypage" onClick={() => setProfileOpen(false)}>👤 {t.mypage}</Link>
-                <div className="dd-logout" onClick={handleLogout}>🚪 {t.logout}</div>
+                <Link to="/mypage" onClick={() => setProfileOpen(false)}><User size={16} strokeWidth={2} /> {t.mypage}</Link>
+                <div className="dd-logout" onClick={handleLogout}><LogOut size={16} strokeWidth={2} /> {t.logout}</div>
               </div>
             </div>
           ) : (
-            <Link className="login-link" to="/signup">{t.login}</Link>
+            <div className="auth-links">
+              <Link className="login-link" to="/login">{t.login}</Link>
+              <Link className="signup-link" to="/signup">{t.signup}</Link>
+            </div>
           )}
         </div>
       </header>
@@ -97,67 +97,33 @@ export default function Landing() {
       {profileError && <div className="rt-error-text" style={{ padding: '0 22px' }}>{profileError}</div>}
 
       <div className="hero">
-        <div className="hero-eyebrow"><span className="eyebrow-dot"></span>{t.eyebrow}</div>
         <h1>{t.heroTitle}</h1>
-        <p className="hero-sub">{t.heroSub}</p>
       </div>
 
       <div className="cards">
         <Link className="card primary" to="/request">
-          <div className="card-icon">📋</div>
+          <div className="card-icon"><ClipboardList size={18} strokeWidth={2} /></div>
           <div>
             <div className="card-title">{t.cardRequestTitle}</div>
             <div className="card-desc">{t.cardRequestDesc}</div>
           </div>
-          <span className="card-arrow">→</span>
         </Link>
-        <Link className="card" to="/map">
-          <div className="card-icon">🗺️</div>
+        <Link className="card secondary" to="/map">
+          <div className="card-icon"><Map size={18} strokeWidth={2} /></div>
           <div>
             <div className="card-title">{t.cardMapTitle}</div>
             <div className="card-desc">{t.cardMapDesc}</div>
           </div>
-          <span className="card-arrow">→</span>
         </Link>
       </div>
 
-      <div className="quick-stats">
-        <div className="quick-stat">
-          <div className="quick-stat-num">30+</div>
-          <div className="quick-stat-label">{t.statPartners}</div>
-        </div>
-        <div className="quick-stat">
-          <div className="quick-stat-num">24h</div>
-          <div className="quick-stat-label">{t.statResponse}</div>
-        </div>
-        <div className="quick-stat">
-          <div className="quick-stat-num">4</div>
-          <div className="quick-stat-label">{t.statLangs}</div>
-        </div>
-      </div>
-
-      <section className="how-section">
-        <div className="how-title">{t.howTitle}</div>
-        <div className="how-tabs">
-          <button className={`how-tab${howTab === 0 ? ' active' : ''}`} onClick={() => setHowTab(0)}>{t.howTab0}</button>
-          <button className={`how-tab${howTab === 1 ? ' active' : ''}`} onClick={() => setHowTab(1)}>{t.howTab1}</button>
-        </div>
-        <div className="how-steps">
-          {steps.map(([title, desc], i) => (
-            <div className="how-step" key={i}>
-              <div className="how-num">{String(i + 1).padStart(2, '0')}</div>
-              <div>
-                <div className="how-text-title">{title}</div>
-                <div className="how-text-desc">{desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <div className="trust-line">{t.trustLine}</div>
 
       <footer className="landing-footer">
         {t.footerHelp} <a href="#">{t.footerContact}</a>
       </footer>
+
+      <BottomTabBar />
     </div>
   )
 }

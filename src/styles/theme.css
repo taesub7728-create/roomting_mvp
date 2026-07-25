@@ -5,9 +5,9 @@
   --pink-soft: #FDEEF1;
   --pink-dim: #F8D6DE;
   --ink: #1C1A19;
-  --ink-soft: #6B6562;
-  --line: #ECE7E3;
-  --paper: #FBFAF8;
+  --ink-soft: #8A8480;
+  --line: #EFEBE7;
+  --paper: #FFFFFF;
   --white: #fff;
   --radius: 16px;
   --danger: #E8547A; /* 에러 메시지 색 */
@@ -68,18 +68,6 @@ body {
   font-weight: 800;
   color: var(--ink-soft);
   letter-spacing: -0.2px;
-}
-.rt-logo-divider {
-  width: 1px;
-  height: 12px;
-  background: var(--line);
-  margin: 0 1px;
-}
-.rt-logo-tagline {
-  font-size: 12px;
-  font-weight: 600;
-  color: #B5ADA7;
-  letter-spacing: -0.1px;
 }
 
 /* 여러 화면에서 재사용하는 기본 버튼 */

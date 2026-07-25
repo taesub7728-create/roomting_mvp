@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Heart } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile, signOut } from '../../api/auth.api'
 import { listMyRequests } from '../../api/requests.api'
+import { listMyFavorites } from '../../api/favorites.api'
 import { getRoomTypeLabel } from '../../utils/roomTypeLabel'
+import { sortedImageUrls } from '../../utils/propertyImages'
 import './MyPage.css'
 
 export default function MyPage() {
@@ -12,6 +15,7 @@ export default function MyPage() {
 
   const [profile, setProfile] = useState(undefined) // undefined = 로딩중, null = 미로그인
   const [requests, setRequests] = useState([])
+  const [favorites, setFavorites] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -27,9 +31,14 @@ export default function MyPage() {
       }
 
       if (profileData) {
-        const { data, error: listError } = await listMyRequests()
+        const [{ data: requestData, error: listError }, { data: favoriteData, error: favoriteError }] = await Promise.all([
+          listMyRequests(),
+          listMyFavorites(),
+        ])
         if (listError) setError(listError)
-        else setRequests(data)
+        else setRequests(requestData)
+        if (favoriteError) setError(favoriteError)
+        else setFavorites(favoriteData)
       }
       setLoading(false)
     }
@@ -121,6 +130,33 @@ export default function MyPage() {
                   <Link className={`mp-req-resp-btn${isOpen ? '' : ' closed'}`} to={`/requests/${r.id}`}>확인하기</Link>
                 </div>
               </div>
+            )
+          })
+        )}
+      </div>
+
+      <div className="mp-section-title">찜한 매물</div>
+
+      <div className="mp-list">
+        {favorites.length === 0 ? (
+          <div className="mp-empty">아직 찜한 매물이 없어요</div>
+        ) : (
+          favorites.map((f) => {
+            const p = f.property
+            const thumb = sortedImageUrls(p)[0]
+            return (
+              <Link className="mp-fav-card" to={`/property/${p.id}`} key={f.id}>
+                <div className="mp-fav-thumb">
+                  {thumb ? <img src={thumb} alt={p.title} /> : <Heart size={20} strokeWidth={1.5} color="#C3BCB6" />}
+                </div>
+                <div className="mp-fav-info">
+                  <div className="mp-fav-title">{p.title}</div>
+                  <div className="mp-fav-price">
+                    월세 {Number(p.monthly_rent ?? 0).toLocaleString()}만원 · 보증금 {Number(p.deposit ?? 0).toLocaleString()}만원
+                  </div>
+                  <span className="mp-req-chip">{getRoomTypeLabel(lang, p.room_type)}</span>
+                </div>
+              </Link>
             )
           })
         )}

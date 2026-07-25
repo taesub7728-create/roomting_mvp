@@ -131,6 +131,32 @@ export async function createPublicProperty({
   return { data, error: null }
 }
 
+// 공인중개사 본인이 등록한 공개 매물 정보 수정 (RLS: realtor_id = auth.uid()인 매물만 UPDATE 허용)
+export async function updatePublicProperty(propertyId, {
+  title, address, description, deposit, monthlyRent, roomType, lat, lng, listingStatus, addressPublic,
+}) {
+  const { data, error } = await supabase
+    .from('properties')
+    .update({
+      title,
+      address,
+      description: description || null,
+      deposit,
+      monthly_rent: monthlyRent,
+      room_type: roomType,
+      lat,
+      lng,
+      listing_status: listingStatus || 'active',
+      address_public: addressPublic !== false,
+    })
+    .eq('id', propertyId)
+    .select()
+    .single()
+
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
 // 공개 매물의 노출상태(판매중/거래완료/미노출) 변경
 export async function updateListingStatus(propertyId, status) {
   const { data, error } = await supabase
@@ -159,7 +185,8 @@ export async function listPropertiesForRequest(requestId) {
 
 // 매물 사진 파일들을 Storage에 올리고, property_images 테이블에 URL을 기록
 // 실패한 파일이 있어도 나머지는 계속 진행하고, 실패 목록을 함께 알려줌
-export async function uploadPropertyImages(propertyId, files) {
+// startOrder: 기존 사진이 있는 매물(수정 시 사진 추가)에 이어붙일 때, 기존 사진 개수를 넘겨서 sort_order가 겹치지 않게 함
+export async function uploadPropertyImages(propertyId, files, startOrder = 0) {
   const uploadedUrls = []
   const failedFiles = []
 
@@ -178,7 +205,7 @@ export async function uploadPropertyImages(propertyId, files) {
   }
 
   if (uploadedUrls.length > 0) {
-    const rows = uploadedUrls.map((url, idx) => ({ property_id: propertyId, image_url: url, sort_order: idx }))
+    const rows = uploadedUrls.map((url, idx) => ({ property_id: propertyId, image_url: url, sort_order: startOrder + idx }))
     const { error: insertError } = await supabase.from('property_images').insert(rows)
     if (insertError) return { data: null, error: toFriendlyError(insertError) }
   }
