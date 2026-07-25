@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { signUpWithEmail, signInWithEmail, getCurrentProfile } from '../../api/auth.api'
 import { checkLandlineDuplicate, submitRealtorApplication } from '../../api/realtorApplication.api'
 import { redirectForRole } from '../../utils/redirectForRole'
-import logo from '../../assets/roomting-logo-symbol.png'
+import logo from '../../assets/roomting-symbol.svg'
 import '../Login/Login.css'
 import './RealtorSignUp.css'
 

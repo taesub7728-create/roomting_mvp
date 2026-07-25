@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import logo from '../assets/roomting-logo-symbol.png'
+import logo from '../assets/roomting-symbol.svg'
 import './Splash.css'
 
 const FADE_IN_MS = 700

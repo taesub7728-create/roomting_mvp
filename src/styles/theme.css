@@ -11,6 +11,7 @@
   --white: #fff;
   --radius: 16px;
   --danger: #E8547A; /* 에러 메시지 색 */
+  --sidebar-width: 224px; /* 데스크톱 좌측 고정 탭바(사이드바) 폭 */
 }
 
 * {
@@ -44,6 +45,14 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
+}
+
+/* 데스크톱(1024px~): 좌측 탭바가 세로 사이드바로 바뀌는 화면은 그만큼 좌측 여백을 확보.
+   나머지 공간은 화면별로 자유롭게 사용(.frame의 max-width는 화면별 다음 단계에서 확장) */
+@media (min-width: 1024px) {
+  #root:has(.tab-bar) {
+    padding-left: var(--sidebar-width);
+  }
 }
 
 /* 로고 (헤더에서 반복 사용) */

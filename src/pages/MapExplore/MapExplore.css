@@ -1,13 +1,26 @@
 /* 지도 화면은 스크롤 없이 화면 전체를 지도가 채워야 해서, 다른 화면과 달리 높이를 고정함 */
 .me-frame { height: 100vh; overflow: hidden; }
 
-/* 지도가 하단 탭바로 들어오는 메인 탭이 되면서, 뒤로가기 없는 최소 헤더로 교체 */
-.me-header { padding: 14px 20px; background: var(--paper); flex-shrink: 0; }
-
 .me-map { flex: 1; min-height: 0; position: relative; background: var(--line); }
 
+/* ── 상단 검색바 (지도 위에 떠 있는 형태) ── */
+.me-search-bar {
+  position: absolute; top: 16px; left: 16px; right: 16px; z-index: 20;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
+  padding: 13px 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+.me-search-icon { color: var(--ink-soft); flex-shrink: 0; }
+.me-search-input {
+  flex: 1; border: none; outline: none; background: none;
+  font-size: 14px; font-weight: 500; color: var(--ink);
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.me-search-input::placeholder { color: var(--ink-soft); }
+.me-search-input:disabled { opacity: .6; }
+
 .me-overlay-badge {
-  position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 76px; left: 50%; transform: translateX(-50%);
   background: var(--white); border: 1px solid var(--line); border-radius: 50px;
   padding: 8px 16px; font-size: 12.5px; font-weight: 700; color: var(--ink-soft);
   box-shadow: 0 4px 14px rgba(0,0,0,.06); white-space: nowrap; z-index: 10;
@@ -18,12 +31,28 @@
 
 /* ── 현재 위치 버튼 ── */
 .locate-btn {
-  position: absolute; top: 16px; right: 16px;
+  position: absolute; top: 80px; right: 16px;
   width: 40px; height: 40px; background: var(--white); border: 1px solid var(--line); border-radius: 12px;
   display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink);
   box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 15; transition: transform .15s;
 }
 .locate-btn:active { transform: scale(.93); }
+
+/* ── 가격 말풍선 마커 (카카오맵 CustomOverlay) ── */
+.price-marker {
+  position: relative;
+  background: var(--pink); color: #fff;
+  font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 800;
+  padding: 6px 12px; border-radius: 50px; border: 2px solid var(--paper);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18); white-space: nowrap; cursor: pointer;
+  transition: transform .15s;
+}
+.price-marker::after {
+  content: ''; position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%);
+  border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid var(--pink);
+}
+.price-marker.active { background: var(--ink); transform: scale(1.08); }
+.price-marker.active::after { border-top-color: var(--ink); }
 
 /* ── 리스트뷰 토글 ── */
 /* bottom: 하단 탭바(실측 69px) 위에 24px 여백을 두고 뜨도록 */
@@ -60,16 +89,18 @@
 .cards-scroll { display: flex; gap: 13px; overflow-x: auto; padding: 0 18px 4px; scrollbar-width: none; scroll-snap-type: x mandatory; }
 .cards-scroll::-webkit-scrollbar { display: none; }
 
-/* ── 매물 카드 ── */
+/* ── 매물 카드 (가로형: 좌측 사진 캐러셀 + 우측 정보) ── */
 .listing-card {
+  display: flex; align-items: stretch;
   background: var(--white); border-radius: var(--radius); overflow: hidden;
-  min-width: 230px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); scroll-snap-align: start;
+  width: 300px; min-width: 300px; height: 128px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07); scroll-snap-align: start;
   cursor: pointer; transition: transform .18s, border-color .15s; flex-shrink: 0; border: 1px solid var(--line);
 }
 .listing-card:active { transform: scale(.97); }
 .listing-card.highlighted { border-color: var(--pink-dim); box-shadow: 0 4px 16px rgba(232,84,122,0.18); }
 
-.card-img { width: 100%; height: 130px; background: var(--line); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.card-img { width: 112px; flex-shrink: 0; background: var(--line); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .card-img img { width: 100%; height: 100%; object-fit: cover; }
 
 .card-badges { position: absolute; top: 9px; left: 9px; display: flex; gap: 5px; }
@@ -85,7 +116,9 @@
 .card-heart:active { transform: scale(.85); }
 .card-heart.liked { color: var(--pink); }
 
-.card-info { padding: 11px 13px 13px; }
-.card-price { font-size: 15.5px; font-weight: 800; color: var(--ink); margin-bottom: 4px; letter-spacing: -0.3px; }
-.card-price .deposit { font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-left: 4px; }
+.card-info { flex: 1; min-width: 0; padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+.card-price { font-size: 14.5px; font-weight: 800; color: var(--ink); letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-price .deposit { display: block; font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-top: 2px; }
 .card-location { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--pink); }
+.card-location svg { flex-shrink: 0; }
+.card-location span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

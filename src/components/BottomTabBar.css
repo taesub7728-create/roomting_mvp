@@ -47,3 +47,49 @@
   color: var(--pink);
   font-weight: 700;
 }
+
+/* 데스크톱(1024px~): 하단 고정 탭바 → 좌측 고정 세로 사이드바.
+   항목 구성/active 로직은 BottomTabBar.jsx 그대로, 레이아웃만 전환 */
+@media (min-width: 1024px) {
+  .tab-bar {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: auto;
+    transform: none;
+    width: var(--sidebar-width);
+    max-width: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 28px 14px;
+    border-top: none;
+    border-right: 1px solid var(--line);
+  }
+
+  .tab-item {
+    flex: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 12px;
+  }
+
+  .tab-item.active {
+    background: var(--pink-soft);
+  }
+
+  .tab-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .tab-item.active .tab-icon {
+    background: none;
+  }
+
+  .tab-label {
+    font-size: 14px;
+  }
+}

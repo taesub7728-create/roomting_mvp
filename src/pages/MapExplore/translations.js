@@ -9,6 +9,7 @@ export const mapText = {
     rentLabel: '월세', depositLabel: '보증금',
     nearby: '근처 매물', viewListBtn: '목록 보기',
     locateMe: '현재 위치로 이동', locateError: '현재 위치를 가져올 수 없어요',
+    searchPlaceholder: '어디로 이사 가시나요?', searchNoResult: '검색 결과가 없어요',
   },
   ja: {
     title: '地図で部屋を探す',
@@ -20,6 +21,7 @@ export const mapText = {
     rentLabel: '家賃', depositLabel: '保証金',
     nearby: '近くの物件', viewListBtn: 'リスト表示',
     locateMe: '現在地に移動', locateError: '現在地を取得できませんでした',
+    searchPlaceholder: 'どこへ引っ越しますか？', searchNoResult: '検索結果がありません',
   },
   zh: {
     title: '在地图上找房',
@@ -31,6 +33,7 @@ export const mapText = {
     rentLabel: '月租', depositLabel: '押金',
     nearby: '附近房源', viewListBtn: '列表查看',
     locateMe: '移动到当前位置', locateError: '无法获取当前位置',
+    searchPlaceholder: '您要搬到哪里？', searchNoResult: '没有搜索结果',
   },
   en: {
     title: 'Explore rooms on the map',
@@ -42,5 +45,6 @@ export const mapText = {
     rentLabel: 'Rent', depositLabel: 'Deposit',
     nearby: 'Nearby Listings', viewListBtn: 'List View',
     locateMe: 'Move to current location', locateError: 'Could not get your current location',
+    searchPlaceholder: 'Where are you moving to?', searchNoResult: 'No results found',
   },
 }

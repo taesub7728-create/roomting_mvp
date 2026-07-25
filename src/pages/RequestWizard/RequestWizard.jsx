@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useLanguage } from '../../context/LanguageContext'
 import { getSession } from '../../api/auth.api'
 import { createRequest } from '../../api/requests.api'
-import logo from '../../assets/roomting-logo-symbol.png'
+import logo from '../../assets/roomting-symbol.svg'
 import { requestText } from './translations'
 import './RequestWizard.css'
 

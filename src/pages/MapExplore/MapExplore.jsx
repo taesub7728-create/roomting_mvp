@@ -1,18 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { List, Locate, MapPin, Home, Heart, X } from 'lucide-react'
+import { List, Locate, MapPin, Home, Heart, Search, X } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile } from '../../api/auth.api'
 import { listPublicProperties } from '../../api/properties.api'
 import { addFavorite, listMyFavoriteIds, removeFavorite } from '../../api/favorites.api'
 import { getRoomTypeLabel } from '../../utils/roomTypeLabel'
 import { sortedImageUrls } from '../../utils/propertyImages'
-import { loadKakaoMaps } from '../../lib/kakaoMaps'
+import { loadKakaoMaps, searchAddressCandidates } from '../../lib/kakaoMaps'
 import ImageCarousel from '../../components/ImageCarousel'
 import BottomTabBar from '../../components/BottomTabBar'
-import logo from '../../assets/roomting-logo-symbol.png'
 import { mapText } from './translations'
 import './MapExplore.css'
+
+// 보증금/월세를 마커 말풍선에 쓸 짧은 형태로 (전세처럼 월세가 없으면 보증금만)
+function formatMarkerPrice(property) {
+  const rent = Number(property.monthly_rent ?? 0)
+  const deposit = Number(property.deposit ?? 0)
+  return rent > 0 ? `${deposit.toLocaleString()}/${rent.toLocaleString()}` : deposit.toLocaleString()
+}
 
 const SEOUL_CITY_HALL = { lat: 37.5665, lng: 126.978 }
 const ACTIVE_ZOOM_LEVEL = 4
@@ -25,6 +31,7 @@ export default function MapExplore() {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef([])
+  const markerElsRef = useRef({})
   const cardRefs = useRef({})
 
   const [profile, setProfile] = useState(undefined) // undefined = 로딩중, null = 미로그인
@@ -34,6 +41,8 @@ export default function MapExplore() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [error, setError] = useState(null)
   const [mapReady, setMapReady] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searching, setSearching] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -70,6 +79,26 @@ export default function MapExplore() {
         return next
       })
       setError(favError)
+    }
+  }
+
+  async function handleSearchSubmit(e) {
+    e.preventDefault()
+    const query = searchQuery.trim()
+    if (!query || !mapRef.current || !window.kakao) return
+
+    setSearching(true)
+    try {
+      const results = await searchAddressCandidates(query)
+      if (results.length === 0) { setError(t.searchNoResult); return }
+      setError(null)
+      const kakao = window.kakao
+      mapRef.current.setLevel(ACTIVE_ZOOM_LEVEL)
+      mapRef.current.panTo(new kakao.maps.LatLng(results[0].lat, results[0].lng))
+    } catch (err) {
+      setError(err?.message || t.searchNoResult)
+    } finally {
+      setSearching(false)
     }
   }
 
@@ -123,29 +152,40 @@ export default function MapExplore() {
     }
   }
 
-  // 매물 목록이 준비되면 마커를 그리고, 전체가 보이도록 지도 범위를 맞춤
+  // 매물 목록이 준비되면 가격 말풍선 마커를 그리고, 전체가 보이도록 지도 범위를 맞춤
   useEffect(() => {
     if (!mapReady || !mapRef.current || !window.kakao) return
     const kakao = window.kakao
 
     markersRef.current.forEach((m) => m.setMap(null))
     markersRef.current = []
+    markerElsRef.current = {}
     if (properties.length === 0) return
 
     const bounds = new kakao.maps.LatLngBounds()
     properties.forEach((p) => {
       const position = new kakao.maps.LatLng(p.display_lat, p.display_lng)
-      const marker = new kakao.maps.Marker({ position, map: mapRef.current })
-      kakao.maps.event.addListener(marker, 'click', () => selectProperty(p))
-      markersRef.current.push(marker)
+
+      const el = document.createElement('div')
+      el.className = 'price-marker'
+      el.textContent = formatMarkerPrice(p)
+      el.addEventListener('click', () => selectProperty(p))
+      markerElsRef.current[p.id] = el
+
+      const overlay = new kakao.maps.CustomOverlay({ position, content: el, yAnchor: 1.3, clickable: true })
+      overlay.setMap(mapRef.current)
+      markersRef.current.push(overlay)
       bounds.extend(position)
     })
     mapRef.current.setBounds(bounds)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, properties])
 
-  // 핀을 탭해서 activeId가 바뀌면, 캐러셀에서 해당 카드로 자동 스크롤
+  // 핀을 탭해서 activeId가 바뀌면, 캐러셀에서 해당 카드로 자동 스크롤 + 해당 마커도 강조
   useEffect(() => {
+    Object.entries(markerElsRef.current).forEach(([id, el]) => {
+      el.classList.toggle('active', id === String(activeId))
+    })
     if (activeId == null) return
     cardRefs.current[activeId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
   }, [activeId])
@@ -168,14 +208,20 @@ export default function MapExplore() {
 
   return (
     <div className="frame me-frame">
-      <div className="me-header">
-        <div className="rt-logo">
-          <div className="rt-logo-mark"><img src={logo} alt="roomting" /></div>
-          <span className="rt-logo-name">roomting</span>
-        </div>
-      </div>
-
       <div className="me-map" ref={mapContainerRef}>
+        <form className="me-search-bar" onSubmit={handleSearchSubmit}>
+          <Search size={18} strokeWidth={2} className="me-search-icon" />
+          <input
+            className="me-search-input"
+            type="text"
+            inputMode="search"
+            placeholder={t.searchPlaceholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            disabled={searching}
+          />
+        </form>
+
         {error && <div className="me-overlay-badge me-error-badge">{error}</div>}
         {!error && mapReady && properties.length === 0 && (
           <div className="me-overlay-badge">{t.emptyText}</div>
@@ -226,7 +272,7 @@ export default function MapExplore() {
                     {t.rentLabel} {Number(p.monthly_rent ?? 0).toLocaleString()}만원
                     <span className="deposit">{t.depositLabel} {Number(p.deposit ?? 0).toLocaleString()}만원</span>
                   </div>
-                  <div className="card-location"><MapPin size={11} strokeWidth={2} /> {p.display_address}</div>
+                  <div className="card-location"><MapPin size={11} strokeWidth={2} /> <span>{p.display_address}</span></div>
                 </div>
               </div>
             ))}

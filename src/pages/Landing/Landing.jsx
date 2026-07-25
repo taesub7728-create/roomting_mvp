@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ClipboardList, Map, User, LogOut } from 'lucide-react'
+import { ArrowRight, User, LogOut } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile, signOut } from '../../api/auth.api'
 import BottomTabBar from '../../components/BottomTabBar'
-import logo from '../../assets/roomting-logo-symbol.png'
+import logo from '../../assets/roomting-symbol.svg'
 import { landingText, langOptions } from './translations'
 import './Landing.css'
 
@@ -102,18 +102,11 @@ export default function Landing() {
 
       <div className="cards">
         <Link className="card primary" to="/request">
-          <div className="card-icon"><ClipboardList size={18} strokeWidth={2} /></div>
-          <div>
+          <div className="card-top">
             <div className="card-title">{t.cardRequestTitle}</div>
-            <div className="card-desc">{t.cardRequestDesc}</div>
+            <ArrowRight className="card-arrow" size={26} strokeWidth={2} />
           </div>
-        </Link>
-        <Link className="card secondary" to="/map">
-          <div className="card-icon"><Map size={18} strokeWidth={2} /></div>
-          <div>
-            <div className="card-title">{t.cardMapTitle}</div>
-            <div className="card-desc">{t.cardMapDesc}</div>
-          </div>
+          <div className="card-desc">{t.cardRequestDesc}</div>
         </Link>
       </div>
 

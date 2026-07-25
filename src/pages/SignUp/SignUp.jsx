@@ -5,7 +5,7 @@ import { signUpWithEmail, signInWithEmail, signInWithOAuth, updateOwnProfile, ge
 import { createRequest } from '../../api/requests.api'
 import { PENDING_REQUEST_KEY } from '../RequestWizard/RequestWizard'
 import { redirectForRole } from '../../utils/redirectForRole'
-import logo from '../../assets/roomting-logo-symbol.png'
+import logo from '../../assets/roomting-symbol.svg'
 import { signupText } from './translations'
 import './SignUp.css'
 

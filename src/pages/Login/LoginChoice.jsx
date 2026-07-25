@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Home, Building2 } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
-import logo from '../../assets/roomting-logo-symbol.png'
+import logo from '../../assets/roomting-symbol.svg'
 import { loginChoiceText } from './translations'
 import '../SignUp/SignUpChoice.css'
 
