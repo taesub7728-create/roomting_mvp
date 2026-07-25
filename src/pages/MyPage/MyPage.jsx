@@ -7,6 +7,7 @@ import { listMyRequests } from '../../api/requests.api'
 import { listMyFavorites } from '../../api/favorites.api'
 import { getRoomTypeLabel } from '../../utils/roomTypeLabel'
 import { sortedImageUrls } from '../../utils/propertyImages'
+import BottomTabBar from '../../components/BottomTabBar'
 import './MyPage.css'
 
 export default function MyPage() {
@@ -161,6 +162,8 @@ export default function MyPage() {
           })
         )}
       </div>
+
+      <BottomTabBar />
     </div>
   )
 }

@@ -1,0 +1,334 @@
+<!DOCTYPE html><html class="light" lang="ko"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Roomting - 지도 검색</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Design System Implementation -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary": "#ffffff",
+                    "surface-container-low": "#f9f2f0",
+                    "inverse-on-surface": "#f6efed",
+                    "surface-container-highest": "#e7e1df",
+                    "on-tertiary-fixed-variant": "#005321",
+                    "outline-variant": "#dfbfc3",
+                    "pink-dim": "#F8D6DE",
+                    "surface-container": "#f3edea",
+                    "surface-container-lowest": "#ffffff",
+                    "inactive-gray": "#C3BCB6",
+                    "line": "#EFEBE7",
+                    "paper": "#FFFFFF",
+                    "surface-dim": "#dfd9d7",
+                    "on-surface-variant": "#584144",
+                    "surface-tint": "#af2851",
+                    "on-error": "#ffffff",
+                    "primary-container": "#cd4066",
+                    "ink-soft": "#8A8480",
+                    "on-primary-fixed-variant": "#8e073a",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#eddfe2",
+                    "on-surface": "#1d1b1a",
+                    "on-secondary-fixed": "#211a1c",
+                    "tertiary": "#006b2d",
+                    "on-primary-fixed": "#3f0015",
+                    "secondary": "#665c5e",
+                    "primary-fixed": "#ffd9de",
+                    "tertiary-container": "#00873b",
+                    "tertiary-fixed-dim": "#60df7e",
+                    "on-primary-container": "#fffbff",
+                    "surface-bright": "#fef8f6",
+                    "tertiary-fixed": "#7dfc97",
+                    "primary": "#ac254f",
+                    "on-secondary-container": "#6a6063",
+                    "outline": "#8b7074",
+                    "surface-container-high": "#ede7e5",
+                    "error": "#ba1a1a",
+                    "secondary-fixed-dim": "#d1c3c6",
+                    "primary-fixed-dim": "#ffb2bf",
+                    "surface-variant": "#e7e1df",
+                    "on-tertiary-container": "#f7fff3",
+                    "on-tertiary-fixed": "#002109",
+                    "on-tertiary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "background": "#fef8f6",
+                    "surface": "#fef8f6",
+                    "secondary-container": "#ebdcdf",
+                    "inverse-primary": "#ffb2bf",
+                    "on-secondary-fixed-variant": "#4e4447",
+                    "inverse-surface": "#32302f",
+                    "on-secondary": "#ffffff",
+                    "on-background": "#1d1b1a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-desktop": "40px",
+                    "gutter": "16px",
+                    "margin-mobile": "20px",
+                    "unit": "4px",
+                    "element-gap": "12px",
+                    "section-gap": "48px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Noto Sans KR"],
+                    "label-md": ["Noto Sans KR"],
+                    "body-sm": ["Noto Sans KR"],
+                    "display-lg": ["Manrope"],
+                    "numeral-md": ["Manrope"],
+                    "headline-sm": ["Manrope"],
+                    "body-md": ["Noto Sans KR"],
+                    "headline-md": ["Manrope"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "numeral-md": ["16px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .marker-pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .map-bg {
+            filter: grayscale(0.4) contrast(0.9) brightness(1.05);
+        }
+        
+        /* Custom horizontal swipe area */
+        .card-carousel {
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+        }
+        .card-item {
+            scroll-snap-align: center;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md antialiased overflow-hidden">
+<!-- Top Navigation Shell (Desktop & Mobile Wrapper) -->
+<header class="fixed top-0 left-0 right-0 z-50 pointer-events-none">
+<div class="max-w-[430px] mx-auto w-full px-margin-mobile pt-4 pointer-events-auto">
+<!-- Search & Filter Bar -->
+<div class="flex items-center gap-element-gap bg-paper/90 backdrop-blur-md rounded-xl p-3 shadow-sm border border-line">
+<div class="flex flex-1 items-center gap-3 px-2">
+<i class="w-5 h-5 text-ink-soft" data-lucide="search"></i>
+<input class="bg-transparent border-none focus:ring-0 w-full font-body-md text-on-surface placeholder:text-ink-soft" placeholder="어디로 이사 가시나요?" type="text">
+</div>
+<div class="w-[1px] h-6 bg-line"></div>
+<button class="flex items-center justify-center p-1 text-primary hover:bg-pink-soft rounded-lg transition-colors">
+<i class="w-5 h-5" data-lucide="sliders-horizontal"></i>
+</button>
+</div>
+<!-- Quick Filter Chips -->
+<div class="flex gap-2 mt-3 overflow-x-auto no-scrollbar pb-2">
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-paper border border-line text-label-md font-label-md text-on-surface hover:border-primary transition-all">전월세</button>
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-paper border border-line text-label-md font-label-md text-on-surface hover:border-primary transition-all">가격대</button>
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-paper border border-line text-label-md font-label-md text-on-surface hover:border-primary transition-all">관리비</button>
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-paper border border-line text-label-md font-label-md text-on-surface hover:border-primary transition-all">투룸 이상</button>
+</div>
+</div>
+</header>
+<!-- Main Canvas: Map Container -->
+<main class="relative w-full h-screen bg-surface-container-low overflow-hidden">
+<!-- Mock Map Background -->
+<div class="absolute inset-0 map-bg" data-alt="A sophisticated, minimalist digital map of a modern metropolitan city with clean lines, soft pastel tones, and subtle grey building footprints. The aesthetic is light-mode, airy, and professional, using a refined color palette of off-whites and light greys to create an effortless real-estate matchmaking background. The lighting is bright and even, emphasizing clarity and transparency." data-location="Seoul">
+<!-- Dynamic Map Markers (Randomly placed for demo) -->
+<div class="absolute top-1/4 left-1/3 group cursor-pointer">
+<div class="relative">
+<div class="absolute -inset-2 bg-primary/20 rounded-full marker-pulse"></div>
+<div class="relative bg-primary text-paper px-3 py-1 rounded-full font-numeral-md text-numeral-md shadow-lg border-2 border-paper">
+                        1.2억
+                    </div>
+<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-primary"></div>
+</div>
+</div>
+<div class="absolute top-[45%] right-1/4 group cursor-pointer">
+<div class="relative">
+<div class="absolute -inset-2 bg-primary/20 rounded-full marker-pulse" style="animation-delay: 0.5s;"></div>
+<div class="relative bg-primary text-paper px-3 py-1 rounded-full font-numeral-md text-numeral-md shadow-lg border-2 border-paper">
+                        8,500
+                    </div>
+<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-primary"></div>
+</div>
+</div>
+<div class="absolute bottom-1/3 left-1/2 group cursor-pointer">
+<div class="relative">
+<div class="absolute -inset-2 bg-primary/20 rounded-full marker-pulse" style="animation-delay: 1.2s;"></div>
+<div class="relative bg-primary text-paper px-3 py-1 rounded-full font-numeral-md text-numeral-md shadow-lg border-2 border-paper">
+                        2.5억
+                    </div>
+<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-primary"></div>
+</div>
+</div>
+</div>
+<!-- Floating Action Button for Current Location -->
+<button class="absolute bottom-[240px] right-margin-mobile p-3 bg-paper rounded-full shadow-lg border border-line text-primary active:scale-95 transition-transform">
+<i class="w-6 h-6" data-lucide="navigation"></i>
+</button>
+<!-- Bottom Property Cards (Swipeable) -->
+<div class="absolute bottom-20 left-0 right-0 z-40 pb-4">
+<div class="card-carousel flex gap-4 overflow-x-auto no-scrollbar px-margin-mobile">
+<!-- Card 1 -->
+<div class="card-item shrink-0 w-[300px] bg-paper rounded-2xl overflow-hidden border border-line shadow-sm">
+<div class="flex h-32">
+<div class="w-1/3 bg-surface-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A bright, minimalist interior of a modern studio apartment with large windows, white walls, and elegant wooden floors. The room is decorated with a single green plant and a minimalist chair, reflecting an effortless and breathable lifestyle. The lighting is soft and natural, emphasizing transparency and clarity. The color palette consists of whites, soft greys, and warm wood tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCeKZpF5dNsdL5IgfjBKXeiDOxZT5F8M3nK5ZhoyuAlmcppYUuM7tRkb_sH7MJJTGNAWjCtg34KlaWR8W6qGJzN5ETYchYq9OF0IzLiFOV-7FDzSNjynSyW3wO5R1ZxAxwIkRbocNeoYh6In19QkJlb9PjtjIBWQXm0o9-aOc-L-CYYeRoLJRatsVz7mLELGMb0liLWmhATEeV-FU9r1NHMCSBl6YPjd-3otS84YO830CZOqHfLd-o2-LfjRRRLq6HkGs6FMIRVCDC">
+</div>
+<div class="flex-1 p-4 flex flex-col justify-between">
+<div>
+<span class="text-label-md font-label-md text-primary bg-pink-soft px-2 py-0.5 rounded">투룸</span>
+<h3 class="font-headline-sm text-headline-sm mt-1">월세 1,000/65</h3>
+<p class="text-body-sm text-ink-soft line-clamp-1">서울시 관악구 신림동 451-2</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label-md text-ink-soft flex items-center gap-1"><i class="w-3 h-3" data-lucide="maximize"></i> 24m²</span>
+<span class="text-label-md text-ink-soft flex items-center gap-1"><i class="w-3 h-3" data-lucide="layers"></i> 3층</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="card-item shrink-0 w-[300px] bg-paper rounded-2xl overflow-hidden border border-line shadow-sm">
+<div class="flex h-32">
+<div class="w-1/3 bg-surface-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A contemporary urban living space with a high-end minimalist design. Large glass windows offer a view of the city, while the interior is characterized by clean lines, a monochromatic grey palette, and luxurious textures. The mood is empathetic and calm, featuring a cozy reading nook and soft, indirect lighting that enhances the spacious feel of the room." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_TNr651KL3eToBissxQoy6gXswjMbQulf5AQqJCFe5bBL44WylKw83maWbrZqf_WR2Ivk0TcHoQ9VXnEMtMigTzaXpF9MrJq2A5aitHbVnEYU_a0DLvHFOAmzbrHxkuLXNGYxUIOpEHWr6y-sCEvj3fz7X5aCQnkgapgWmt6UJMreJ03RPWBSKRym2T7KOB85yqOynv31cLjUPj70t764SLSb-JEaK0Rq__2o-n8OP381US6D4l3tbUuMLCHZXBY2QaMjy5Ii8j1G">
+</div>
+<div class="flex-1 p-4 flex flex-col justify-between">
+<div>
+<span class="text-label-md font-label-md text-primary bg-pink-soft px-2 py-0.5 rounded">오피스텔</span>
+<h3 class="font-headline-sm text-headline-sm mt-1">전세 2.3억</h3>
+<p class="text-body-sm text-ink-soft line-clamp-1">서울시 서초구 방배동 88-1</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label-md text-ink-soft flex items-center gap-1"><i class="w-3 h-3" data-lucide="maximize"></i> 32m²</span>
+<span class="text-label-md text-ink-soft flex items-center gap-1"><i class="w-3 h-3" data-lucide="layers"></i> 12층</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="card-item shrink-0 w-[300px] bg-paper rounded-2xl overflow-hidden border border-line shadow-sm">
+<div class="flex h-32">
+<div class="w-1/3 bg-surface-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A serene, light-filled bedroom in a minimalist apartment. The walls are a soft off-white, and the bedding is made of natural linen in a light sand color. A minimalist wooden bedside table holds a single ceramic lamp. The overall aesthetic is digital-native and clean, with generous whitespace and a focus on essential, high-quality elements. The morning light is crisp and bright." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyKd_plGQKWhcrzai2U2-M9nE9DbsK9RQYq-cPDjhAwuSrVJ-8FsoEbIBeqTrhIVsVHJkgVeKuXOK6auyEwU-nsHoCInFFuHfWJVpbp1j2CUILulO87NNh0--x2hM6YUS5rN-OTCDYWVyp3qVlGVC7zs8ZdyjaX4M6JeA0_FVVGF59QWEX3w4hLWEgnLsAbS016MC1moKBjim44PZmCCPOzZ62-SHQK3AXl3QxavDGyjaXeLpyrVu3kbX_NXhZNyYF8GBYoTIBLayt">
+</div>
+<div class="flex-1 p-4 flex flex-col justify-between">
+<div>
+<span class="text-label-md font-label-md text-primary bg-pink-soft px-2 py-0.5 rounded">원룸</span>
+<h3 class="font-headline-sm text-headline-sm mt-1">월세 500/45</h3>
+<p class="text-body-sm text-ink-soft line-clamp-1">서울시 동작구 상도동 12-4</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label-md text-ink-soft flex items-center gap-1"><i class="w-3 h-3" data-lucide="maximize"></i> 18m²</span>
+<span class="text-label-md text-ink-soft flex items-center gap-1"><i class="w-3 h-3" data-lucide="layers"></i> 반지하</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Shared Navigation Component: BottomNavBar -->
+<!-- Mandatory Styling from JSON applied -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center py-2 px-margin-mobile bg-paper dark:bg-surface-dim max-w-[430px] mx-auto z-50 border-t border-line dark:border-outline-variant">
+<!-- Home -->
+<a class="flex flex-col items-center justify-center text-inactive-gray dark:text-outline px-3 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-md text-label-md">홈</span>
+</a>
+<!-- Map (ACTIVE) -->
+<a class="flex flex-col items-center justify-center bg-pink-dim dark:bg-primary-container text-primary dark:text-on-primary-container rounded-xl px-3 py-1 scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="map" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="font-label-md text-label-md font-bold">지도</span>
+</a>
+<!-- Chat -->
+<a class="flex flex-col items-center justify-center text-inactive-gray dark:text-outline px-3 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="chat">chat</span>
+<span class="font-label-md text-label-md">채팅</span>
+</a>
+<!-- My -->
+<a class="flex flex-col items-center justify-center text-inactive-gray dark:text-outline px-3 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">MY</span>
+</a>
+</nav>
+<!-- Side Navigation for Admin/Desktop view (Hidden on Mobile) -->
+<aside class="hidden lg:flex flex-col gap-unit py-section-gap px-4 fixed left-0 top-0 h-full w-[280px] bg-paper border-r border-line z-[60]">
+<div class="font-headline-md text-headline-md font-bold text-primary mb-8 px-4"><div class="flex items-center gap-2">
+  <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGLY-wiuwvQbFhVnd_Q2Oj-fYW76zNjzWK-Vt7sZWAmDrP1WX_SrbPfuQ6gP9lO4-BkbUc-9KM645LBPI3Gj-ODtPQYmPNd78SaZaNnLvHkcZrMp2JSXiuw9ypkczvo_2eU--ylkJocRWEV0189xcMxj6oxJN19FNGjwejYqkh-Z73gHo6l7regP2sseUEgmxuRgLVzIiwodn6J1BUJzs6n4SfxWrZtKjj-Qyl2Tp60RS6pjt9MyeQh5kmfm0baFg8AWBnOBiin-Dx" alt="Roomting Symbol" class="h-8 w-auto">
+  <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDx9SFkyO2Wm6v31qsPAwLATXxK-jmQoXS43mmvenfyhCcz-rZE73MZJQP1AvXtILXOQn40n7lL8aiQOVkg4zUtvm-gTGaGhmwN32dQLyE2M3UBGkAmj6gVi2-7iV6UlH74YwnCMG-V5DH8AU7WeGWZ5ypwXsRa6f4L0hDh5RzN-OzzZyi29-2vSw35oiVBRHlMofqcQIRETMxnI0df6q8A9fBjRuWBLRl7VhSN5WSlJIkMQgKfjRMFelYyvAOYZRjGqpn8BwA-uBzN" alt="Roomting Wordmark" class="h-5 w-auto">
+</div></div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-element-gap text-secondary px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg" href="#">
+<i class="w-5 h-5" data-lucide="home"></i>
+<span class="font-body-md text-body-md">홈</span>
+</a>
+<a class="flex items-center gap-element-gap bg-pink-dim text-primary rounded-lg px-4 py-3 translate-x-1 duration-200" href="#">
+<i class="w-5 h-5" data-lucide="map"></i>
+<span class="font-body-md text-body-md font-bold">지도</span>
+</a>
+<a class="flex items-center gap-element-gap text-secondary px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg" href="#">
+<i class="w-5 h-5" data-lucide="message-circle"></i>
+<span class="font-body-md text-body-md">채팅</span>
+</a>
+<a class="flex items-center gap-element-gap text-secondary px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg" href="#">
+<i class="w-5 h-5" data-lucide="user"></i>
+<span class="font-body-md text-body-md">MY</span>
+</a>
+</nav>
+</aside>
+<script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Optional micro-interaction for markers
+        const markers = document.querySelectorAll('.group');
+        markers.forEach(marker => {
+            marker.addEventListener('click', () => {
+                marker.classList.toggle('scale-110');
+                marker.style.transition = 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            });
+        });
+
+        // Horizontal card snap indicator update (Visual only for now)
+        const carousel = document.querySelector('.card-carousel');
+        carousel.addEventListener('scroll', () => {
+            // Logic to link map markers to card index could go here
+        });
+    </script>
+
+
+</body></html>

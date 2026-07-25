@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Roomting Admin - 채팅 관리</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@100..900&family=Noto+Sans+KR:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                "on-tertiary": "#ffffff",
+                "on-background": "#1d1b1a",
+                "inverse-surface": "#32302f",
+                "background": "#fef8f6",
+                "surface": "#fef8f6",
+                "primary-fixed": "#ffd9de",
+                "tertiary": "#006b2d",
+                "on-surface": "#1d1b1a",
+                "secondary-container": "#ebdcdf",
+                "surface-container": "#f3edea",
+                "error": "#ba1a1a",
+                "on-primary-container": "#fffbff",
+                "surface-bright": "#fef8f6",
+                "secondary": "#665c5e",
+                "paper": "#FFFFFF",
+                "ink-soft": "#8A8480",
+                "primary": "#ac254f",
+                "on-tertiary-container": "#f7fff3",
+                "outline": "#8b7074",
+                "inverse-primary": "#ffb2bf",
+                "on-primary-fixed-variant": "#8e073a",
+                "surface-container-lowest": "#ffffff",
+                "surface-container-high": "#ede7e5",
+                "outline-variant": "#dfbfc3",
+                "secondary-fixed": "#eddfe2",
+                "inverse-on-surface": "#f6efed",
+                "on-error-container": "#93000a",
+                "on-tertiary-fixed-variant": "#005321",
+                "tertiary-container": "#00873b",
+                "inactive-gray": "#C3BCB6",
+                "primary-fixed-dim": "#ffb2bf",
+                "surface-tint": "#af2851",
+                "surface-dim": "#dfd9d7",
+                "surface-container-low": "#f9f2f0",
+                "secondary-fixed-dim": "#d1c3c6",
+                "surface-variant": "#e7e1df",
+                "on-secondary-container": "#6a6063",
+                "on-tertiary-fixed": "#002109",
+                "on-surface-variant": "#584144",
+                "on-primary": "#ffffff",
+                "surface-container-highest": "#e7e1df",
+                "error-container": "#ffdad6",
+                "tertiary-fixed-dim": "#60df7e",
+                "on-secondary-fixed": "#211a1c",
+                "on-error": "#ffffff",
+                "on-secondary": "#ffffff",
+                "on-primary-fixed": "#3f0015",
+                "pink-dim": "#F8D6DE",
+                "tertiary-fixed": "#7dfc97",
+                "primary-container": "#cd4066",
+                "on-secondary-fixed-variant": "#4e4447",
+                "line": "#EFEBE7"
+              },
+              "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+              },
+              "spacing": {
+                "gutter": "16px",
+                "element-gap": "12px",
+                "unit": "4px",
+                "margin-desktop": "40px",
+                "margin-mobile": "20px",
+                "section-gap": "48px"
+              },
+              "fontFamily": {
+                "numeral-md": ["Manrope"],
+                "label-md": ["Noto Sans KR"],
+                "display-lg": ["Manrope"],
+                "headline-sm": ["Manrope"],
+                "body-lg": ["Noto Sans KR"],
+                "headline-md": ["Manrope"],
+                "body-sm": ["Noto Sans KR"],
+                "body-md": ["Noto Sans KR"]
+              },
+              "fontSize": {
+                "numeral-md": ["16px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                "label-md": ["12px", {"lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                "display-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .chat-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .chat-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-scroll::-webkit-scrollbar-thumb {
+            background: #EFEBE7;
+            border-radius: 10px;
+        }
+        body {
+            background-color: #fef8f6;
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md text-on-background overflow-hidden">
+<!-- Fixed Side Navigation -->
+<aside class="fixed left-0 top-0 h-screen w-[280px] bg-surface border-r border-line flex flex-col gap-4 p-6 z-50">
+<div class="mb-8">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Roomting Admin</h1>
+<p class="font-label-md text-label-md text-ink-soft">Agency Dashboard</p>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-secondary-container hover:text-on-secondary-container rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">home_work</span>
+<span class="font-body-md text-body-md">Property Management</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-secondary-container hover:text-on-secondary-container rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">pending_actions</span>
+<span class="font-body-md text-body-md">Request Management</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-secondary-container hover:text-on-secondary-container rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span class="font-body-md text-body-md">Agent Approval</span>
+</a>
+<!-- Active State: Inquiries / Chat Management -->
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-container text-on-primary-container rounded-lg" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-body-md text-body-md">Inquiries</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-line flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A professional headshot of a female real estate agent with a warm, empathetic smile. She is wearing a modern business casual blazer. The background is a brightly lit, clean white office space with soft pink accents to match the brand identity. High-key lighting ensures a transparent and professional mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbgZKeLQYEFTSFrVOCzL-ytwqtzYSqt7zBpJDOEyIe9PYKiMXDttatFX42bA4tAXdVrqPdUnvcenrsRApzyfy51i4CklXJwFVz0XHNashv_-WMrwged1uyqzz-lLFri3bRATxrxMeJhwxUb6yBhlVVR_ITLlgWjcpbUWzE48iZU2NfNcA2-IbzJzfANlWAaX2thnSJyFB_AhF6kKjdj7G-T_ZBAzbrjvpbD910pqpWhbqyLzPkjkl5xmawlQz_4LZ_lll3-kLibBtG"/>
+<div>
+<p class="font-label-md text-label-md font-bold text-on-surface">김지수 팀장</p>
+<p class="font-label-md text-label-md text-ink-soft">관리자 계정</p>
+</div>
+</div>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 left-[280px] h-16 bg-paper border-b border-line flex justify-between items-center px-margin-desktop z-40">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">관리자 - 채팅 관리</span>
+</div>
+<div class="flex items-center gap-6">
+<button class="relative text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="font-label-md text-label-md text-on-primary bg-primary px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">Logout</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-[280px] mt-16 h-[calc(100vh-64px)] flex overflow-hidden">
+<!-- Left Column: Chat Room List -->
+<section class="w-[400px] border-r border-line bg-paper flex flex-col">
+<div class="p-6 border-b border-line">
+<div class="relative">
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-line rounded-lg focus:outline-none focus:border-primary text-body-sm font-body-sm" placeholder="문의 고객 검색..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft">search</span>
+</div>
+</div>
+<div class="chat-scroll overflow-y-auto flex-1">
+<!-- Active Chat Item -->
+<div class="p-5 border-b border-line bg-primary-fixed/30 cursor-pointer transition-all">
+<div class="flex gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="A portrait of a young male customer looking into the camera. He is in a stylish, minimalist home setting with natural light streaming through a window. The aesthetic is clean and modern, following the effortless and transparent brand tone. The color palette features whites and soft earthy tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC45HLnV3irbzPyyKDQ6p7mBbAx7OC2_XqLJOjai1hKMab1S1WUxTzuABukx77UAStKMpLX5UrrgQD-MGi9DWQUxlGO0Ns5NPG016sMd29XOt932jftUOz-x8icY50IS8dBiOjsC45IlfH2ySU_SODUPw4sIUgEahGWfxQz9Hs_83Ik_085abeiYhu5KIMVv18JKK26zYdLSSRw5Qv7m0SIAhPxADra7sO-Ai8xNrY932qMkB0FVUmDlMEXGl_hWuD4EMATQj5-kxlc"/>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-label-md text-label-md font-bold text-on-surface truncate">박서준</h3>
+<span class="font-label-md text-[10px] text-ink-soft">오후 2:45</span>
+</div>
+<p class="font-body-sm text-body-sm text-primary font-medium truncate mb-1">매물 ID: RT-4092 문의드립니다.</p>
+<div class="flex justify-between items-center">
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate w-48">네, 주차 공간은 총 2대 가능하며...</p>
+<span class="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">2</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Chat Item 2 -->
+<div class="p-5 border-b border-line hover:bg-surface-container-low cursor-pointer transition-all">
+<div class="flex gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="Close-up portrait of a woman in her late 20s, smiling gently. The lighting is soft and empathetic, captured in a bright studio with high-key illumination. The style is professional and digital-native, emphasizing clarity and friendliness within a minimalist aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAPGgphkaQXE-n4Vl8mzE0aLFJtqusMkkrx2iz04_poWtMcvpgFKSztI0bg0qTfjncE64sMCgZKc9vsk1nH3rSPGF8u0gqyQYL6GNFgPQT_nXPkbeZPIJtzfDxgGh--YLHVYyiQgCfCWPWl70X7j_33OxDi78cA2JvEBu5H9OgM_8Rk4G5Sghyk1Q6t4W0mGapxCWfGyrpmCdWiv_zmgOWVi5_RGKrwqd9aGzGf6V1NxF-E1i_o2Xqb4fgIMlu0Z1iLBZDGlVXqtMyH"/>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-label-md text-label-md font-bold text-on-surface truncate">최민지</h3>
+<span class="font-label-md text-[10px] text-ink-soft">오후 1:12</span>
+</div>
+<p class="font-body-sm text-body-sm text-ink-soft truncate mb-1">한남동 테라스 하우스</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">내일 오후 3시에 방문 가능할까요?</p>
+</div>
+</div>
+</div>
+<!-- Chat Item 3 -->
+<div class="p-5 border-b border-line hover:bg-surface-container-low cursor-pointer transition-all">
+<div class="flex gap-4">
+<div class="w-12 h-12 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-bold">이</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-label-md text-label-md font-bold text-on-surface truncate">이영희</h3>
+<span class="font-label-md text-[10px] text-ink-soft">어제</span>
+</div>
+<p class="font-body-sm text-body-sm text-ink-soft truncate mb-1">성수동 리버뷰 아파트</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">상세 정보 확인했습니다. 감사합니다.</p>
+</div>
+</div>
+</div>
+<!-- Chat Item 4 -->
+<div class="p-5 border-b border-line hover:bg-surface-container-low cursor-pointer transition-all">
+<div class="flex gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="A medium shot of a man in professional attire, looking thoughtful. He is in a modern architectural space with large glass panes and clean lines. The atmosphere is transparent and calm, using a signature pink and white color scheme to maintain the brand's empathetic and effortless identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2Kku7NFaJMiAA0x8vBFL0QIb12yOuBQXBjcqrnYQBDQ_5V7n5EZ74ALk20g6OMtY-UrCi7DUyAoEvEiB6Gx3IYO5YWznU8f-qmYE-0eYAVzGa_pcr55P0UWjaljgToztysqeIgCRFt8vjJPu3c9pfosf-l3IS23Hllj1nBYvFs6L7h133ZcejgMCXDROSdEMDPBrFpZ6ficp0zZV1iqOyKLbjlCf3Aoa9bGg67ZWGK5Nax5XGsaqgpoW2M0yOwOF0gL3Ht_Bayoot"/>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-label-md text-label-md font-bold text-on-surface truncate">정우성</h3>
+<span class="font-label-md text-[10px] text-ink-soft">어제</span>
+</div>
+<p class="font-body-sm text-body-sm text-ink-soft truncate mb-1">서초동 시그니처 룸</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">입주 시기 조율이 가능할지 문의드려요.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Column: Active Chat Window -->
+<section class="flex-1 bg-background flex flex-col relative">
+<!-- Chat Top Bar -->
+<div class="h-16 bg-paper px-8 border-b border-line flex justify-between items-center shrink-0">
+<div class="flex items-center gap-4">
+<div class="relative">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Detailed portrait of a friendly customer against a minimalist white background. The subject is well-lit with soft, diffuse lighting, highlighting the brand's commitment to transparency and empathy. The style is modern, digital-native real estate service UI design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDC3w4wMsApb80y97LH9BR_B1DJEUg8xbek28_6gbvicXZoh-0BQx9Q5rxeEObdXUw4ekzkC-U_QN7nUeg2Z7NsAjvxgLRafdm9f9n7OLMCdRKlkAwqMmIcxgkd52ypG37FdAUEtFpE9w9TkaSFMA4iNqIEZINY-VdXUBGJZ_kQEQTL8FP9MSF1qY6F1cXlHTBw97HNXuY3274ivcHpo3XNgP9Zr7o13JPNcnTpPs8DzGWW0IastkvFNJPJxveY23b87unkADajQoir"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-tertiary border-2 border-paper rounded-full"></span>
+</div>
+<div>
+<h2 class="font-label-md text-label-md font-bold text-on-surface">박서준 고객님</h2>
+<p class="font-label-md text-[11px] text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">apartment</span>
+                            매물 ID: RT-4092 (압구정 럭셔리 스튜디오)
+                        </p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-3 py-1.5 border border-line rounded-lg text-body-sm font-label-md text-on-surface hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">info</span>
+                        매물 상세
+                    </button>
+<button class="flex items-center gap-2 px-3 py-1.5 border border-line rounded-lg text-body-sm font-label-md text-on-surface hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">event</span>
+                        방문 예약
+                    </button>
+<button class="text-ink-soft hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Message History Area -->
+<div class="flex-1 p-8 chat-scroll overflow-y-auto flex flex-col gap-6">
+<!-- System Date Separator -->
+<div class="flex justify-center">
+<span class="px-4 py-1 bg-surface-container-high rounded-full text-[10px] font-label-md text-ink-soft">2023년 10월 24일 화요일</span>
+</div>
+<!-- Customer Message -->
+<div class="flex items-start gap-3 max-w-[70%]">
+<img class="w-8 h-8 rounded-full object-cover shrink-0 mt-1" data-alt="Customer avatar for chat interface, showing a young adult with a professional yet approachable look. Soft studio lighting, minimalist background, adhering to a serene and clean real estate brand aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbKXck8Hh1hvRZmUBeeXBKongLtEqzI-IDj38erzaSDa-m7NgfqQ7Qc3OYfK9oW_nsY2x1KC2drGKgjysFJ8-r-AiAeAllOoWCFWaOz3vMtVELc_QsP0DpWR1EfLSvGyqk7DedswtrqzSkCvUMUHFTEJfcQ_2tbllF6DWGH148YuZzoRuhoDclPhFJB5VEAdyHjdWSYEj3HA523uz0bFiObUxYCUqVkPAuq_n77bOI4gOeZ0MLrMXwAUG6QLRow2s45S0Jx4XW6HeY"/>
+<div>
+<div class="bg-surface-variant text-on-surface px-4 py-2.5 rounded-2xl rounded-tl-none font-body-sm text-body-sm leading-relaxed">
+                            안녕하세요, 압구정 럭셔리 스튜디오 매물을 보고 연락드립니다. 
+                            혹시 주차 공간이 넉넉한가요? 제가 차량이 2대라서요.
+                        </div>
+<span class="text-[10px] text-ink-soft mt-1 ml-1">오후 2:10</span>
+</div>
+</div>
+<!-- Admin Message -->
+<div class="flex items-start gap-3 max-w-[70%] self-end flex-row-reverse">
+<div class="bg-primary text-on-primary px-4 py-2.5 rounded-2xl rounded-tr-none font-body-sm text-body-sm leading-relaxed">
+                        안녕하세요 박서준님! Roomting 김지수 매니저입니다. 
+                        해당 매물은 가구당 기본 1대 무료 주차가 가능하며, 추가 1대는 월 10만원의 비용으로 등록 가능합니다. 주차장은 지하 3층까지 있어 공간은 아주 넉넉한 편입니다.
+                    </div>
+<span class="text-[10px] text-ink-soft mt-1 mr-1 text-right">오후 2:15</span>
+</div>
+<!-- Property Card in Chat -->
+<div class="flex items-start gap-3 max-w-[70%] self-end flex-row-reverse">
+<div class="bg-paper border border-line p-4 rounded-2xl rounded-tr-none shadow-sm w-72">
+<div class="w-full h-32 rounded-lg mb-3 bg-cover bg-center" data-alt="A high-end luxury studio apartment interior. Minimalist furniture, floor-to-ceiling windows showing a Seoul city view. The lighting is warm and inviting, using soft pink and beige tones. Digital-native real estate photography style, clear and sharp." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBgZstLZahyA6UOPLbwbkB7oQQs9YDm-3CDxGSk-hM7DwMCpgumuidl0YjSB4RBwK67G1JSShFDv4ookKiG7nxxT394VASNLfNsjWDM6Qczom79bg51ZJGSdExWE-HJFo_gtuFIeqTGTrrbC977QvgeuaRBCcSt21JnR68j3ofqRi40LltGpEl4wtHMLrV54TdDACwWi-M4h9ohFPNrII3qxE1pgetw6pTE-d6C6Y3TYLtC0Zt2cJyrzS_pcf9aEQpz4NM7ebdRCQNG')"></div>
+<h4 class="font-label-md text-label-md font-bold mb-1">압구정 럭셔리 스튜디오</h4>
+<p class="font-body-sm text-[12px] text-ink-soft mb-3">보증금 1억 / 월세 250만</p>
+<button class="w-full py-2 bg-pink-dim text-primary font-bold rounded-lg text-body-sm">상세 정보 전송됨</button>
+</div>
+</div>
+<!-- Customer Message -->
+<div class="flex items-start gap-3 max-w-[70%]">
+<img class="w-8 h-8 rounded-full object-cover shrink-0 mt-1" data-alt="Small avatar of the customer for a chat message, emphasizing high-key lighting and a professional modern aesthetic in line with a serene real estate platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhiTk8hmaZTTJMpXZDiinhsSML569zlH7HfR0-rJ9zmKvEdVVDQWtTLGFcrQGl7v5vuKydun_u_6_U17th21BfpmIkhq3HqWMf-kQQuDXqa-QUxJ1Es5AKrgAzyxaXdfUEcvmhthhxGYzBSlCdr5xRwQxlRU6BrPY-2ejHFxTzCjioG4AmxcS3OhjqgIqVLpMPnYlJgN7L_M9Ixytdi48XoWhJUEAGbN9S5lc6ffxno1n5ug6wgJoUHgXBvQcjjXxnCKCjljiUPZtd"/>
+<div>
+<div class="bg-surface-variant text-on-surface px-4 py-2.5 rounded-2xl rounded-tl-none font-body-sm text-body-sm leading-relaxed">
+                            네, 확인했습니다! 혹시 반려동물 사육도 가능한가요? 
+                            작은 강아지 한 마리가 있습니다.
+                        </div>
+<span class="text-[10px] text-ink-soft mt-1 ml-1">오후 2:45</span>
+</div>
+</div>
+</div>
+<!-- Chat Input Area -->
+<div class="p-6 bg-paper border-t border-line">
+<div class="flex items-end gap-3 bg-surface-container-low rounded-xl p-3 border border-line focus-within:border-primary transition-colors">
+<button class="p-2 text-ink-soft hover:text-primary transition-colors">
+<span class="material-symbols-outlined">attach_file</span>
+</button>
+<button class="p-2 text-ink-soft hover:text-primary transition-colors">
+<span class="material-symbols-outlined">mood</span>
+</button>
+<textarea class="flex-1 bg-transparent border-none focus:ring-0 text-body-sm py-2 resize-none max-h-32 chat-scroll" placeholder="메시지를 입력하세요..." rows="1"></textarea>
+<button class="bg-primary text-on-primary w-10 h-10 rounded-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+<div class="mt-3 flex gap-2">
+<span class="text-[11px] text-ink-soft font-label-md">자주 쓰는 답변:</span>
+<button class="px-2 py-0.5 border border-line rounded text-[11px] text-on-secondary-container hover:bg-secondary-container transition-colors">주차 안내</button>
+<button class="px-2 py-0.5 border border-line rounded text-[11px] text-on-secondary-container hover:bg-secondary-container transition-colors">반려동물 규정</button>
+<button class="px-2 py-0.5 border border-line rounded text-[11px] text-on-secondary-container hover:bg-secondary-container transition-colors">방문 예약 신청</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Micro-interaction for input auto-resize (optional JS) -->
+<script>
+        const tx = document.getElementsByTagName("textarea");
+        for (let i = 0; i < tx.length; i++) {
+          tx[i].setAttribute("style", "height:" + (tx[i].scrollHeight) + "px;overflow-y:hidden;");
+          tx[i].addEventListener("input", OnInput, false);
+        }
+
+        function OnInput() {
+          this.style.height = 0;
+          this.style.height = (this.scrollHeight) + "px";
+        }
+    </script>
+</body></html>

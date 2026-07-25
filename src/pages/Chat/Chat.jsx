@@ -10,6 +10,7 @@ import {
   markChatRoomRead,
   subscribeToRoomUpdates,
 } from '../../api/chat.api'
+import BottomTabBar from '../../components/BottomTabBar'
 import './Chat.css'
 
 export default function Chat() {
@@ -171,6 +172,8 @@ export default function Chat() {
         />
         <button className="chat-send-btn" disabled={sending || !text.trim()} onClick={handleSend}>➤</button>
       </div>
+
+      <BottomTabBar />
     </div>
   )
 }

@@ -1,5 +1,6 @@
+/* 하단 여백: 고정된 입력창(약 74px) + 그 아래 탭바(69px)에 가려지지 않도록 */
 .chat-body {
-  flex: 1; overflow-y: auto; padding: 16px 16px 90px;
+  flex: 1; overflow-y: auto; padding: 16px 16px 159px;
   display: flex; flex-direction: column; gap: 10px;
 }
 
@@ -35,8 +36,9 @@
 .chat-msg-row:not(.mine) .chat-translated { border-top-color: var(--line); color: var(--ink-soft); }
 .chat-translate-fail { font-size: 11px; margin-top: 4px; opacity: 0.85; }
 
+/* bottom: 69px = 하단 탭바(실측 69px) 위에 얹혀서, 탭바에 가려지지 않도록 */
 .chat-input-bar {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  position: fixed; bottom: 69px; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 430px; padding: 10px 14px 20px;
   background: var(--paper); border-top: 1px solid var(--line);
   display: flex; gap: 8px; z-index: 30;

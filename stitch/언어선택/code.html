@@ -1,0 +1,257 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
+<title>Roomting - 언어 선택</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f9f2f0",
+                        "tertiary-container": "#00873b",
+                        "pink-dim": "#F8D6DE",
+                        "on-secondary-container": "#6a6063",
+                        "inverse-primary": "#ffb2bf",
+                        "outline-variant": "#dfbfc3",
+                        "on-primary-fixed-variant": "#8e073a",
+                        "surface-tint": "#af2851",
+                        "surface-bright": "#fef8f6",
+                        "error": "#ba1a1a",
+                        "surface-container": "#f3edea",
+                        "surface": "#fef8f6",
+                        "surface-container-highest": "#e7e1df",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed": "#eddfe2",
+                        "background": "#fef8f6",
+                        "primary-fixed-dim": "#ffb2bf",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#32302f",
+                        "primary-container": "#cd4066",
+                        "line": "#EFEBE7",
+                        "on-tertiary-container": "#f7fff3",
+                        "secondary": "#665c5e",
+                        "on-primary-container": "#fffbff",
+                        "ink-soft": "#8A8480",
+                        "inverse-on-surface": "#f6efed",
+                        "tertiary": "#006b2d",
+                        "on-background": "#1d1b1a",
+                        "surface-dim": "#dfd9d7",
+                        "tertiary-fixed": "#7dfc97",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed": "#002109",
+                        "tertiary-fixed-dim": "#60df7e",
+                        "outline": "#8b7074",
+                        "on-primary-fixed": "#3f0015",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#005321",
+                        "on-surface-variant": "#584144",
+                        "paper": "#FFFFFF",
+                        "secondary-container": "#ebdcdf",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed": "#211a1c",
+                        "surface-variant": "#e7e1df",
+                        "on-secondary-fixed-variant": "#4e4447",
+                        "primary-fixed": "#ffd9de",
+                        "surface-container-high": "#ede7e5",
+                        "inactive-gray": "#C3BCB6",
+                        "secondary-fixed-dim": "#d1c3c6",
+                        "on-surface": "#1d1b1a",
+                        "primary": "#ac254f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "section-gap": "48px",
+                        "unit": "4px",
+                        "gutter": "16px",
+                        "element-gap": "12px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Noto Sans KR"],
+                        "display-lg": ["Manrope"],
+                        "headline-md": ["Manrope"],
+                        "body-sm": ["Noto Sans KR"],
+                        "body-md": ["Noto Sans KR"],
+                        "body-lg": ["Noto Sans KR"],
+                        "numeral-md": ["Manrope"],
+                        "headline-sm": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "display-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "numeral-md": ["16px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #fef8f6;
+            color: #1d1b1a;
+        }
+        .language-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .language-card.active {
+            border-color: #ac254f;
+            background-color: #F8D6DE;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(172, 37, 79, 0.1);
+        }
+        .cta-button {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .cta-button:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen max-w-[430px] mx-auto bg-background overflow-hidden">
+<!-- Top Navigation -->
+<header class="flex justify-between items-center w-full px-5 h-16 bg-background/80 backdrop-blur-md">
+<div class="flex items-center gap-2">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="home" aria-hidden="true" class="lucide lucide-home w-6 h-6 text-primary"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+<span class="font-display-lg text-primary font-extrabold text-[20px] tracking-tight">Roomting</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="bell" aria-hidden="true" class="lucide lucide-bell w-6 h-6 text-on-surface-variant"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+</button>
+</header>
+<!-- Progress Step Indicator -->
+<div class="w-full px-margin-mobile flex justify-center py-6">
+<div class="flex gap-2 items-center">
+<div class="w-10 h-1.5 bg-primary rounded-full"></div>
+<div class="w-2 h-1.5 bg-line rounded-full"></div>
+<div class="w-2 h-1.5 bg-line rounded-full"></div>
+</div>
+</div>
+<!-- Main Content -->
+<main class="flex-1 px-margin-mobile pt-10">
+<!-- Headline Section -->
+<div class="mb-14 text-center" style="opacity: 1; transform: translateY(0px); transition: 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);">
+<span class="font-label-md text-primary font-bold tracking-widest uppercase mb-3 block">Welcome</span>
+<h1 class="font-display-lg text-on-background leading-tight mb-4">
+                사용할 언어를<br>선택해주세요
+            </h1>
+<p class="font-body-md text-ink-soft">설정에서 언제든지 변경할 수 있습니다</p>
+</div>
+<!-- Language Selection Grid -->
+<div class="grid grid-cols-2 gap-4" style="opacity: 1; transform: translateY(0px); transition: 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);">
+<!-- KR -->
+<button class="language-card active border border-outline-variant rounded-2xl p-6 flex flex-col items-center justify-center bg-paper text-center space-y-3" onclick="selectLanguage(this, 'kr')" style="opacity: 1; transform: translateY(0px); transition: 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);">
+<span class="font-numeral-md text-primary text-xl font-bold">KR</span>
+<span class="font-body-md text-on-surface font-semibold">한국어</span>
+</button>
+<!-- JP -->
+<button class="language-card border border-line rounded-2xl p-6 flex flex-col items-center justify-center bg-paper text-center space-y-3" onclick="selectLanguage(this, 'jp')" style="opacity: 1; transform: translateY(0px); transition: 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);">
+<span class="font-numeral-md text-on-surface text-xl font-bold">JP</span>
+<span class="font-body-md text-on-surface">日本語</span>
+</button>
+<!-- CN -->
+<button class="language-card border border-line rounded-2xl p-6 flex flex-col items-center justify-center bg-paper text-center space-y-3" onclick="selectLanguage(this, 'cn')" style="opacity: 1; transform: translateY(0px); transition: 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);">
+<span class="font-numeral-md text-on-surface text-xl font-bold">CN</span>
+<span class="font-body-md text-on-surface">中文</span>
+</button>
+<!-- EN -->
+<button class="language-card border border-line rounded-2xl p-6 flex flex-col items-center justify-center bg-paper text-center space-y-3" onclick="selectLanguage(this, 'en')" style="opacity: 1; transform: translateY(0px); transition: 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="globe" aria-hidden="true" class="lucide lucide-globe w-7 h-7 text-on-surface-variant"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+<span class="font-body-md text-on-surface">English</span>
+</button>
+</div>
+<!-- Decorative Spacer for mood -->
+
+</main>
+<!-- Bottom Action Button -->
+<div class="p-8 pb-12 bg-background">
+<button class="cta-button w-full h-16 bg-primary text-paper rounded-[20px] font-headline-sm shadow-lg shadow-primary/10 flex items-center justify-center gap-2">
+<span class="">다음</span>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" data-lucide="chevron-right" aria-hidden="true" class="lucide lucide-chevron-right w-5 h-5"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</div>
+<script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        function selectLanguage(element, lang) {
+            // Remove active state from all cards
+            document.querySelectorAll('.language-card').forEach(card => {
+                card.classList.remove('active', 'border-outline-variant', 'bg-pink-dim');
+                card.classList.add('border-line', 'bg-paper');
+                
+                // Reset text styles
+                const textNodes = card.querySelectorAll('span');
+                textNodes.forEach(span => {
+                    span.classList.remove('text-primary', 'font-bold', 'font-semibold');
+                    if (span.classList.contains('font-numeral-md')) {
+                        span.classList.add('text-on-surface');
+                    }
+                });
+
+                // Reset icon color if exists
+                const icon = card.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('text-primary');
+                    icon.classList.add('text-on-surface-variant');
+                }
+            });
+
+            // Add active state to clicked card
+            element.classList.add('active');
+            element.classList.remove('border-line', 'bg-paper');
+            element.classList.add('border-outline-variant');
+
+            // Set primary color styles for selected state
+            const numeral = element.querySelector('.font-numeral-md');
+            if (numeral) {
+                numeral.classList.remove('text-on-surface');
+                numeral.classList.add('text-primary');
+            }
+            const label = element.querySelector('.font-body-md');
+            if (label) {
+                label.classList.add('font-semibold');
+            }
+            const activeIcon = element.querySelector('i');
+            if (activeIcon) {
+                activeIcon.classList.remove('text-on-surface-variant');
+                activeIcon.classList.add('text-primary');
+            }
+        }
+
+        // Animation entry
+        document.addEventListener('DOMContentLoaded', () => {
+            const elements = document.querySelectorAll('main > div, .language-card');
+            elements.forEach((el, index) => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)';
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, 100 * index);
+            });
+        });
+    </script>
+
+
+</body></html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline": "#8b7074",
+                        "on-secondary-fixed-variant": "#4e4447",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed": "#3f0015",
+                        "surface-container-lowest": "#ffffff",
+                        "background": "#fef8f6",
+                        "surface-container-high": "#ede7e5",
+                        "on-tertiary-fixed-variant": "#005321",
+                        "inactive-gray": "#C3BCB6",
+                        "surface-container-highest": "#e7e1df",
+                        "pink-dim": "#F8D6DE",
+                        "line": "#EFEBE7",
+                        "secondary": "#665c5e",
+                        "primary-fixed": "#ffd9de",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#32302f",
+                        "on-tertiary-fixed": "#002109",
+                        "on-primary-container": "#fffbff",
+                        "secondary-fixed-dim": "#d1c3c6",
+                        "surface-container": "#f3edea",
+                        "on-surface": "#1d1b1a",
+                        "tertiary-fixed": "#7dfc97",
+                        "primary": "#ac254f",
+                        "surface-bright": "#fef8f6",
+                        "primary-container": "#cd4066",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#ebdcdf",
+                        "secondary-fixed": "#eddfe2",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#e7e1df",
+                        "on-secondary-container": "#6a6063",
+                        "tertiary-fixed-dim": "#60df7e",
+                        "inverse-primary": "#ffb2bf",
+                        "primary-fixed-dim": "#ffb2bf",
+                        "on-error": "#ffffff",
+                        "on-background": "#1d1b1a",
+                        "on-surface-variant": "#584144",
+                        "surface-container-low": "#f9f2f0",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed-variant": "#8e073a",
+                        "paper": "#FFFFFF",
+                        "outline-variant": "#dfbfc3",
+                        "tertiary": "#006b2d",
+                        "on-secondary-fixed": "#211a1c",
+                        "surface-dim": "#dfd9d7",
+                        "on-tertiary-container": "#f7fff3",
+                        "surface-tint": "#af2851",
+                        "surface": "#fef8f6",
+                        "inverse-on-surface": "#f6efed",
+                        "error-container": "#ffdad6",
+                        "ink-soft": "#8A8480",
+                        "tertiary-container": "#00873b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "margin-desktop": "40px",
+                        "element-gap": "12px",
+                        "section-gap": "48px",
+                        "gutter": "16px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Noto Sans KR"],
+                        "body-lg": ["Noto Sans KR"],
+                        "display-lg": ["Manrope"],
+                        "numeral-md": ["Manrope"],
+                        "label-md": ["Noto Sans KR"],
+                        "headline-sm": ["Manrope"],
+                        "body-sm": ["Noto Sans KR"],
+                        "headline-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "display-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "numeral-md": ["16px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .cta-card {
+            background-color: #E8547A;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .cta-card:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col items-center overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-paper border-b border-line flex justify-between items-center px-margin-mobile h-[56px]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="home_work">home_work</span>
+<img alt="Roomting Logo" class="h-6 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLsAQK-N0JefxzxPB88wYVtqaHyYJJMFc3oEZC1uObZpL--ddyfFe7C_lTAfzh0Tz72l5WebP-B4wH_-XIDhNwZomT7XUnSZXYYEumGfdqKi3N57xRo8QGiKrUXTjD14CJhyaagMdCMnIesH7J1ou9wvSTMKQ6NmvXcYA_t9hA-QgEIJk4BMY1WuAnVh2UhqJSH4nNSf45O9ad2sscVyxdRPLzGby64RiYoCm8iLNz4SapAUEbSeH0FgMHzj"/>
+</div>
+<div class="flex items-center">
+<button class="p-2 transition-opacity duration-200 hover:opacity-80">
+<span class="material-symbols-outlined text-ink-soft" data-icon="notifications">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-[430px] flex flex-col justify-center px-margin-mobile py-section-gap">
+<!-- Headline Section -->
+<section class="mb-section-gap">
+<h1 class="font-headline-md text-headline-md font-semibold text-on-background whitespace-pre-line text-center">
+                조건만 입력하면,<br/>부동산이 먼저 제안해요
+            </h1>
+</section>
+<!-- Primary CTA Card Section (The only bordered/card element) -->
+<section class="w-full mb-gutter">
+<div class="cta-card w-full p-margin-mobile rounded-xl shadow-sm cursor-pointer flex flex-col gap-element-gap relative overflow-hidden group">
+<div class="flex justify-between items-start">
+<h2 class="font-headline-sm text-headline-sm font-bold text-white leading-tight">
+                        내 조건에 맞는<br/>방 알아보기
+                    </h2>
+<span class="material-symbols-outlined text-white text-[32px] group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</div>
+<p class="font-body-sm text-body-sm text-white/90">
+                    간편하게 조건을 등록하고 공인중개사의<br/>제안을 받아보세요
+                </p>
+<!-- Subtle Background Decorative Element -->
+<div class="absolute -bottom-4 -right-4 opacity-10">
+<span class="material-symbols-outlined text-[120px]" data-icon="search_spark">search_spark</span>
+</div>
+</div>
+</section>
+<!-- Trust Statement -->
+<section class="w-full text-center mb-section-gap">
+<p class="font-label-md text-label-md text-ink-soft">
+                여러 공인중개사가 24시간 안에 답해요
+            </p>
+</section>
+<!-- Secondary Footer Link -->
+<footer class="w-full text-center mt-auto">
+<a class="font-body-sm text-body-sm text-ink-soft underline underline-offset-4 decoration-line" href="#">
+                도움이 필요하신가요? 고객센터 문의
+            </a>
+</footer>
+</main>
+<!-- Spacer for Navigation Shell -->
+<div class="h-[80px] w-full"></div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 h-[80px] bg-paper border-t border-line flex justify-around items-center px-margin-mobile pb-safe">
+<!-- Home (Active) -->
+<div class="flex flex-col items-center justify-center bg-pink-dim text-primary rounded-[10px] px-3 py-1 scale-95 transition-transform duration-150 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-md text-label-md">홈</span>
+</div>
+<!-- Map -->
+<div class="flex flex-col items-center justify-center text-inactive-gray cursor-pointer hover:bg-surface-container-low transition-colors duration-200 p-2 rounded-lg">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span class="font-label-md text-label-md">지도</span>
+</div>
+<!-- Chat -->
+<div class="flex flex-col items-center justify-center text-inactive-gray cursor-pointer hover:bg-surface-container-low transition-colors duration-200 p-2 rounded-lg">
+<span class="material-symbols-outlined" data-icon="chat">chat</span>
+<span class="font-label-md text-label-md">채팅</span>
+</div>
+<!-- MY -->
+<div class="flex flex-col items-center justify-center text-inactive-gray cursor-pointer hover:bg-surface-container-low transition-colors duration-200 p-2 rounded-lg">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">MY</span>
+</div>
+</nav>
+<script>
+        // Micro-interaction for the CTA card
+        const card = document.querySelector('.cta-card');
+        card.addEventListener('click', () => {
+            console.log('Navigating to room registration...');
+            // In a real app, this would trigger navigation
+        });
+
+        // Basic active state toggling for nav items (conceptual)
+        const navItems = document.querySelectorAll('nav > div');
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(i => {
+                    i.classList.remove('bg-pink-dim', 'text-primary', 'rounded-[10px]', 'px-3', 'py-1', 'scale-95');
+                    i.classList.add('text-inactive-gray');
+                    const icon = i.querySelector('.material-symbols-outlined');
+                    if(icon) icon.style.fontVariationSettings = "'FILL' 0";
+                });
+                item.classList.add('bg-pink-dim', 'text-primary', 'rounded-[10px]', 'px-3', 'py-1', 'scale-95');
+                item.classList.remove('text-inactive-gray');
+                const activeIcon = item.querySelector('.material-symbols-outlined');
+                if(activeIcon) activeIcon.style.fontVariationSettings = "'FILL' 1";
+            });
+        });
+    </script>
+</body></html>

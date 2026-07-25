@@ -6,7 +6,7 @@ import './BottomTabBar.css'
 const TABS = [
   { key: 'home', label: '홈', to: '/', icon: Home, match: (path) => path === '/' },
   { key: 'map', label: '지도', to: '/map', icon: Map, match: (path) => path.startsWith('/map') },
-  { key: 'chat', label: '채팅', to: '/mypage', icon: MessageCircle, match: () => false },
+  { key: 'chat', label: '채팅', to: '/mypage', icon: MessageCircle, match: (path) => path.startsWith('/chat') },
   { key: 'my', label: 'MY', to: '/mypage', icon: User, match: (path) => path.startsWith('/mypage') },
 ]
 

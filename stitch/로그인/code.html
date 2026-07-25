@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Roomting - 로그인 유형 선택</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-low": "#f9f2f0",
+                    "tertiary-container": "#00873b",
+                    "pink-dim": "#F8D6DE",
+                    "on-secondary-container": "#6a6063",
+                    "inverse-primary": "#ffb2bf",
+                    "outline-variant": "#dfbfc3",
+                    "on-primary-fixed-variant": "#8e073a",
+                    "surface-tint": "#af2851",
+                    "surface-bright": "#fef8f6",
+                    "error": "#ba1a1a",
+                    "surface-container": "#f3edea",
+                    "surface": "#fef8f6",
+                    "surface-container-highest": "#e7e1df",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#eddfe2",
+                    "background": "#fef8f6",
+                    "primary-fixed-dim": "#ffb2bf",
+                    "on-tertiary": "#ffffff",
+                    "inverse-surface": "#32302f",
+                    "primary-container": "#cd4066",
+                    "line": "#EFEBE7",
+                    "on-tertiary-container": "#f7fff3",
+                    "secondary": "#665c5e",
+                    "on-primary-container": "#fffbff",
+                    "ink-soft": "#8A8480",
+                    "inverse-on-surface": "#f6efed",
+                    "tertiary": "#006b2d",
+                    "on-background": "#1d1b1a",
+                    "surface-dim": "#dfd9d7",
+                    "tertiary-fixed": "#7dfc97",
+                    "error-container": "#ffdad6",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed": "#002109",
+                    "tertiary-fixed-dim": "#60df7e",
+                    "outline": "#8b7074",
+                    "on-primary-fixed": "#3f0015",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#005321",
+                    "on-surface-variant": "#584144",
+                    "paper": "#FFFFFF",
+                    "secondary-container": "#ebdcdf",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed": "#211a1c",
+                    "surface-variant": "#e7e1df",
+                    "on-secondary-fixed-variant": "#4e4447",
+                    "primary-fixed": "#ffd9de",
+                    "surface-container-high": "#ede7e5",
+                    "inactive-gray": "#C3BCB6",
+                    "secondary-fixed-dim": "#d1c3c6",
+                    "on-surface": "#1d1b1a",
+                    "primary": "#ac254f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-desktop": "40px",
+                    "section-gap": "48px",
+                    "unit": "4px",
+                    "gutter": "16px",
+                    "element-gap": "12px",
+                    "margin-mobile": "20px"
+            },
+            "fontFamily": {
+                    "label-md": ["Noto Sans KR"],
+                    "display-lg": ["Manrope"],
+                    "headline-md": ["Manrope"],
+                    "body-sm": ["Noto Sans KR"],
+                    "body-md": ["Noto Sans KR"],
+                    "body-lg": ["Noto Sans KR"],
+                    "numeral-md": ["Manrope"],
+                    "headline-sm": ["Manrope"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "display-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "numeral-md": ["16px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #fef8f6;
+            min-height: 100dvh;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .type-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .type-card:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body class="flex flex-col text-on-background overflow-x-hidden">
+<!-- Top Bar -->
+<header class="flex items-center w-full px-margin-mobile h-16 bg-transparent">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="home_pin">home_pin</span>
+<h1 class="text-headline-md font-headline-md font-extrabold text-primary tracking-tight">Roomting</h1>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow flex flex-col px-margin-mobile pt-12 pb-24 max-w-[430px] mx-auto w-full">
+<!-- Header Text -->
+<div class="mb-12">
+<p class="font-label-md text-label-md text-primary font-bold mb-3 uppercase tracking-wider">Login</p>
+<h2 class="font-display-lg text-display-lg leading-tight text-on-background mb-4">
+                어떤 계정으로<br/>로그인하시나요?
+            </h2>
+<p class="font-body-md text-body-md text-ink-soft">
+                계정 유형에 맞는 로그인 화면으로 안내할게요
+            </p>
+</div>
+<!-- Selection Stack -->
+<div class="space-y-6">
+<!-- General Member -->
+<button class="type-card w-full text-left flex items-center justify-between p-8 bg-paper rounded-[32px] group shadow-sm hover:shadow-md border border-line/30">
+<div class="flex items-center gap-5">
+<div class="w-14 h-14 rounded-2xl bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-paper transition-colors duration-300">
+<!-- Lucide-style Home Icon -->
+<svg fill="none" height="28" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="28" xmlns="http://www.w3.org/2000/svg"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">일반회원</h3>
+<p class="font-body-sm text-body-sm text-ink-soft">방을 구하고 있어요</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-inactive-gray group-hover:text-primary group-hover:translate-x-1 transition-all" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Realtor -->
+<button class="type-card w-full text-left flex items-center justify-between p-8 bg-paper rounded-[32px] group shadow-sm hover:shadow-md border border-line/30">
+<div class="flex items-center gap-5">
+<div class="w-14 h-14 rounded-2xl bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-paper transition-colors duration-300">
+<!-- Lucide-style Building Icon -->
+<svg fill="none" height="28" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="28" xmlns="http://www.w3.org/2000/svg"><rect height="20" rx="2" ry="2" width="16" x="4" y="2"></rect><line x1="9" x2="9" y1="22" y2="22"></line><line x1="15" x2="15" y1="22" y2="22"></line><line x1="8" x2="8" y1="6" y2="6"></line><line x1="12" x2="12" y1="6" y2="6"></line><line x1="16" x2="16" y1="6" y2="6"></line><line x1="8" x2="8" y1="10" y2="10"></line><line x1="12" x2="12" y1="10" y2="10"></line><line x1="16" x2="16" y1="10" y2="10"></line><line x1="8" x2="8" y1="14" y2="14"></line><line x1="12" x2="12" y1="14" y2="14"></line><line x1="16" x2="16" y1="14" y2="14"></line><line x1="8" x2="8" y1="18" y2="18"></line><line x1="12" x2="12" y1="18" y2="18"></line><line x1="16" x2="16" y1="18" y2="18"></line></svg>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">공인중개사</h3>
+<p class="font-body-sm text-body-sm text-ink-soft">매물을 등록하고 있어요</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-inactive-gray group-hover:text-primary group-hover:translate-x-1 transition-all" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<!-- Footer -->
+<div class="mt-auto pt-16 text-center">
+<p class="font-body-md text-body-md text-ink-soft">
+                계정이 없으신가요? 
+                <a class="text-primary font-bold ml-2 underline underline-offset-4 hover:opacity-80 transition-opacity" href="#">회원가입</a>
+</p>
+<div class="mt-12 opacity-30">
+<p class="text-[10px] font-headline-md uppercase tracking-[0.2em] text-ink-soft">Premium Renewal 2024</p>
+</div>
+</div>
+</main>
+<!-- Background Decorative -->
+<div class="fixed inset-0 -z-10 pointer-events-none">
+<div class="absolute top-[-10%] right-[-20%] w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+<div class="absolute bottom-[-10%] left-[-20%] w-96 h-96 bg-secondary-container/20 rounded-full blur-3xl"></div>
+</div>
+</body></html>

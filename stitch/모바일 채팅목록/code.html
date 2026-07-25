@@ -1,0 +1,304 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary": "#ffffff",
+                    "surface-container-low": "#f9f2f0",
+                    "inverse-on-surface": "#f6efed",
+                    "surface-container-highest": "#e7e1df",
+                    "on-tertiary-fixed-variant": "#005321",
+                    "outline-variant": "#dfbfc3",
+                    "pink-dim": "#F8D6DE",
+                    "surface-container": "#f3edea",
+                    "surface-container-lowest": "#ffffff",
+                    "inactive-gray": "#C3BCB6",
+                    "line": "#EFEBE7",
+                    "paper": "#FFFFFF",
+                    "surface-dim": "#dfd9d7",
+                    "on-surface-variant": "#584144",
+                    "surface-tint": "#af2851",
+                    "on-error": "#ffffff",
+                    "primary-container": "#cd4066",
+                    "ink-soft": "#8A8480",
+                    "on-primary-fixed-variant": "#8e073a",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#eddfe2",
+                    "on-surface": "#1d1b1a",
+                    "on-secondary-fixed": "#211a1c",
+                    "tertiary": "#006b2d",
+                    "on-primary-fixed": "#3f0015",
+                    "secondary": "#665c5e",
+                    "primary-fixed": "#ffd9de",
+                    "tertiary-container": "#00873b",
+                    "tertiary-fixed-dim": "#60df7e",
+                    "on-primary-container": "#fffbff",
+                    "surface-bright": "#fef8f6",
+                    "tertiary-fixed": "#7dfc97",
+                    "primary": "#ac254f",
+                    "on-secondary-container": "#6a6063",
+                    "outline": "#8b7074",
+                    "surface-container-high": "#ede7e5",
+                    "error": "#ba1a1a",
+                    "secondary-fixed-dim": "#d1c3c6",
+                    "primary-fixed-dim": "#ffb2bf",
+                    "surface-variant": "#e7e1df",
+                    "on-tertiary-container": "#f7fff3",
+                    "on-tertiary-fixed": "#002109",
+                    "on-tertiary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "background": "#fef8f6",
+                    "surface": "#fef8f6",
+                    "secondary-container": "#ebdcdf",
+                    "inverse-primary": "#ffb2bf",
+                    "on-secondary-fixed-variant": "#4e4447",
+                    "inverse-surface": "#32302f",
+                    "on-secondary": "#ffffff",
+                    "on-background": "#1d1b1a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-desktop": "40px",
+                    "gutter": "16px",
+                    "margin-mobile": "20px",
+                    "unit": "4px",
+                    "element-gap": "12px",
+                    "section-gap": "48px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Noto Sans KR"],
+                    "label-md": ["Noto Sans KR"],
+                    "body-sm": ["Noto Sans KR"],
+                    "display-lg": ["Manrope"],
+                    "numeral-md": ["Manrope"],
+                    "headline-sm": ["Manrope"],
+                    "body-md": ["Noto Sans KR"],
+                    "headline-md": ["Manrope"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "numeral-md": ["16px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 0; background: transparent; }
+        .message-bubble-inbound { border-radius: 4px 16px 16px 16px; }
+        .message-bubble-outbound { border-radius: 16px 16px 4px 16px; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden antialiased">
+<!-- Screen Container -->
+<div class="max-w-[430px] mx-auto min-h-screen bg-paper relative pb-20 shadow-sm">
+<!-- TopAppBar (Mapped from JSON) -->
+<header class="flex justify-between items-center w-full px-margin-mobile h-16 max-w-[430px] mx-auto sticky top-0 bg-background z-50">
+<div class="flex items-center gap-2"><div class="flex items-center gap-1.5">
+  <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGLY-wiuwvQbFhVnd_Q2Oj-fYW76zNjzWK-Vt7sZWAmDrP1WX_SrbPfuQ6gP9lO4-BkbUc-9KM645LBPI3Gj-ODtPQYmPNd78SaZaNnLvHkcZrMp2JSXiuw9ypkczvo_2eU--ylkJocRWEV0189xcMxj6oxJN19FNGjwejYqkh-Z73gHo6l7regP2sseUEgmxuRgLVzIiwodn6J1BUJzs6n4SfxWrZtKjj-Qyl2Tp60RS6pjt9MyeQh5kmfm0baFg8AWBnOBiin-Dx" alt="Roomting Symbol" class="h-8 w-auto object-contain">
+  <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDx9SFkyO2Wm6v31qsPAwLATXxK-jmQoXS43mmvenfyhCcz-rZE73MZJQP1AvXtILXOQn40n7lL8aiQOVkg4zUtvm-gTGaGhmwN32dQLyE2M3UBGkAmj6gVi2-7iV6UlH74YwnCMG-V5DH8AU7WeGWZ5ypwXsRa6f4L0hDh5RzN-OzzZyi29-2vSw35oiVBRHlMofqcQIRETMxnI0df6q8A9fBjRuWBLRl7VhSN5WSlJIkMQgKfjRMFelYyvAOYZRjGqpn8BwA-uBzN" alt="Roomting Wordmark" class="h-6 w-auto object-contain">
+</div></div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-low transition-colors p-2 rounded-full" data-icon="search">search</button>
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-low transition-colors p-2 rounded-full" data-icon="notifications">notifications</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="px-margin-mobile">
+<!-- Section Header -->
+<div class="py-element-gap">
+<h2 class="font-headline-md text-headline-md text-on-surface">채팅</h2>
+</div>
+<!-- Chat List Layout -->
+<section class="flex flex-col gap-unit">
+<!-- Chat Item (Active/Recent) -->
+<div class="flex items-center gap-4 py-4 cursor-pointer hover:bg-surface-container-low transition-colors rounded-xl px-2 -mx-2" onclick="toggleView('chat-detail')">
+<div class="relative">
+<img class="w-14 h-14 rounded-full object-cover" data-alt="A close-up high-quality portrait of a friendly young woman with a warm smile, set against a clean, softly lit minimalist interior background. The image has a professional, airy feel with a palette of soft whites and subtle pink tones, consistent with a modern real estate matchmaking application aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7kITJU05RhfzXEBuV4Wo_XhtX6Q-tw6FpKpzE_76tqTuChKDFQho0g7wkHOuKx5MwE1WPRneGQlA9ditFGRQ_i5KL8sA5RsKBpbuCMcRLWY4_uvMLi4l6kMADnM7AbB3NQ1iLtCdsaayC2K5APUbVdpTUGBGEsrC8xgNGv5Qw3PB6qGKh_YDERtL5h-vKLhFnDPZFxrQF7YADV_KXufVlOlGUgp3iqWETZYCWMtRS_a_qZMngG7Lh_QwPtlVEGdkHpS7OXTP_hXhY">
+<div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-primary border-2 border-paper rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-0.5">
+<span class="font-headline-sm text-body-lg font-bold truncate">이지은</span>
+<span class="font-label-md text-ink-soft">오후 2:30</span>
+</div>
+<p class="font-body-sm text-ink-soft truncate">방금 집 사진 확인했어요! 위치가 정말 좋네요. 내일 방문 가능할까요?</p>
+</div>
+</div>
+<!-- Chat Item (Read) -->
+<div class="flex items-center gap-4 py-4 cursor-pointer hover:bg-surface-container-low transition-colors rounded-xl px-2 -mx-2">
+<img class="w-14 h-14 rounded-full object-cover" data-alt="A portrait of a professional looking man in his late 20s, with a gentle expression, wearing a minimalist neutral-toned sweater. The background is a blurred modern cafe with light wood textures and soft daylight, conveying a sense of reliability and clarity for a property rental service." src="https://lh3.googleusercontent.com/aida-public/AB6AXuACopTc9xdBZUXnWxlFKfB7nKG943YsVaPwPnnuD8XzJE7feO5J_laOZEPhpNyrXtL4ra0zQZCYqDO6VmGwPhSiQKbOG0Md7f_TGQaXQchL7BwIs4-fFI0EwRQz0amv-YwI2b4n0pIHllPMxkptOCn7whv9GTcR4fqHNfR06hHBT7YXF7CjXpUVyWvk8uAApkwaGDaedc2TJ84L2EFhl-MmY4QRDdXLvkYvqUgRzICQ83aiA7qEOEncfEifay1CCsWiKZOkeYpdKJw0">
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-0.5">
+<span class="font-headline-sm text-body-lg font-bold truncate">김태현</span>
+<span class="font-label-md text-ink-soft">오전 11:15</span>
+</div>
+<p class="font-body-sm text-ink-soft truncate">보증금 조정 가능한지 여쭤보고 싶습니다.</p>
+</div>
+</div>
+<!-- Chat Item (Multiple unread) -->
+<div class="flex items-center gap-4 py-4 cursor-pointer hover:bg-surface-container-low transition-colors rounded-xl px-2 -mx-2">
+<div class="relative">
+<img class="w-14 h-14 rounded-full object-cover" data-alt="A portrait of a cheerful young couple looking into the camera with a bright, welcoming atmosphere. The lighting is high-key and natural, emphasizing clean skin tones and minimalist fashion. The aesthetic aligns with a premium lifestyle-focused apartment hunting app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9tw-FkLDCaBn5YLMqK52w63oIHOP48pd_9EcdKjWLyWpgwGl-09nOf5iq7_fI3G14OwYYVYz7pmV9jw4CDmI17AmVJmqGhJqZSgGLu2fKQfYHX9FZt-Ir5u2fTfdJovxxVBqXpZ4VV2zeT_1TGy6cJXhmtMZr2rwCVf746wTyiFXbqoBMcSQ_zPhLBNQ-yMA3xxpBJRECkGIpqSVFbooOJ4rNpVNWmOMYo8UQR504rOvUNbGKKMpxCezS83e2DMJbNECtwZY8qSat">
+<div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-primary border-2 border-paper rounded-full flex items-center justify-center text-[8px] text-white">2</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-0.5">
+<span class="font-headline-sm text-body-lg font-bold truncate">행복한 룸메이트</span>
+<span class="font-label-md text-ink-soft">어제</span>
+</div>
+<p class="font-body-sm text-on-surface font-medium truncate">계약서 초안 보내드렸습니다. 확인 부탁드려요!</p>
+</div>
+</div>
+<!-- Chat Item (System) -->
+<div class="flex items-center gap-4 py-4 cursor-pointer hover:bg-surface-container-low transition-colors rounded-xl px-2 -mx-2">
+<div class="w-14 h-14 rounded-full bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-ink-soft" data-icon="apartment">apartment</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-0.5">
+<span class="font-headline-sm text-body-lg font-bold truncate">Roomting 관리자</span>
+<span class="font-label-md text-ink-soft">3일 전</span>
+</div>
+<p class="font-body-sm text-ink-soft truncate">새로운 매칭이 도착했습니다. 프로필을 확인해보세요.</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Chat Detail Overlay (Initially Hidden) -->
+<div class="fixed inset-0 bg-paper z-[100] transform translate-y-full transition-transform duration-300 ease-out flex flex-col max-w-[430px] mx-auto" id="chat-detail">
+<!-- Chat Detail Header -->
+<header class="flex items-center justify-between px-4 h-16 border-b border-line">
+<button class="material-symbols-outlined text-on-surface p-2" data-icon="arrow_back" onclick="toggleView('chat-list')">arrow_back</button>
+<div class="flex flex-col items-center">
+<span class="font-headline-sm text-body-md font-bold">이지은</span>
+<span class="text-[10px] text-primary">현재 접속 중</span>
+</div>
+<button class="material-symbols-outlined text-on-surface p-2" data-icon="more_vert">more_vert</button>
+</header>
+<!-- Chat Messages Area -->
+<div class="flex-1 overflow-y-auto px-margin-mobile py-6 flex flex-col gap-6">
+<!-- Date Separator -->
+<div class="flex justify-center">
+<span class="bg-surface-container-low text-ink-soft px-3 py-1 rounded-full text-[10px] font-medium">2023년 10월 24일</span>
+</div>
+<!-- Inbound Message -->
+<div class="flex items-end gap-2 max-w-[85%]">
+<img class="w-8 h-8 rounded-full" data-alt="Small avatar of a young woman with a friendly expression, consistent with the previous main profile shot. Clear lighting, minimalist feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdjnc2L_dbJNAAac6hj3dymUKQifyBJ254KERDgsCeD8ncqXa-j2viqwtOYFyiOH4awvdAA_lvnNXcE26emvop4D4j5f1m0ZqOM5LH4hLnC94rAX_xYkEIERgdaqhdbWXqUfG26lfSEuFtn_UHAqVZa6H6GSw5FtLiSH0qJ7IUGt28WQBQ357GSgqDapul-YAoZaGJBud_gldV4vxO3UuGTsr3ESiOsvzm_zxnYVoxDovq4LrPtcVimURKJUxHXIfz618BT1laHf5l">
+<div class="flex flex-col gap-1">
+<div class="message-bubble-inbound bg-surface-container-low text-on-surface p-3 text-body-sm">
+                            안녕하세요! 아까 낮에 문의드렸던 방 아직 남아있을까요?
+                        </div>
+<span class="text-[10px] text-ink-soft ml-1">오후 2:10</span>
+</div>
+</div>
+<!-- Outbound Message -->
+<div class="flex items-end gap-2 max-w-[85%] self-end flex-row-reverse">
+<div class="flex flex-col items-end gap-1">
+<div class="message-bubble-outbound bg-primary text-on-primary p-3 text-body-sm shadow-sm">
+                            네, 아직 계약 가능합니다! 혹시 언제쯤 보러 오실 수 있나요?
+                        </div>
+<div class="flex items-center gap-1">
+<span class="text-[10px] text-primary font-bold">읽음</span>
+<span class="text-[10px] text-ink-soft">오후 2:15</span>
+</div>
+</div>
+</div>
+<!-- Inbound Message with Image -->
+<div class="flex items-end gap-2 max-w-[85%]">
+<img class="w-8 h-8 rounded-full" data-alt="Small avatar of a young woman" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCr5wrkB6pFUjIeiChu5Iv-QBv_NqtcZv11QBpVi0KJxZTrb8rhz1qT4t1cYGFQEps-1o07ecKjQsnOSmtT-R07HC9M4TVrx0AWy7Dv5SSF-IxbWM9_LeM0PPrauvhw1Bbx-QybykpjeOi0HlCp4k0xiH2HWZALRSPPsetAdoIElZxf82fy7XUQtMlv8BREAXOkNxfuvrjj9-CFXonpCno9cli7HCab4R-HObXpGjDc9UoQNbr5W_oXMe0nqwradrtO17fFWpbBnhFv">
+<div class="flex flex-col gap-1">
+<div class="message-bubble-inbound bg-surface-container-low overflow-hidden">
+<img class="w-full h-40 object-cover" data-alt="A bright, airy photograph of a modern studio apartment interior. Features large windows with soft sunlight streaming in, white walls, light wood flooring, and a minimalist small dining table with a single plant. The mood is peaceful and professional, highlighting a premium living space." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDJzVvQ8Jio9FwPIykVriHbxsdpOGpxIazY7K5TyS7BJLY11sLPJb6snDa-pBS1cozLTp2bnU47F8vJAEWmK6Q2YmdzdOLJE9KL9CTP2EgjqOtW8xU4sC0qrFFlAa9Ktz8xuskDwaB8yNU6RodDykBlcUYetUf22WRmdck9zwL_AbRZgnGb_aUIJL_1BqeWpgrSyD9-t46kGLJEZ97gaiXntiKVE5SNEklwdCrDHPb0aX-M0ShhIEjLWE0GFz3C4Y1eCleGfyvHmN2">
+<div class="p-3 text-body-sm">이 방 맞죠? 채광이 너무 좋아서 마음에 들어요.</div>
+</div>
+<span class="text-[10px] text-ink-soft ml-1">오후 2:30</span>
+</div>
+</div>
+<!-- Real-time Typing (Mockup) -->
+<div class="flex items-center gap-1 text-primary text-[10px] font-medium ml-10">
+                    이지은님이 입력 중...
+                </div>
+</div>
+<!-- Chat Input Area -->
+<div class="p-4 bg-paper flex items-center gap-3">
+<button class="material-symbols-outlined text-ink-soft" data-icon="add_circle">add_circle</button>
+<div class="flex-1 bg-surface-container-low rounded-full px-4 py-2 flex items-center">
+<input class="bg-transparent border-none focus:ring-0 text-body-sm w-full placeholder:text-ink-soft" placeholder="메시지를 입력하세요" type="text">
+<button class="material-symbols-outlined text-ink-soft ml-2" data-icon="sentiment_satisfied">sentiment_satisfied</button>
+</div>
+<button class="bg-primary text-on-primary w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-sm">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+</button>
+</div>
+</div>
+<!-- BottomNavBar (Mapped from JSON) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center py-2 px-margin-mobile bg-paper dark:bg-surface-dim max-w-[430px] mx-auto border-t border-line z-[60]">
+<a class="flex flex-col items-center justify-center text-inactive-gray px-3 py-1 hover:bg-surface-container-lowest transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-md text-label-md">홈</span>
+</a>
+<a class="flex flex-col items-center justify-center text-inactive-gray px-3 py-1 hover:bg-surface-container-lowest transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span class="font-label-md text-label-md">지도</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-pink-dim text-primary rounded-xl px-3 py-1 scale-95 duration-200 shadow-sm" href="#">
+<span class="material-symbols-outlined" data-icon="chat" style="font-variation-settings: 'FILL' 1;">chat</span>
+<span class="font-label-md text-label-md font-bold">채팅</span>
+</a>
+<a class="flex flex-col items-center justify-center text-inactive-gray px-3 py-1 hover:bg-surface-container-lowest transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">MY</span>
+</a>
+</nav>
+<!-- Floating Action Button (FAB) - Suppression Logic: Hide when chat detail is open -->
+<button class="fixed bottom-24 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center z-40 hover:scale-105 active:scale-95 transition-all" id="main-fab">
+<span class="material-symbols-outlined" data-icon="message-circle" style="font-variation-settings: 'FILL' 1;">message</span>
+</button>
+</div>
+<script>
+        function toggleView(view) {
+            const detail = document.getElementById('chat-detail');
+            const fab = document.getElementById('main-fab');
+            if (view === 'chat-detail') {
+                detail.classList.remove('translate-y-full');
+                fab.style.display = 'none';
+            } else {
+                detail.classList.add('translate-y-full');
+                fab.style.display = 'flex';
+            }
+        }
+
+        // Horizontal scrolling chips if needed for filter
+        document.querySelectorAll('.chip-container').forEach(container => {
+            container.addEventListener('wheel', (evt) => {
+                evt.preventDefault();
+                container.scrollLeft += evt.deltaY;
+            });
+        });
+    </script>
+
+
+</body></html>
