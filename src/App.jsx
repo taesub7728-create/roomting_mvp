@@ -1,8 +1,6 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { LanguageProvider } from './context/LanguageContext'
 import Landing from './pages/Landing/Landing'
-import Login from './pages/Login/Login'
-import PartnerLogin from './pages/PartnerLogin/PartnerLogin'
 import SignUp from './pages/SignUp/SignUp'
 import SignUpChoice from './pages/SignUp/SignUpChoice'
 import RealtorSignUp from './pages/RealtorSignUp/RealtorSignUp'
@@ -22,8 +20,9 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/partner/login" element={<PartnerLogin />} />
+          {/* 가입/로그인 통합 진입점으로 리다이렉트 (구 URL 대비) */}
+          <Route path="/login" element={<Navigate to="/signup/customer" replace />} />
+          <Route path="/partner/login" element={<Navigate to="/signup/realtor" replace />} />
           <Route path="/signup" element={<SignUpChoice />} />
           <Route path="/signup/customer" element={<SignUp />} />
           <Route path="/signup/realtor" element={<RealtorSignUp />} />

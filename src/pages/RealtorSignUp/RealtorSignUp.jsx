@@ -1,14 +1,22 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { signUpWithEmail } from '../../api/auth.api'
+import { signUpWithEmail, signInWithEmail, getCurrentProfile } from '../../api/auth.api'
 import { checkLandlineDuplicate, submitRealtorApplication } from '../../api/realtorApplication.api'
+import { redirectForRole } from '../../utils/redirectForRole'
 import logo from '../../assets/roomting-logo-symbol.png'
+import '../Login/Login.css'
 import './RealtorSignUp.css'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function RealtorSignUp() {
   const navigate = useNavigate()
+
+  const [mode, setMode] = useState('apply') // 'apply' | 'login'
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState(null)
+  const [loginLoading, setLoginLoading] = useState(false)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -72,6 +80,63 @@ export default function RealtorSignUp() {
     setLoading(false)
     if (applyError) { setError(applyError); return }
     setSubmitted(true)
+  }
+
+  async function handleLogin() {
+    setLoginError(null)
+    setLoginLoading(true)
+    const { error: err } = await signInWithEmail({ email: loginEmail.trim(), password: loginPassword })
+    if (err) { setLoginLoading(false); setLoginError(err); return }
+
+    const { data: profile } = await getCurrentProfile()
+    setLoginLoading(false)
+    redirectForRole(navigate, profile?.role)
+  }
+
+  if (mode === 'login') {
+    return (
+      <div className="frame">
+        <div style={{ padding: '18px 24px 0' }}>
+          <div className="rt-logo">
+            <div className="rt-logo-mark"><img src={logo} alt="roomting" /></div>
+            <span className="rt-logo-name">roomting partners</span>
+          </div>
+        </div>
+
+        <div className="login-wrap">
+          <div className="login-title">공인중개사 · 에이전트 로그인</div>
+
+          <div className="login-form">
+            <input
+              className="rt-input"
+              type="email"
+              placeholder="이메일"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+            />
+            <input
+              className="rt-input"
+              type="password"
+              placeholder="비밀번호"
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+            />
+          </div>
+
+          {loginError && <div className="rt-error-text" style={{ marginBottom: 12 }}>{loginError}</div>}
+
+          <button className="rt-btn-primary" disabled={loginLoading || !loginEmail || !loginPassword} onClick={handleLogin}>
+            로그인
+          </button>
+
+          <div className="login-signup-link" style={{ marginTop: 18 }}>
+            <span onClick={() => setMode('apply')} style={{ cursor: 'pointer', color: 'var(--pink)', fontWeight: 700 }}>
+              아직 지원하지 않으셨나요? 지원서 작성하기
+            </span>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (submitted) {
@@ -167,6 +232,11 @@ export default function RealtorSignUp() {
           {loading ? '제출하는 중...' : '지원서 제출하기'}
         </button>
 
+        <div className="rsu-link">
+          <span onClick={() => setMode('login')} style={{ cursor: 'pointer', color: 'var(--pink)', fontWeight: 700 }}>
+            이미 계정이 있으신가요? 로그인
+          </span>
+        </div>
         <div className="rsu-link">
           <Link to="/signup">← 가입 유형 다시 선택하기</Link>
         </div>

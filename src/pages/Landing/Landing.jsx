@@ -89,7 +89,7 @@ export default function Landing() {
               </div>
             </div>
           ) : (
-            <Link className="login-link" to="/login">{t.login}</Link>
+            <Link className="login-link" to="/signup">{t.login}</Link>
           )}
         </div>
       </header>

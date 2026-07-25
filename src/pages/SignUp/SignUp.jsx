@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../../context/LanguageContext'
-import { signUpWithEmail, signInWithOAuth, updateOwnProfile, getSession } from '../../api/auth.api'
+import { signUpWithEmail, signInWithEmail, signInWithOAuth, updateOwnProfile, getSession, getCurrentProfile } from '../../api/auth.api'
 import { createRequest } from '../../api/requests.api'
 import { PENDING_REQUEST_KEY } from '../RequestWizard/RequestWizard'
+import { redirectForRole } from '../../utils/redirectForRole'
 import logo from '../../assets/roomting-logo-symbol.png'
-import { signupText, langOptions } from './translations'
+import { signupText } from './translations'
 import './SignUp.css'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function SignUp() {
-  const { lang, setLang } = useLanguage()
+  const { lang } = useLanguage()
   const t = signupText[lang]
   const navigate = useNavigate()
 
@@ -50,22 +51,25 @@ export default function SignUp() {
   useEffect(() => {
     async function checkExistingSession() {
       const session = await getSession()
-      if (session) {
-        setFinalizeMode(true)
-        setStep(2)
+      if (!session) return
+
+      // 이미 닉네임까지 있는 계정이면(기존 회원) 소셜 로그인으로 온 것이므로 바로 로그인 처리
+      const { data: profile } = await getCurrentProfile()
+      if (profile?.nickname) {
+        redirectForRole(navigate, profile.role)
+        return
       }
+      // 닉네임이 없으면 소셜 가입 직후 처음 들어온 것 → 닉네임만 채우면 가입 완료
+      setFinalizeMode(true)
+      setStep(1)
     }
     checkExistingSession()
-  }, [])
+  }, [navigate])
 
   const nickTrimmed = nickname.trim()
   const nickValid = nickTrimmed.length >= 2 && nickTrimmed.length <= 16
   const emailValid = EMAIL_RE.test(email.trim())
   const passwordValid = password.length >= 6
-
-  function selectLang(code) {
-    setLang(code)
-  }
 
   async function handleOAuth(provider) {
     setError(null)
@@ -85,7 +89,18 @@ export default function SignUp() {
 
   function goToNickname() {
     setError(null)
-    setStep(2)
+    setStep(1)
+  }
+
+  async function handleLogin() {
+    setError(null)
+    setLoading(true)
+    const { error: loginError } = await signInWithEmail({ email: email.trim(), password })
+    if (loginError) { setLoading(false); setError(loginError); return }
+
+    const { data: profile } = await getCurrentProfile()
+    setLoading(false)
+    redirectForRole(navigate, profile?.role)
   }
 
   async function handleFinish() {
@@ -137,36 +152,12 @@ export default function SignUp() {
       {!finalizeMode && (
         <div className="step-bar">
           <div className={`step-dot${step === 0 ? ' active' : step > 0 ? ' done' : ''}`}></div>
-          <div className={`step-dot${step === 1 ? ' active' : step > 1 ? ' done' : ''}`}></div>
-          <div className={`step-dot${step === 2 ? ' active' : ''}`}></div>
+          <div className={`step-dot${step === 1 ? ' active' : ''}`}></div>
         </div>
       )}
 
-      {/* STEP 0: 언어 선택 */}
+      {/* STEP 0: 로그인 방식 선택 */}
       {step === 0 && (
-        <div className="slide-wrap">
-          <div className="slide-content">
-            <div className="slide-eyebrow">{t.t1eyebrow}</div>
-            <div className="slide-title">{t.t1}</div>
-            <div className="slide-sub">{t.sub1}</div>
-            <div className="lang-grid">
-              {langOptions.map((o) => (
-                <div
-                  key={o.code}
-                  className={`lang-card${lang === o.code ? ' selected' : ''}`}
-                  onClick={() => selectLang(o.code)}
-                >
-                  <span className="lang-card-flag">{o.flag}</span>
-                  <span className="lang-card-name">{o.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 1: 로그인 방식 선택 */}
-      {step === 1 && (
         <div className="slide-wrap">
           <div className="slide-content">
             <div className="slide-eyebrow">{t.t2eyebrow}</div>
@@ -230,8 +221,8 @@ export default function SignUp() {
         </div>
       )}
 
-      {/* STEP 2: 닉네임 */}
-      {step === 2 && (
+      {/* STEP 1: 닉네임 */}
+      {step === 1 && (
         <div className="slide-wrap">
           <div className="slide-content">
             <div className="slide-eyebrow">{t.t3eyebrow}</div>
@@ -259,19 +250,25 @@ export default function SignUp() {
       )}
 
       <div className="bottom-area">
-        {step === 0 && (
-          <button className="rt-btn-primary" onClick={() => setStep(1)}>{t.next}</button>
+        {step === 0 && authMethod === 'email' && (
+          <>
+            <button
+              className="rt-btn-primary"
+              disabled={!emailValid || !passwordValid || loading}
+              onClick={goToNickname}
+            >
+              {t.signupBtn}
+            </button>
+            <button
+              className="rt-btn-secondary"
+              disabled={!emailValid || !passwordValid || loading}
+              onClick={handleLogin}
+            >
+              {t.haveAccount} {t.loginBtn}
+            </button>
+          </>
         )}
-        {step === 1 && authMethod === 'email' && (
-          <button
-            className="rt-btn-primary"
-            disabled={!emailValid || !passwordValid}
-            onClick={goToNickname}
-          >
-            {t.next}
-          </button>
-        )}
-        {step === 2 && (
+        {step === 1 && (
           <button className="rt-btn-primary" disabled={!nickValid || loading} onClick={handleFinish}>
             {t.start}
           </button>
