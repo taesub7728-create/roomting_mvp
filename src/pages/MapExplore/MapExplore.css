@@ -75,7 +75,7 @@
 .bottom-sheet.show { transform: translateY(0); }
 
 .sheet-handle-area { display: flex; justify-content: center; padding: 10px 0 0; }
-.sheet-handle { width: 34px; height: 4px; background: #D8D2CD; border-radius: 2px; }
+.sheet-handle { width: 34px; height: 4px; background: var(--ink-soft); border-radius: 2px; }
 
 .cards-wrap { background: var(--paper); border-radius: 22px 22px 0 0; padding: 8px 0 30px; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); }
 

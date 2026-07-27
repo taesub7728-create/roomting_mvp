@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { MapPin, Home, CheckCircle2, Building2, ImageOff } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getRequestById, closeRequest } from '../../api/requests.api'
 import { listPropertiesForRequest } from '../../api/properties.api'
@@ -80,12 +81,12 @@ export default function ResponseStatus() {
             </div>
           </div>
           <div className="rs-request-summary">
-            <span className="rs-summary-chip">📍 {request.region_text}</span>
+            <span className="rs-summary-chip"><MapPin size={12} strokeWidth={2} style={{ verticalAlign: -2, marginRight: 3 }} /> {request.region_text}</span>
             <span className="rs-summary-chip">{t.depositLabel} {Number(request.deposit_max ?? 0).toLocaleString()}만원 / {t.rentLabel} {request.rent_max ?? 0}만원</span>
             {(request.room_types || []).map((rt) => (
-              <span className="rs-summary-chip" key={rt}>🏠 {getRoomTypeLabel(lang, rt)}</span>
+              <span className="rs-summary-chip" key={rt}><Home size={12} strokeWidth={2} style={{ verticalAlign: -2, marginRight: 3 }} /> {getRoomTypeLabel(lang, rt)}</span>
             ))}
-            {request.registration_required && <span className="rs-summary-chip">✅ {t.registrationYes}</span>}
+            {request.registration_required && <span className="rs-summary-chip"><CheckCircle2 size={12} strokeWidth={2} style={{ verticalAlign: -2, marginRight: 3 }} /> {t.registrationYes}</span>}
           </div>
         </div>
 
@@ -130,13 +131,13 @@ export default function ResponseStatus() {
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 ) : (
-                  '🏠'
+                  <ImageOff size={22} strokeWidth={1.75} />
                 )}
                 <div className="rs-type-badge">{getRoomTypeLabel(lang, p.room_type)}</div>
               </div>
               <div className="rs-body-inner">
                 <div className="rs-agency">
-                  <div className="rs-agency-avatar">🏢</div>
+                  <div className="rs-agency-avatar"><Building2 size={15} strokeWidth={2} /></div>
                   <div>
                     <div className="rs-agency-name">{p.realtor?.nickname || '공인중개사'}</div>
                     <div className="rs-agency-addr">{p.address}</div>

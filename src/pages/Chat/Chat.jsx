@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { Home, Send, TriangleAlert } from 'lucide-react'
 import { getCurrentProfile } from '../../api/auth.api'
 import { getPropertyById } from '../../api/properties.api'
 import {
@@ -116,7 +117,7 @@ export default function Chat() {
       {property && (
         <div className="chat-property-card">
           <div className="chat-property-thumb">
-            {firstImage ? <img src={firstImage} alt={property.title} /> : '🏠'}
+            {firstImage ? <img src={firstImage} alt={property.title} /> : <Home size={20} strokeWidth={1.75} />}
           </div>
           <div className="chat-property-info">
             <div className="chat-property-title">{property.title}</div>
@@ -149,7 +150,7 @@ export default function Chat() {
                 <div className="chat-original">{primaryText}</div>
                 {showOriginalBelow && <div className="chat-translated">{m.original_text}</div>}
                 {!isMine && m.translation_status === 'failed' && (
-                  <div className="chat-translate-fail">⚠ 번역 실패, 원문만 표시</div>
+                  <div className="chat-translate-fail"><TriangleAlert size={12} strokeWidth={2} style={{ verticalAlign: -2, marginRight: 3 }} /> 번역 실패, 원문만 표시</div>
                 )}
                 {!isMine && m.translation_status === 'pending' && (
                   <div className="chat-translate-fail">번역 중...</div>
@@ -170,7 +171,9 @@ export default function Chat() {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSend() }}
         />
-        <button className="chat-send-btn" disabled={sending || !text.trim()} onClick={handleSend}>➤</button>
+        <button className="chat-send-btn" disabled={sending || !text.trim()} onClick={handleSend} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Send size={17} strokeWidth={2} />
+        </button>
       </div>
 
       <BottomTabBar />

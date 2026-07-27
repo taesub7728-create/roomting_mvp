@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Heart, MapPin, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Heart, MapPin, MessageCircle, ImageOff } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile } from '../../api/auth.api'
 import { listPublicProperties } from '../../api/properties.api'
@@ -93,7 +93,7 @@ export default function PropertyDetail() {
       <div className="pd-gallery">
         <ImageCarousel
           images={sortedImageUrls(property)}
-          placeholder={<div className="pd-gallery-placeholder">🏠</div>}
+          placeholder={<div className="pd-gallery-placeholder"><ImageOff size={40} strokeWidth={1.5} /></div>}
         />
         <button className="pd-back-btn" onClick={() => navigate(-1)}><ArrowLeft size={18} strokeWidth={2} /></button>
       </div>

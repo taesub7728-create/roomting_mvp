@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { WashingMachine, Snowflake, SquareParking, PawPrint, Flame } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getSession } from '../../api/auth.api'
 import { createRequest } from '../../api/requests.api'
@@ -8,6 +9,14 @@ import { requestText } from './translations'
 import './RequestWizard.css'
 
 export const PENDING_REQUEST_KEY = 'roomting_pending_request'
+
+const AMENITY_ICONS = {
+  washer: WashingMachine,
+  ac: Snowflake,
+  parking: SquareParking,
+  pet: PawPrint,
+  full_option: Flame,
+}
 
 export default function RequestWizard() {
   const { lang } = useLanguage()
@@ -201,15 +210,19 @@ export default function RequestWizard() {
         <div className="rw-section">
           <div className="rw-section-header"><div className="rw-section-title">{t.s6title}</div></div>
           <div className="chip-group" style={{ marginBottom: 6 }}>
-            {t.amenities.map((label) => (
-              <div
-                key={label}
-                className={`chip${amenities.includes(label) ? ' active' : ''}`}
-                onClick={() => toggleAmenity(label)}
-              >
-                {label}
-              </div>
-            ))}
+            {t.amenities.map((a) => {
+              const Icon = AMENITY_ICONS[a.code]
+              return (
+                <div
+                  key={a.code}
+                  className={`chip${amenities.includes(a.code) ? ' active' : ''}`}
+                  onClick={() => toggleAmenity(a.code)}
+                >
+                  <Icon size={13} strokeWidth={2} style={{ marginRight: 5, verticalAlign: -2 }} />
+                  {a.label}
+                </div>
+              )
+            })}
           </div>
           <textarea
             className="rw-textarea"

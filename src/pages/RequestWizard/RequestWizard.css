@@ -13,27 +13,27 @@
 .rw-required { font-size: 11px; color: var(--pink); font-weight: 700; }
 
 .rw-input, .rw-textarea {
-  width: 100%; background: #F3EFEB;
+  width: 100%; background: var(--line);
   border: 1.5px solid var(--line); border-radius: 13px;
   padding: 13px 15px; font-size: 14.5px; font-weight: 600;
   color: var(--ink); font-family: 'Noto Sans KR', sans-serif;
   outline: none; transition: border-color .15s, background .15s;
 }
 .rw-input:focus, .rw-textarea:focus { border-color: var(--pink); background: var(--white); }
-.rw-input::placeholder, .rw-textarea::placeholder { color: #ABA39C; font-weight: 500; }
+.rw-input::placeholder, .rw-textarea::placeholder { color: var(--ink-soft); font-weight: 500; }
 .rw-textarea { resize: none; height: 86px; line-height: 1.6; }
 
 .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   padding: 8px 14px; border-radius: 50px;
-  border: 1.5px solid var(--line); background: #F3EFEB;
+  border: 1.5px solid var(--line); background: var(--line);
   font-size: 12.5px; font-weight: 700; color: var(--ink-soft);
   cursor: pointer; transition: all .15s; user-select: none;
 }
 .chip.active { background: var(--ink); border-color: var(--ink); color: white; }
 .chip:active { transform: scale(0.96); }
 
-.slider-card { background: #F3EFEB; border: 1.5px solid var(--line); border-radius: 14px; padding: 16px; }
+.slider-card { background: var(--line); border: 1.5px solid var(--line); border-radius: 14px; padding: 16px; }
 .slider-display { display: flex; align-items: baseline; justify-content: center; gap: 4px; margin-bottom: 14px; }
 .slider-value { font-size: 23px; font-weight: 800; color: var(--pink); letter-spacing: -0.5px; }
 .slider-unit { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
@@ -47,7 +47,7 @@
 
 .toggle-row {
   display: flex; align-items: center; justify-content: space-between;
-  background: #F3EFEB; border: 1.5px solid var(--line);
+  background: var(--line); border: 1.5px solid var(--line);
   border-radius: 14px; padding: 14px 16px; cursor: pointer;
 }
 .toggle-row.on { border-color: var(--pink); background: var(--pink-soft); }
@@ -66,7 +66,7 @@
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 .date-input {
-  width: 100%; background: #F3EFEB;
+  width: 100%; background: var(--line);
   border: 1.5px solid var(--line); border-radius: 13px;
   padding: 12px 15px; font-size: 14px; font-weight: 600;
   color: var(--ink); font-family: 'Noto Sans KR', sans-serif;

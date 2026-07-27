@@ -18,7 +18,7 @@
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 .slide-content { animation: fadeUp .45s both; }
 
-.terms { font-size: 11px; color: #B5ADA7; font-weight: 500; margin-top: 18px; line-height: 1.6; }
+.terms { font-size: 11px; color: var(--ink-soft); font-weight: 500; margin-top: 18px; line-height: 1.6; }
 
 .email-form { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
 
@@ -28,7 +28,7 @@
 .signup-inline-link { color: var(--pink); font-weight: 700; text-decoration: none; }
 
 .nick-hint { font-size: 12px; font-weight: 600; margin-top: 8px; }
-.nick-hint.ok { color: #2A9D5C; }
+.nick-hint.ok { color: var(--success); }
 .nick-hint.err { color: var(--pink); }
 
 .bottom-area {

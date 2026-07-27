@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { List, Locate, MapPin, Home, Heart, Search, X } from 'lucide-react'
+import { List, Locate, MapPin, Home, Heart, Search, X, Lock } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile } from '../../api/auth.api'
 import { listPublicProperties } from '../../api/properties.api'
@@ -198,7 +198,7 @@ export default function MapExplore() {
     return (
       <div className="frame">
         <div className="me-guard">
-          <div style={{ fontSize: 32 }}>🔒</div>
+          <Lock size={32} strokeWidth={1.75} />
           <p style={{ fontWeight: 700 }}>{t.needLogin}</p>
           <Link to="/login" style={{ color: 'var(--pink)', fontWeight: 700 }}>{t.goLogin}</Link>
         </div>

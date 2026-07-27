@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Home, Building2 } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import logo from '../../assets/roomting-symbol.svg'
 import { signupText, langOptions } from './translations'
@@ -59,12 +60,12 @@ export default function SignUpChoice() {
 
             <div className="sc-choice-list">
               <button className="sc-choice-card" onClick={() => navigate('/signup/customer')}>
-                <span className="sc-choice-emoji">🏠</span>
+                <Home size={26} strokeWidth={1.75} color="var(--pink)" />
                 <span className="sc-choice-title">{t.choiceCustomerTitle}</span>
                 <span className="sc-choice-desc">{t.choiceCustomerDesc}</span>
               </button>
               <button className="sc-choice-card" onClick={() => navigate('/signup/realtor')}>
-                <span className="sc-choice-emoji">🏢</span>
+                <Building2 size={26} strokeWidth={1.75} color="var(--pink)" />
                 <span className="sc-choice-title">{t.choiceRealtorTitle}</span>
                 <span className="sc-choice-desc">{t.choiceRealtorDesc}</span>
               </button>

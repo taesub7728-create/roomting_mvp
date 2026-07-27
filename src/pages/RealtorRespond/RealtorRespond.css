@@ -21,19 +21,19 @@
 .rr-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 .rr-input, .rr-textarea {
-  width: 100%; background: #F3EFEB;
+  width: 100%; background: var(--line);
   border: 1.5px solid var(--line); border-radius: 13px;
   padding: 13px 15px; font-size: 14.5px; font-weight: 600;
   color: var(--ink); font-family: 'Noto Sans KR', sans-serif;
   outline: none; transition: border-color .15s, background .15s;
 }
 .rr-input:focus, .rr-textarea:focus { border-color: var(--pink); background: var(--white); }
-.rr-input::placeholder, .rr-textarea::placeholder { color: #ABA39C; font-weight: 500; }
+.rr-input::placeholder, .rr-textarea::placeholder { color: var(--ink-soft); font-weight: 500; }
 .rr-textarea { resize: none; height: 86px; line-height: 1.6; }
 
 .rr-chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .rr-chip {
-  padding: 8px 14px; border-radius: 50px; border: 1.5px solid var(--line); background: #F3EFEB;
+  padding: 8px 14px; border-radius: 50px; border: 1.5px solid var(--line); background: var(--line);
   font-size: 12.5px; font-weight: 700; color: var(--ink-soft); cursor: pointer;
 }
 .rr-chip.active { background: var(--ink); border-color: var(--ink); color: white; }

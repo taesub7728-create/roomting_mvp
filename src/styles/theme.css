@@ -7,10 +7,12 @@
   --ink: #1C1A19;
   --ink-soft: #8A8480;
   --line: #EFEBE7;
-  --paper: #FFFFFF;
+  --paper: #FFFCFB;
   --white: #fff;
   --radius: 16px;
   --danger: #E8547A; /* 에러 메시지 색 */
+  --success: #2A9D5C; /* 성공/승인/응답대기 등 긍정적 상태 표시 */
+  --success-soft: #E8F5EC; /* 성공 상태 배경(뱃지 등) */
   --sidebar-width: 224px; /* 데스크톱 좌측 고정 탭바(사이드바) 폭 */
 }
 
@@ -187,4 +189,4 @@ body {
 
 .divider { display: flex; align-items: center; gap: 12px; margin: 14px 0 4px; }
 .divider-line { flex: 1; height: 1px; background: var(--line); }
-.divider-text { font-size: 11.5px; font-weight: 600; color: #B5ADA7; }
+.divider-text { font-size: 11.5px; font-weight: 600; color: var(--ink-soft); }
