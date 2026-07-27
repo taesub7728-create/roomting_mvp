@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { LanguageProvider } from './context/LanguageContext'
+import { AuthProvider } from './shared/auth/AuthProvider'
+import CustomerRoute from './shared/routes/CustomerRoute'
+import RealtorRoute from './shared/routes/RealtorRoute'
+import AdminRoute from './shared/routes/AdminRoute'
 import Splash from './components/Splash'
-import CustomerRouteGuard from './components/CustomerRouteGuard'
 import Landing from './pages/Landing/Landing'
 import LoginChoice from './pages/Login/LoginChoice'
 import SignUp from './pages/SignUp/SignUp'
@@ -10,6 +13,7 @@ import SignUpChoice from './pages/SignUp/SignUpChoice'
 import RealtorSignUp from './pages/RealtorSignUp/RealtorSignUp'
 import RequestWizard from './pages/RequestWizard/RequestWizard'
 import RealtorDashboard from './pages/RealtorDashboard/RealtorDashboard'
+import RealtorPending from './pages/RealtorDashboard/RealtorPending'
 import RealtorRespond from './pages/RealtorRespond/RealtorRespond'
 import ResponseStatus from './pages/ResponseStatus/ResponseStatus'
 import Chat from './pages/Chat/Chat'
@@ -17,44 +21,62 @@ import MyPage from './pages/MyPage/MyPage'
 import MapExplore from './pages/MapExplore/MapExplore'
 import PropertyDetail from './pages/PropertyDetail/PropertyDetail'
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
+import AdminLogin from './pages/AdminDashboard/AdminLogin'
 import ComingSoon from './pages/ComingSoon/ComingSoon'
 
 function App() {
   const [showSplash, setShowSplash] = useState(true)
 
   return (
-    <LanguageProvider>
-      <BrowserRouter>
-        {showSplash && <Splash onFinish={() => setShowSplash(false)} />}
-        <Routes>
-          {/* 고객용 화면 묶음: admin 계정이 URL 직접 입력/뒤로가기 등으로 들어오면 즉시 /admin으로 되돌림 */}
-          <Route element={<CustomerRouteGuard />}>
-            <Route path="/" element={<Landing />} />
-            <Route path="/request" element={<RequestWizard />} />
-            <Route path="/requests/:requestId" element={<ResponseStatus />} />
-            <Route path="/mypage" element={<MyPage />} />
+    <AuthProvider>
+      <LanguageProvider>
+        <BrowserRouter>
+          {showSplash && <Splash onFinish={() => setShowSplash(false)} />}
+          <Routes>
+            {/* 고객용 화면 묶음: customer가 아니면 각자 홈으로, 미로그인이면 /login으로 즉시 리다이렉트 */}
+            <Route element={<CustomerRoute />}>
+              <Route path="/" element={<Landing />} />
+              <Route path="/request" element={<RequestWizard />} />
+              <Route path="/requests/:requestId" element={<ResponseStatus />} />
+              <Route path="/mypage" element={<MyPage />} />
+              <Route path="/map" element={<MapExplore />} />
+              <Route path="/property/:propertyId" element={<PropertyDetail />} />
+            </Route>
+
+            {/* 채팅은 customer/realtor 둘 다 쓰는 공유 화면이라 아직 도메인별 Route Guard로 나누지 않음
+                (Chat.jsx를 CustomerChat/RealtorChat으로 분리하는 다음 폴더 이동 Step에서 정리 예정).
+                실제 데이터 접근은 RLS(chat_rooms/chat_messages 정책)가 보호하므로 보안 공백은 아님 */}
             <Route path="/chat/:propertyId" element={<Chat />} />
-            <Route path="/map" element={<MapExplore />} />
-            <Route path="/property/:propertyId" element={<PropertyDetail />} />
-          </Route>
 
-          {/* 로그인 전용 진입점 - 회원가입(/signup) 흐름과 분리 */}
-          <Route path="/login" element={<LoginChoice />} />
-          <Route path="/login/customer" element={<SignUp mode="login" />} />
-          <Route path="/login/realtor" element={<RealtorSignUp initialMode="login" />} />
-          {/* 구 URL 대비 */}
-          <Route path="/partner/login" element={<Navigate to="/login/realtor" replace />} />
+            {/* 로그인 전용 진입점 - 회원가입(/signup) 흐름과 분리 */}
+            <Route path="/login" element={<LoginChoice />} />
+            <Route path="/login/customer" element={<SignUp mode="login" />} />
+            <Route path="/login/realtor" element={<RealtorSignUp initialMode="login" />} />
+            {/* 구 URL 대비 */}
+            <Route path="/partner/login" element={<Navigate to="/login/realtor" replace />} />
 
-          <Route path="/signup" element={<SignUpChoice />} />
-          <Route path="/signup/customer" element={<SignUp />} />
-          <Route path="/signup/realtor" element={<RealtorSignUp />} />
-          <Route path="/realtor" element={<RealtorDashboard />} />
-          <Route path="/realtor/respond/:requestId" element={<RealtorRespond />} />
-          <Route path="/coming-soon" element={<ComingSoon />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-        </Routes>
-      </BrowserRouter>
-    </LanguageProvider>
+            <Route path="/signup" element={<SignUpChoice />} />
+            <Route path="/signup/customer" element={<SignUp />} />
+            <Route path="/signup/realtor" element={<RealtorSignUp />} />
+
+            {/* 공인중개사 화면 묶음: role==='realtor'만 허용, 심사 대기 중이면 /realtor/pending으로 */}
+            <Route element={<RealtorRoute />}>
+              <Route path="/realtor" element={<RealtorDashboard />} />
+              <Route path="/realtor/respond/:requestId" element={<RealtorRespond />} />
+            </Route>
+            <Route path="/realtor/pending" element={<RealtorPending />} />
+
+            <Route path="/coming-soon" element={<ComingSoon />} />
+
+            {/* 운영자 화면: role==='admin'만 허용, 아니면 로그아웃 후 /admin/login으로 */}
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<AdminDashboard />} />
+            </Route>
+            <Route path="/admin/login" element={<AdminLogin />} />
+          </Routes>
+        </BrowserRouter>
+      </LanguageProvider>
+    </AuthProvider>
   )
 }
 
