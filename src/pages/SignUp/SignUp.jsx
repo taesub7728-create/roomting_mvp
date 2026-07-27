@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Mail } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { signUpWithEmail, signInWithEmail, signInWithOAuth, updateOwnProfile, getSession, getCurrentProfile } from '../../api/auth.api'
 import { createRequest } from '../../api/requests.api'
 import { PENDING_REQUEST_KEY } from '../RequestWizard/RequestWizard'
 import { redirectForRole } from '../../utils/redirectForRole'
+import { useAuth } from '../../shared/auth/useAuth'
+import { homePathForRole } from '../../shared/auth/homePathForRole'
 import logo from '../../assets/roomting-symbol.svg'
 import { signupText } from './translations'
 import './SignUp.css'
@@ -16,6 +19,7 @@ export default function SignUp({ mode = 'signup' }) {
   const { lang } = useLanguage()
   const t = signupText[lang]
   const navigate = useNavigate()
+  const { user, profile, authLoading, profileLoading } = useAuth()
 
   const [step, setStep] = useState(0)
   // 소셜 로그인 후 브라우저가 돌아왔을 때는 이미 계정이 생성된 상태이므로,
@@ -136,6 +140,14 @@ export default function SignUp({ mode = 'signup' }) {
     }
   }
 
+  // 로그인 전용 화면(mode==='login')에서는 이미 로그인 + profile까지 확정된 사용자에게
+  // 로그인 폼이 잠깐이라도 보이지 않도록 렌더 단계에서 먼저 처리한다.
+  // (mode==='signup'일 때는 위 checkExistingSession의 OAuth 콜백 처리 로직이 별도로 담당하므로 여기서는 손대지 않음)
+  if (mode === 'login') {
+    if (authLoading || profileLoading) return null
+    if (user && profile) return <Navigate to={homePathForRole(profile.role)} replace />
+  }
+
   return (
     <div className="frame signup-frame">
       <div className="ambient amb-1"></div>
@@ -184,7 +196,7 @@ export default function SignUp({ mode = 'signup' }) {
               </div>
 
               <button className="social-btn btn-email" onClick={chooseEmail}>
-                <span className="social-icon">✉</span>
+                <span className="social-icon"><Mail size={16} strokeWidth={2} /></span>
                 <span>{t.email}</span>
               </button>
 

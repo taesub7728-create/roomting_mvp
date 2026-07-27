@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getCurrentProfile, signOut } from '../../api/auth.api'
+import { Home } from 'lucide-react'
+import { signOut } from '../../api/auth.api'
 import { listOpenRequests } from '../../api/requests.api'
 import {
   listMyPropertyResponses,
@@ -12,6 +13,7 @@ import {
 } from '../../api/properties.api'
 import { searchAddressCandidates } from '../../lib/kakaoMaps'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { useAuth } from '../../shared/auth/useAuth'
 import { roomTypeLabels } from './roomTypeLabels'
 import './RealtorDashboard.css'
 
@@ -35,7 +37,7 @@ function timeAgo(dateStr) {
 export default function RealtorDashboard() {
   const navigate = useNavigate()
   const isDesktop = useIsDesktop(900)
-  const [profile, setProfile] = useState(undefined) // undefined = 로딩중, null = 미로그인
+  const { profile } = useAuth() // RealtorRoute가 이미 role==='realtor'까지 확인한 뒤에만 이 컴포넌트가 렌더됨
   const [tab, setTab] = useState('open') // 'open' | 'mine' | 'listings'
   const [requests, setRequests] = useState([])
   const [myResponses, setMyResponses] = useState([])
@@ -66,23 +68,17 @@ export default function RealtorDashboard() {
 
   useEffect(() => {
     async function load() {
-      const { data: profileData, error: profileError } = await getCurrentProfile()
-      if (profileError) { setError(profileError); setLoading(false); return }
-      setProfile(profileData)
-
-      if (profileData?.role === 'realtor') {
-        const [openResult, mineResult, listingsResult] = await Promise.all([
-          listOpenRequests(),
-          listMyPropertyResponses(),
-          listMyPublicListings(),
-        ])
-        if (openResult.error) setError(openResult.error)
-        else setRequests(openResult.data)
-        if (mineResult.error) setError(mineResult.error)
-        else setMyResponses(mineResult.data)
-        if (listingsResult.error) setError(listingsResult.error)
-        else setListings(listingsResult.data)
-      }
+      const [openResult, mineResult, listingsResult] = await Promise.all([
+        listOpenRequests(),
+        listMyPropertyResponses(),
+        listMyPublicListings(),
+      ])
+      if (openResult.error) setError(openResult.error)
+      else setRequests(openResult.data)
+      if (mineResult.error) setError(mineResult.error)
+      else setMyResponses(mineResult.data)
+      if (listingsResult.error) setError(listingsResult.error)
+      else setListings(listingsResult.data)
       setLoading(false)
     }
     load()
@@ -206,32 +202,9 @@ export default function RealtorDashboard() {
     setListings((prev) => prev.map((p) => (p.id === propertyId ? { ...p, listing_status: newStatus } : p)))
   }
 
+  // role/심사 상태 확인은 RealtorRoute가 이미 끝냈으므로 여기서는 이 페이지 자체의 데이터 로딩만 처리
   if (loading) {
     return <div className="frame"><div className="rd-guard">불러오는 중...</div></div>
-  }
-
-  if (profile?.role === 'pending_realtor') {
-    return (
-      <div className="frame">
-        <div className="rd-guard">
-          <div style={{ fontSize: 32 }}>⏳</div>
-          <p style={{ fontWeight: 700 }}>아직 심사 중이에요</p>
-          <p style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>승인되면 안내드릴게요. 조금만 기다려주세요</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!profile || profile.role !== 'realtor') {
-    return (
-      <div className="frame">
-        <div className="rd-guard">
-          <div style={{ fontSize: 32 }}>🔒</div>
-          <p style={{ fontWeight: 700 }}>공인중개사 계정으로 로그인해야 볼 수 있는 화면이에요</p>
-          <Link to="/partner/login" style={{ color: 'var(--pink)', fontWeight: 700 }}>파트너 로그인하러 가기</Link>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -379,7 +352,7 @@ export default function RealtorDashboard() {
                   <tr key={p.id}>
                     <td>
                       <div className="rd-thumb">
-                        {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : '🏠'}
+                        {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : <Home size={18} strokeWidth={1.75} />}
                       </div>
                     </td>
                     <td className="rd-td-region">{p.requests?.region_text || p.address}</td>
@@ -400,7 +373,7 @@ export default function RealtorDashboard() {
             {filteredMyResponses.map((p) => (
               <div key={p.id} className="rd-card rd-card-mine">
                 <div className="rd-thumb rd-thumb-card">
-                  {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : '🏠'}
+                  {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : <Home size={22} strokeWidth={1.75} />}
                 </div>
                 <div className="rd-card-mine-body">
                   <div className="rd-card-top">
@@ -535,7 +508,7 @@ export default function RealtorDashboard() {
               {listings.map((p) => (
                 <div key={p.id} className="rd-listing-row">
                   <div className="rd-thumb">
-                    {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : '🏠'}
+                    {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : <Home size={18} strokeWidth={1.75} />}
                   </div>
                   <div className="rd-listing-info">
                     <div className="rd-listing-title">{p.title}</div>

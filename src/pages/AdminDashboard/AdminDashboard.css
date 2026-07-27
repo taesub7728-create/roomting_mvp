@@ -39,7 +39,7 @@
 .ad-app-top { display: flex; align-items: center; justify-content: space-between; }
 .ad-app-company { font-size: 15px; font-weight: 800; color: var(--ink); }
 .ad-app-status { font-size: 11.5px; font-weight: 700; color: var(--pink); background: var(--pink-soft); border-radius: 50px; padding: 4px 10px; }
-.ad-app-status.approved { color: #2A9D5C; background: #E8F5EC; }
+.ad-app-status.approved { color: var(--success); background: var(--success-soft); }
 
 .ad-app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
 .ad-app-grid-wide { grid-column: 1 / -1; }

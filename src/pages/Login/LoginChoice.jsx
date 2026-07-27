@@ -1,6 +1,8 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Home, Building2 } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
+import { useAuth } from '../../shared/auth/useAuth'
+import { homePathForRole } from '../../shared/auth/homePathForRole'
 import logo from '../../assets/roomting-symbol.svg'
 import { loginChoiceText } from './translations'
 import '../SignUp/SignUpChoice.css'
@@ -11,6 +13,11 @@ export default function LoginChoice() {
   const { lang } = useLanguage()
   const t = loginChoiceText[lang]
   const navigate = useNavigate()
+  const { user, profile, authLoading, profileLoading } = useAuth()
+
+  // 이미 로그인 + profile까지 확정된 사용자에게는 선택 화면을 아예 보여주지 않는다
+  if (authLoading || profileLoading) return null
+  if (user && profile) return <Navigate to={homePathForRole(profile.role)} replace />
 
   return (
     <div className="frame">

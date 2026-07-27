@@ -54,7 +54,7 @@
   padding: 4px 10px; border-radius: 50px; background: var(--pink-soft);
   font-size: 11.5px; font-weight: 700; color: var(--pink);
 }
-.rd-tag.neutral { background: #F3EFEB; color: var(--ink-soft); }
+.rd-tag.neutral { background: var(--line); color: var(--ink-soft); }
 
 .rd-note { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 8px; }
 
@@ -92,7 +92,7 @@
   transition: border-color .15s;
 }
 .rd-textarea:focus { border-color: var(--pink); }
-.rd-textarea::placeholder { color: #ABA39C; font-weight: 500; }
+.rd-textarea::placeholder { color: var(--ink-soft); font-weight: 500; }
 
 .rd-form-chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .rd-form-chip {

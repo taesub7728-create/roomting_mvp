@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { signUpWithEmail, signInWithEmail, getCurrentProfile } from '../../api/auth.api'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import { signUpWithEmail, signInWithEmail } from '../../api/auth.api'
 import { checkLandlineDuplicate, submitRealtorApplication } from '../../api/realtorApplication.api'
-import { redirectForRole } from '../../utils/redirectForRole'
+import { useAuth } from '../../shared/auth/useAuth'
+import { homePathForRole } from '../../shared/auth/homePathForRole'
 import logo from '../../assets/roomting-symbol.svg'
 import '../Login/Login.css'
 import './RealtorSignUp.css'
@@ -12,6 +14,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 // initialMode: 'apply'(기본, /signup/realtor) | 'login'(/login/realtor - 로그인 화면으로 바로 진입)
 export default function RealtorSignUp({ initialMode = 'apply' }) {
   const navigate = useNavigate()
+  const { user, profile, authLoading, profileLoading } = useAuth()
 
   const [mode, setMode] = useState(initialMode) // 'apply' | 'login'
   const [loginEmail, setLoginEmail] = useState('')
@@ -55,7 +58,7 @@ export default function RealtorSignUp({ initialMode = 'apply' }) {
       email: email.trim(),
       password,
       nickname: companyName.trim(),
-      role: 'pending_realtor',
+      role: 'customer', // role은 항상 customer로 생성됨(서버가 강제). "심사중" 여부는 realtor_applications 존재로 판단
       preferredLanguage: 'ko',
     })
     if (signUpError) { setLoading(false); setError(signUpError); return }
@@ -87,14 +90,20 @@ export default function RealtorSignUp({ initialMode = 'apply' }) {
     setLoginError(null)
     setLoginLoading(true)
     const { error: err } = await signInWithEmail({ email: loginEmail.trim(), password: loginPassword })
-    if (err) { setLoginLoading(false); setLoginError(err); return }
-
-    const { data: profile } = await getCurrentProfile()
     setLoginLoading(false)
-    redirectForRole(navigate, profile?.role)
+    if (err) { setLoginError(err); return }
+
+    // 파트너 로그인 화면이므로 role과 무관하게 항상 /realtor로 보냄
+    // (role은 이제 승인 전까지 customer로 유지되므로, "심사중"인지 "권한 없음"인지는
+    // RealtorDashboard가 realtor_applications 존재 여부로 직접 판단함)
+    navigate('/realtor')
   }
 
   if (mode === 'login') {
+    // 이미 로그인 + profile까지 확정된 사용자에게는 로그인 폼을 아예 보여주지 않는다
+    if (authLoading || profileLoading) return null
+    if (user && profile) return <Navigate to={homePathForRole(profile.role)} replace />
+
     return (
       <div className="frame">
         <div style={{ padding: '18px 24px 0' }}>
@@ -136,7 +145,7 @@ export default function RealtorSignUp({ initialMode = 'apply' }) {
             </span>
           </div>
           <div className="login-signup-link">
-            <Link to="/login">← 로그인 유형 다시 선택하기</Link>
+            <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeft size={13} strokeWidth={2} /> 로그인 유형 다시 선택하기</Link>
           </div>
         </div>
       </div>
@@ -242,7 +251,7 @@ export default function RealtorSignUp({ initialMode = 'apply' }) {
           </span>
         </div>
         <div className="rsu-link">
-          <Link to="/signup">← 가입 유형 다시 선택하기</Link>
+          <Link to="/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeft size={13} strokeWidth={2} /> 가입 유형 다시 선택하기</Link>
         </div>
       </div>
     </div>

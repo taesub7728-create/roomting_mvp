@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { getCurrentProfile, signOut } from '../../api/auth.api'
+import { useNavigate } from 'react-router-dom'
+import { Home } from 'lucide-react'
+import { signOut } from '../../api/auth.api'
 import { listAllPublicListings, updateListingStatus } from '../../api/properties.api'
 import { listAllRequests, closeRequest } from '../../api/requests.api'
 import { listRealtorApplications, getApplicationDocumentUrl, approveRealtorApplication } from '../../api/realtorApplication.api'
@@ -8,7 +9,6 @@ import './AdminDashboard.css'
 
 const LISTING_STATUS_LABELS = { active: '판매중', completed: '거래완료', hidden: '미노출' }
 const REQUEST_STATUS_LABELS = { open: '응답 대기중', closed: '종료됨', expired: '기한 만료' }
-const APPLICATION_ROLE_LABELS = { pending_realtor: '심사중', realtor: '승인됨' }
 
 function thumbnailUrl(property) {
   if (!property.property_images?.length) return null
@@ -28,7 +28,6 @@ function timeAgo(dateStr) {
 // 여기서는 전체 공개 매물 노출상태 관리와 요청서 전체 조회/강제종료만 함
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const [profile, setProfile] = useState(undefined) // undefined = 로딩중, null = 미로그인
   const [tab, setTab] = useState('listings')
 
   const [listings, setListings] = useState([])
@@ -36,14 +35,11 @@ export default function AdminDashboard() {
   const [applications, setApplications] = useState([])
   const [error, setError] = useState(null)
   const [approvingId, setApprovingId] = useState(null)
+  const [loading, setLoading] = useState(true)
 
+  // role 확인은 AdminRoute가 이미 끝냈으므로 여기서는 이 페이지 자체의 데이터 로딩만 처리
   useEffect(() => {
     async function load() {
-      const { data: profileData, error: profileError } = await getCurrentProfile()
-      if (profileError) { setError(profileError); setProfile(null); return }
-      setProfile(profileData)
-      if (profileData?.role !== 'admin') { navigate('/', { replace: true }); return }
-
       const [listingsResult, requestsResult, applicationsResult] = await Promise.all([
         listAllPublicListings(),
         listAllRequests(),
@@ -55,9 +51,10 @@ export default function AdminDashboard() {
       else setRequests(requestsResult.data)
       if (applicationsResult.error) setError(applicationsResult.error)
       else setApplications(applicationsResult.data)
+      setLoading(false)
     }
     load()
-  }, [navigate])
+  }, [])
 
   async function handleStatusChange(propertyId, newStatus) {
     const { error: updateError } = await updateListingStatus(propertyId, newStatus)
@@ -80,7 +77,7 @@ export default function AdminDashboard() {
 
   async function handleLogout() {
     await signOut()
-    navigate('/login/customer', { replace: true })
+    navigate('/admin/login', { replace: true })
   }
 
   async function handleApprove(application) {
@@ -94,20 +91,8 @@ export default function AdminDashboard() {
     )))
   }
 
-  if (profile === undefined) {
+  if (loading) {
     return <div className="frame ad-frame"><div className="ad-guard">불러오는 중...</div></div>
-  }
-
-  if (!profile || profile.role !== 'admin') {
-    return (
-      <div className="frame ad-frame">
-        <div className="ad-guard">
-          <div style={{ fontSize: 32 }}>🔒</div>
-          <p style={{ fontWeight: 700 }}>운영자 계정으로 로그인해야 볼 수 있는 화면이에요</p>
-          <Link to="/login" style={{ color: 'var(--pink)', fontWeight: 700 }}>로그인하러 가기</Link>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -134,7 +119,7 @@ export default function AdminDashboard() {
             ) : listings.map((p) => (
               <div key={p.id} className="ad-listing-row">
                 <div className="ad-thumb">
-                  {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : '🏠'}
+                  {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : <Home size={20} strokeWidth={1.75} />}
                 </div>
                 <div className="ad-listing-info">
                   <div className="ad-listing-title">{p.title}</div>
@@ -198,7 +183,7 @@ export default function AdminDashboard() {
                   <div className="ad-app-top">
                     <div className="ad-app-company">{a.company_name}</div>
                     <span className={`ad-app-status${a.profile?.role === 'realtor' ? ' approved' : ''}`}>
-                      {APPLICATION_ROLE_LABELS[a.profile?.role] || a.profile?.role}
+                      {a.profile?.role === 'realtor' ? '승인됨' : '심사중'}
                     </span>
                   </div>
                   <div className="ad-app-grid">
