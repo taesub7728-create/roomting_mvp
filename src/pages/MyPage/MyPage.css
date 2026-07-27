@@ -45,7 +45,7 @@
 .mp-req-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .mp-req-status { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; }
 .mp-status-dot { width: 6px; height: 6px; border-radius: 50%; }
-.mp-status-dot.active { background: #2A9D5C; }
+.mp-status-dot.active { background: var(--success); }
 .mp-status-dot.closed { background: #C9C2BC; }
 .mp-req-date { font-size: 11px; font-weight: 500; color: var(--ink-soft); }
 .mp-req-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
@@ -65,3 +65,5 @@
 }
 
 .mp-empty { text-align: center; color: var(--ink-soft); font-size: 13px; padding: 20px; }
+
+.mp-guard { padding: 60px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }

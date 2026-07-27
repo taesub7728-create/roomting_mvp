@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Heart } from 'lucide-react'
+import { Heart, MapPin, Hourglass } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile, signOut } from '../../api/auth.api'
 import { listMyRequests } from '../../api/requests.api'
 import { listMyFavorites } from '../../api/favorites.api'
+import { getMyRealtorApplication } from '../../api/realtorApplication.api'
 import { getRoomTypeLabel } from '../../utils/roomTypeLabel'
 import { sortedImageUrls } from '../../utils/propertyImages'
 import BottomTabBar from '../../components/BottomTabBar'
@@ -15,6 +16,7 @@ export default function MyPage() {
   const navigate = useNavigate()
 
   const [profile, setProfile] = useState(undefined) // undefined = 로딩중, null = 미로그인
+  const [hasApplication, setHasApplication] = useState(false) // role은 customer인데 realtor 지원서를 제출해 심사 대기 중인지
   const [requests, setRequests] = useState([])
   const [favorites, setFavorites] = useState([])
   const [error, setError] = useState(null)
@@ -29,6 +31,18 @@ export default function MyPage() {
       if (profileData?.role === 'realtor') {
         navigate('/realtor', { replace: true })
         return
+      }
+
+      if (profileData?.role === 'customer' || profileData?.role === 'pending_realtor') {
+        // role은 항상 customer로 생성되므로, 지원서를 제출했는지로 "심사중" 여부를 판단
+        // (pending_realtor는 이 방식 도입 이전에 그 role로 가입된 기존 계정을 위한 하위호환 - RealtorDashboard.jsx와 동일 패턴)
+        // getMyRealtorApplication()은 auth.uid() 기준 본인 신청서만 조회함(realtorApplication.api.js 참고)
+        const { data: myApp } = await getMyRealtorApplication()
+        if (myApp) {
+          setHasApplication(true)
+          setLoading(false)
+          return
+        }
       }
 
       if (profileData) {
@@ -59,6 +73,21 @@ export default function MyPage() {
         <div className="mp-empty">
           로그인이 필요해요<br />
           <Link to="/login" style={{ color: 'var(--pink)', fontWeight: 700 }}>로그인하러 가기</Link>
+        </div>
+      </div>
+    )
+  }
+
+  // pending_realtor: 이 방식 도입 이전에 가입된 기존 계정용 하위호환
+  // customer + hasApplication: 이 방식 도입 이후 가입한 신규 지원자(role은 customer로 유지, 지원서 제출 여부로 판단)
+  if (profile.role === 'pending_realtor' || (profile.role === 'customer' && hasApplication)) {
+    return (
+      <div className="frame">
+        <div className="mp-guard">
+          <Hourglass size={32} strokeWidth={1.75} />
+          <p style={{ fontWeight: 700 }}>승인 완료 전까지는 대기중입니다</p>
+          <p style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>공인중개사 지원서를 심사하고 있어요. 승인되면 안내드릴게요</p>
+          <button className="mp-logout" onClick={handleLogout}>로그아웃</button>
         </div>
       </div>
     )
@@ -114,14 +143,14 @@ export default function MyPage() {
             return (
               <div className={`mp-req-card${isOpen ? ' active-req' : ''}`} key={r.id}>
                 <div className="mp-req-header">
-                  <div className={`mp-req-status`} style={{ color: isOpen ? '#2A9D5C' : 'var(--ink-soft)' }}>
+                  <div className={`mp-req-status`} style={{ color: isOpen ? 'var(--success)' : 'var(--ink-soft)' }}>
                     <div className={`mp-status-dot${isOpen ? ' active' : ' closed'}`}></div>
                     <span>{isOpen ? '응답 대기 중' : '종료됨'}</span>
                   </div>
                   <div className="mp-req-date">{new Date(r.created_at).toLocaleDateString('ko-KR')}</div>
                 </div>
                 <div className="mp-req-chips">
-                  <span className="mp-req-chip">📍 {r.region_text}</span>
+                  <span className="mp-req-chip"><MapPin size={12} strokeWidth={2} style={{ verticalAlign: -2, marginRight: 3 }} /> {r.region_text}</span>
                   {(r.room_types || []).map((rt) => (
                     <span className="mp-req-chip" key={rt}>{getRoomTypeLabel(lang, rt)}</span>
                   ))}
