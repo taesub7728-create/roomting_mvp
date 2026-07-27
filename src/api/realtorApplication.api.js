@@ -17,7 +17,8 @@ async function uploadDocument(userId, file) {
 }
 
 // 공인중개사·에이전트 지원서 제출: 사업자등록증/중개등록증을 비공개 버킷에 올리고, 지원 정보를 저장
-// 이 시점엔 이미 role='pending_realtor'로 회원가입이 끝난 상태라 로그인 세션이 있어야 함
+// 이 시점엔 이미 회원가입이 끝난 상태(role은 customer로 생성됨)라 로그인 세션이 있어야 함
+// 승인 전까지는 role이 customer로 유지되고, "심사중" 여부는 이 지원서 존재 여부로 판단함(getMyRealtorApplication 참고)
 export async function submitRealtorApplication({
   companyName,
   businessRegistrationNumber,
@@ -59,6 +60,25 @@ export async function submitRealtorApplication({
     .select()
     .single()
 
+  if (error) return { data: null, error: toFriendlyError(error) }
+  return { data, error: null }
+}
+
+// 로그인한 본인이 이미 제출한 지원서가 있는지 (파트너 대시보드에서 "심사중" 화면을 보여줄지 판단할 때 사용)
+// role은 이제 가입 시 항상 customer로 생성되므로, "심사중" 여부는 role이 아니라 지원서 존재 여부로 판단한다
+export async function getMyRealtorApplication() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: null }
+
+  const { data, error } = await supabase
+    .from('realtor_applications')
+    .select('id, created_at')
+    .eq('profile_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
   if (error) return { data: null, error: toFriendlyError(error) }
   return { data, error: null }
 }
