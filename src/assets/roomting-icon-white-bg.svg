@@ -2,7 +2,7 @@
   <rect width="512" height="512" rx="110" fill="#FFFCFB"/>
   <g transform="translate(56,56) scale(1.6)">
     <path d="M64 168 L64 76 A36 36 0 0 1 136 76 L136 108"
-          fill="none" stroke="#E8547A" stroke-width="18" stroke-linecap="round"/>
-    <rect x="118" y="100" width="36" height="72" rx="14" fill="#E8547A"/>
+          fill="none" stroke="#F05A7E" stroke-width="18" stroke-linecap="round"/>
+    <rect x="118" y="100" width="36" height="72" rx="14" fill="#F05A7E"/>
   </g>
 </svg>

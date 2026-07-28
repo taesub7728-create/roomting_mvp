@@ -1,7 +1,7 @@
 /* 룸팅 전체 화면에서 공통으로 쓰는 색상/간격 값과 기본 리셋
    프로토타입(roomting-*.html)의 :root 변수 값을 그대로 가져옴 - 디자인 톤 유지 */
 :root {
-  --pink: #E8547A;
+  --pink: #F05A7E;
   --pink-soft: #FDEEF1;
   --pink-dim: #F8D6DE;
   --ink: #1C1A19;
@@ -10,7 +10,7 @@
   --paper: #FFFCFB;
   --white: #fff;
   --radius: 16px;
-  --danger: #E8547A; /* 에러 메시지 색 */
+  --danger: #DC2626; /* 에러 메시지 색 */
   --success: #2A9D5C; /* 성공/승인/응답대기 등 긍정적 상태 표시 */
   --success-soft: #E8F5EC; /* 성공 상태 배경(뱃지 등) */
   --sidebar-width: 224px; /* 데스크톱 좌측 고정 탭바(사이드바) 폭 */
