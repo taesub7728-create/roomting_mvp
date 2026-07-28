@@ -351,3 +351,8 @@ Danger
 ## 14. Pending Decisions
 
 - **[완료 2026-07-28]** `theme.css`의 `--danger`가 `--pink`와 동일 값(`#E8547A`)을 사용하던 문제를 해결함. 브랜드 컬러 롤아웃(`#E8547A→#F05A7E`) 시 `--danger`를 `#DC2626`으로 분리 적용했다.
+- **[결정 기록 2026-07-28] B1(Abstract Shape) 최종 심볼 후보 확정**
+  - 확정: Door/Match/Home Flow 계열 및 R모노그램·웨이브 대비 기억성·브랜드 소유성·확장성에서 최상위 → B1을 최종 후보로 확정.
+  - 미해결: 브랜드 컬러(#F05A7E) 배경 위 흰색 반전 버전을 Stitch로 3회 시도했으나 매번 실제 형태(뒤틀린 삼각형 3개) 대신 단순 사각형/사각 테두리로 뭉개져 렌더링됨. Stitch 렌더링 한계로 판단.
+  - 추가 리스크: 16px 파비콘 크기에서 날개 사이 좁은 틈이 뭉개질 위험 있음 — Figma 등 벡터 툴에서 16/32/40px 소형 검증 필요.
+  - 후속 조치: (1) Figma 등에서 반전 버전 및 소형 렌더링 검증 → (2) 검증 통과 시 roomting-symbol-b1.svg의 내용을 roomting-symbol.svg에 덮어써서 기존 8개 컴포넌트의 import 경로 변경 없이 교체 → (3) favicon.svg 및 raster 아이콘(favicon-16x16.png, favicon-32x32.png, favicon.ico, apple-touch-icon.png)도 함께 갱신.
