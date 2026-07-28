@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { LanguageProvider } from './context/LanguageContext'
 import { AuthProvider } from './shared/auth/AuthProvider'
 import CustomerRoute from './shared/routes/CustomerRoute'
+import PublicCustomerRoute from './shared/routes/PublicCustomerRoute'
 import RealtorRoute from './shared/routes/RealtorRoute'
 import AdminRoute from './shared/routes/AdminRoute'
 import Splash from './components/Splash'
@@ -33,13 +34,18 @@ function App() {
         <BrowserRouter>
           {showSplash && <Splash onFinish={() => setShowSplash(false)} />}
           <Routes>
-            {/* 고객용 화면 묶음: customer가 아니면 각자 홈으로, 미로그인이면 /login으로 즉시 리다이렉트 */}
-            <Route element={<CustomerRoute />}>
+            {/* 공개 허브: 비로그인 방문자도 그대로 접근 가능 (Public Entry Flow 승인안).
+                로그인한 사용자에게는 PublicCustomerRoute가 CustomerRoute와 동일한 role/심사 체크를 적용한다 */}
+            <Route element={<PublicCustomerRoute />}>
               <Route path="/" element={<Landing />} />
               <Route path="/request" element={<RequestWizard />} />
+              <Route path="/map" element={<MapExplore />} />
+            </Route>
+
+            {/* 고객용 비공개 화면 묶음: customer가 아니면 각자 홈으로, 미로그인이면 /login으로 즉시 리다이렉트 */}
+            <Route element={<CustomerRoute />}>
               <Route path="/requests/:requestId" element={<ResponseStatus />} />
               <Route path="/mypage" element={<MyPage />} />
-              <Route path="/map" element={<MapExplore />} />
               <Route path="/property/:propertyId" element={<PropertyDetail />} />
             </Route>
 

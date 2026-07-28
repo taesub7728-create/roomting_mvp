@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
-import { useAuth } from '../auth/useAuth'
 import { homePathForRole } from '../auth/homePathForRole'
-import { hasPendingRealtorApplication } from '../auth/realtorStatus'
+import { useCustomerGuardChecks } from './useCustomerGuardChecks'
 import ProfileMissingError from './ProfileMissingError'
 
 // 인증(로그인 여부)과 권한(role 적합성)을 분리해서 처리한다:
@@ -12,31 +10,11 @@ import ProfileMissingError from './ProfileMissingError'
 // role==='customer'라고 해서 바로 통과시키지 않는다: realtor 심사 대기 중인 신청자도 role은
 // 그대로 customer이므로(RealtorRoute와 동일한 기준), 이 신청서 존재 여부까지 확인한 뒤에만
 // 일반 고객 화면(Outlet)을 허용한다. 확인이 끝나기 전에는 Outlet을 렌더하지 않는다.
+//
+// pending/profile 체크 로직 자체는 useCustomerGuardChecks 훅으로 분리해 PublicCustomerRoute와
+// 공유한다 (완전 비로그인 방문자에게는 이 체크들을 적용하지 않는 공개 라우트가 별도로 필요해졌기 때문).
 export default function CustomerRoute() {
-  const { user, profile, authLoading, profileLoading } = useAuth()
-  const [checkingPending, setCheckingPending] = useState(false)
-  const [pendingStatus, setPendingStatus] = useState(null) // true/false로 확정되기 전까지 null
-
-  // profile.id가 바뀔 때만(=다른 사용자로 로그인/로그아웃될 때만) 재조회한다.
-  // profile 객체 자체가 아니라 id만 의존성으로 둬서, 같은 사용자인 동안 매 렌더마다
-  // 반복 호출되는 것을 막는다.
-  useEffect(() => {
-    if (profile?.role !== 'customer') {
-      setCheckingPending(false)
-      setPendingStatus(null)
-      return
-    }
-
-    let cancelled = false
-    setCheckingPending(true)
-    setPendingStatus(null)
-    hasPendingRealtorApplication().then((result) => {
-      if (cancelled) return
-      setPendingStatus(result)
-      setCheckingPending(false)
-    })
-    return () => { cancelled = true }
-  }, [profile?.id])
+  const { user, profile, authLoading, profileLoading, checkingPending, pendingStatus } = useCustomerGuardChecks()
 
   if (authLoading || profileLoading) return null
 
