@@ -104,6 +104,7 @@ export default function SignUp({ mode = 'signup' }) {
     if (loginError) { setLoading(false); setError(loginError); return }
 
     const { data: profile } = await getCurrentProfile()
+    await submitPendingRequestIfAny()
     setLoading(false)
     redirectForRole(navigate, profile?.role)
   }

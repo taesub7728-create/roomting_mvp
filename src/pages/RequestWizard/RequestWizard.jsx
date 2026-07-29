@@ -71,10 +71,11 @@ export default function RequestWizard() {
     setLoading(true)
     const session = await getSession()
     if (!session) {
-      // 로그인 안 된 상태 - 입력한 내용을 저장해두고 회원가입 화면으로 이동
-      // (가입 완료 직후 SignUp 화면에서 이 내용을 그대로 이어서 제출함)
+      // 로그인 안 된 상태 - 입력한 내용을 저장해두고 로그인 화면으로 이동
+      // (기존 회원은 그대로 로그인, 신규 회원은 화면 내 "회원가입" 링크로 이동)
+      // (로그인/가입 완료 직후 SignUp 화면에서 이 내용을 그대로 이어서 제출함)
       localStorage.setItem(PENDING_REQUEST_KEY, JSON.stringify(payload))
-      navigate('/signup/customer')
+      navigate('/login/customer')
       return
     }
 
