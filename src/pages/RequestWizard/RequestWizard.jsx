@@ -38,6 +38,13 @@ function loadValidDraft() {
   return parsed.draft
 }
 
+// draft를 저장할 만한 입력이 있는지 판단하는 단일 기준점.
+// draft를 저장하는 모든 경로는 이 함수를 거쳐야 한다 - 저장 조건을 다른 곳에 중복 구현하지 않는다.
+// 향후 필수 입력 항목이 바뀌면 이 함수만 수정하면 된다.
+function hasMeaningfulDraft(draft) {
+  return draft.station.trim().length > 0
+}
+
 const AMENITY_ICONS = {
   washer: WashingMachine,
   ac: Snowflake,
@@ -110,6 +117,11 @@ export default function RequestWizard() {
     if (serialized === lastSavedDraftRef.current) return
 
     const timer = setTimeout(() => {
+      if (!hasMeaningfulDraft(current)) {
+        localStorage.removeItem(REQUEST_DRAFT_KEY)
+        lastSavedDraftRef.current = serialized
+        return
+      }
       localStorage.setItem(REQUEST_DRAFT_KEY, JSON.stringify({
         version: DRAFT_VERSION,
         savedAt: Date.now(),
