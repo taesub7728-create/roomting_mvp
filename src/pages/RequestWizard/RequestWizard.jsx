@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { WashingMachine, Snowflake, SquareParking, PawPrint, Flame } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
@@ -8,6 +8,35 @@ import { requestText } from './translations'
 import './RequestWizard.css'
 
 export const PENDING_REQUEST_KEY = 'roomting_pending_request'
+
+// draft(작성 중 임시 저장)는 로그인 후 자동 제출용인 PENDING_REQUEST_KEY와
+// 역할이 다르므로 완전히 별도 key를 쓴다.
+export const REQUEST_DRAFT_KEY = 'roomting_request_draft'
+const DRAFT_VERSION = 1
+const DRAFT_TTL_MS = 24 * 60 * 60 * 1000
+const DRAFT_SAVE_DEBOUNCE_MS = 600
+
+// 폼 필드가 나중에 바뀌어도 오래된 draft로 폼이 깨지지 않도록 버전이 다르면 복원하지 않고 삭제한다.
+function loadValidDraft() {
+  const raw = localStorage.getItem(REQUEST_DRAFT_KEY)
+  if (!raw) return null
+  let parsed
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    localStorage.removeItem(REQUEST_DRAFT_KEY)
+    return null
+  }
+  if (!parsed || parsed.version !== DRAFT_VERSION || !parsed.draft || typeof parsed.savedAt !== 'number') {
+    localStorage.removeItem(REQUEST_DRAFT_KEY)
+    return null
+  }
+  if (Date.now() - parsed.savedAt > DRAFT_TTL_MS) {
+    localStorage.removeItem(REQUEST_DRAFT_KEY)
+    return null
+  }
+  return parsed.draft
+}
 
 const AMENITY_ICONS = {
   washer: WashingMachine,
@@ -34,6 +63,63 @@ export default function RequestWizard() {
 
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  // 복원 여부를 물어보는 draft(있을 경우)와, 그 확인이 끝나기 전까지는 autosave를 켜지 않기 위한 플래그
+  const [draftPrompt, setDraftPrompt] = useState(null)
+  const [autosaveEnabled, setAutosaveEnabled] = useState(false)
+  const lastSavedDraftRef = useRef(null)
+
+  // 마운트 시 1회만 유효한 draft 확인. 없으면 바로 autosave 시작, 있으면 사용자 선택을 기다린다.
+  useEffect(() => {
+    const draft = loadValidDraft()
+    if (draft) {
+      setDraftPrompt(draft)
+    } else {
+      setAutosaveEnabled(true)
+    }
+  }, [])
+
+  function handleResumeDraft() {
+    const d = draftPrompt
+    setStation(d.station ?? '')
+    setRent(d.rent ?? 70)
+    setDeposit(d.deposit ?? 1000)
+    setRoomTypes(d.roomTypes ?? [])
+    setJeonip(d.jeonip ?? false)
+    setMoveInDate(d.moveInDate ?? '')
+    setContractMonths(d.contractMonths ?? 6)
+    setAmenities(d.amenities ?? [])
+    setExtraNote(d.extraNote ?? '')
+    lastSavedDraftRef.current = JSON.stringify(d)
+    setDraftPrompt(null)
+    setAutosaveEnabled(true)
+  }
+
+  function handleDiscardDraft() {
+    localStorage.removeItem(REQUEST_DRAFT_KEY)
+    setDraftPrompt(null)
+    setAutosaveEnabled(true)
+  }
+
+  // whitelist: 조건 필드만 저장 대상. error/loading 등 UI 상태나 개인정보 필드는 절대 포함하지 않는다.
+  useEffect(() => {
+    if (!autosaveEnabled) return
+
+    const current = { station, rent, deposit, roomTypes, jeonip, moveInDate, contractMonths, amenities, extraNote }
+    const serialized = JSON.stringify(current)
+    if (serialized === lastSavedDraftRef.current) return
+
+    const timer = setTimeout(() => {
+      localStorage.setItem(REQUEST_DRAFT_KEY, JSON.stringify({
+        version: DRAFT_VERSION,
+        savedAt: Date.now(),
+        draft: current,
+      }))
+      lastSavedDraftRef.current = serialized
+    }, DRAFT_SAVE_DEBOUNCE_MS)
+
+    return () => clearTimeout(timer)
+  }, [autosaveEnabled, station, rent, deposit, roomTypes, jeonip, moveInDate, contractMonths, amenities, extraNote])
 
   function toggleRoomType(code) {
     setRoomTypes((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]))
@@ -80,11 +166,24 @@ export default function RequestWizard() {
     const { data: created, error: submitError } = await createRequest(payload)
     setLoading(false)
     if (submitError) { setError(submitError); return }
+    localStorage.removeItem(REQUEST_DRAFT_KEY)
     navigate(`/request/success/${created.id}`, { replace: true })
   }
 
   return (
     <div className="frame">
+      {draftPrompt && (
+        <div className="draft-resume-overlay">
+          <div className="draft-resume-card">
+            <div className="draft-resume-title">{t.draftPromptTitle}</div>
+            <div className="draft-resume-actions">
+              <button className="rt-btn-secondary" onClick={handleDiscardDraft}>{t.draftPromptDiscard}</button>
+              <button className="rt-btn-primary" onClick={handleResumeDraft}>{t.draftPromptResume}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="top-bar">
         <Link className="back-btn" to="/">←</Link>
         <div className="top-title">{t.topTitle}</div>

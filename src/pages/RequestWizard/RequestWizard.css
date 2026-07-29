@@ -79,3 +79,16 @@
   width: 100%; max-width: 430px; padding: 14px 20px 32px;
   background: linear-gradient(to top, var(--paper) 75%, transparent); z-index: 30;
 }
+
+.draft-resume-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; z-index: 200;
+}
+.draft-resume-card {
+  width: 100%; max-width: 340px; background: var(--white);
+  border-radius: 16px; padding: 24px 20px; box-shadow: 0 8px 28px rgba(0,0,0,0.2);
+}
+.draft-resume-title { font-size: 14.5px; font-weight: 700; color: var(--ink); text-align: center; margin-bottom: 18px; line-height: 1.5; }
+.draft-resume-actions { display: flex; gap: 10px; }
+.draft-resume-actions button { flex: 1; }

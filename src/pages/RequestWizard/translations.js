@@ -28,6 +28,9 @@ export const requestText = {
     textareaPlaceholder: '예) 여성 전용 건물, 보안 카메라 있으면 좋겠어요',
     submitLabel: '조건 제출하기',
     alertMsg: '지역/역명과 입주 희망일은 필수입니다',
+    draftPromptTitle: '작성 중인 요청서가 있습니다.',
+    draftPromptDiscard: '새로 작성',
+    draftPromptResume: '이어서 작성',
   },
   ja: {
     topTitle: '条件を入力する', progressLabel: '条件を入力してください',
@@ -57,6 +60,9 @@ export const requestText = {
     textareaPlaceholder: '例）女性専用建物、防犯カメラがあると嬉しいです',
     submitLabel: '条件を送信する',
     alertMsg: 'エリア/駅名と入居希望日は必須です',
+    draftPromptTitle: '作成中のリクエストがあります。',
+    draftPromptDiscard: '新しく作成',
+    draftPromptResume: '続きから作成',
   },
   zh: {
     topTitle: '输入找房条件', progressLabel: '请输入您的条件',
@@ -86,6 +92,9 @@ export const requestText = {
     textareaPlaceholder: '例）女性专用楼，希望有安全摄像头',
     submitLabel: '提交条件',
     alertMsg: '地区/车站名称和入住日期为必填项',
+    draftPromptTitle: '有正在填写的请求书。',
+    draftPromptDiscard: '重新填写',
+    draftPromptResume: '继续填写',
   },
   en: {
     topTitle: 'Enter Your Criteria', progressLabel: 'Fill in your conditions',
@@ -115,5 +124,8 @@ export const requestText = {
     textareaPlaceholder: 'e.g. Women-only building, CCTV preferred',
     submitLabel: 'Submit Criteria',
     alertMsg: 'Area/station name and move-in date are required',
+    draftPromptTitle: 'You have a request in progress.',
+    draftPromptDiscard: 'Start Over',
+    draftPromptResume: 'Continue',
   },
 }
