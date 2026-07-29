@@ -27,8 +27,7 @@ export const requestText = {
     ],
     textareaPlaceholder: '예) 여성 전용 건물, 보안 카메라 있으면 좋겠어요',
     submitLabel: '조건 제출하기',
-    successTitle: '조건이 전송됐어요', successDesc: '주변 부동산에 요청서가 전달됐어요.\n빠르면 오늘 중으로 응답이 올 거예요',
-    successClose: '확인', alertMsg: '지역/역명과 입주 희망일은 필수입니다',
+    alertMsg: '지역/역명과 입주 희망일은 필수입니다',
   },
   ja: {
     topTitle: '条件を入力する', progressLabel: '条件を入力してください',
@@ -57,8 +56,7 @@ export const requestText = {
     ],
     textareaPlaceholder: '例）女性専用建物、防犯カメラがあると嬉しいです',
     submitLabel: '条件を送信する',
-    successTitle: '条件が送信されました', successDesc: '近くの不動産に送信されました。\n早ければ本日中にご連絡があります',
-    successClose: '確認', alertMsg: 'エリア/駅名と入居希望日は必須です',
+    alertMsg: 'エリア/駅名と入居希望日は必須です',
   },
   zh: {
     topTitle: '输入找房条件', progressLabel: '请输入您的条件',
@@ -87,8 +85,7 @@ export const requestText = {
     ],
     textareaPlaceholder: '例）女性专用楼，希望有安全摄像头',
     submitLabel: '提交条件',
-    successTitle: '条件已发送', successDesc: '已发送给周边中介。\n最快今天就会收到回复',
-    successClose: '确认', alertMsg: '地区/车站名称和入住日期为必填项',
+    alertMsg: '地区/车站名称和入住日期为必填项',
   },
   en: {
     topTitle: 'Enter Your Criteria', progressLabel: 'Fill in your conditions',
@@ -117,7 +114,6 @@ export const requestText = {
     ],
     textareaPlaceholder: 'e.g. Women-only building, CCTV preferred',
     submitLabel: 'Submit Criteria',
-    successTitle: 'Request Sent', successDesc: 'Your request has been sent to nearby agents.\nYou may hear back today',
-    successClose: 'Got it', alertMsg: 'Area/station name and move-in date are required',
+    alertMsg: 'Area/station name and move-in date are required',
   },
 }
