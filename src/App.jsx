@@ -13,6 +13,7 @@ import SignUp from './pages/SignUp/SignUp'
 import SignUpChoice from './pages/SignUp/SignUpChoice'
 import RealtorSignUp from './pages/RealtorSignUp/RealtorSignUp'
 import RequestWizard from './pages/RequestWizard/RequestWizard'
+import RequestSuccess from './pages/RequestSuccess/RequestSuccess'
 import RealtorDashboard from './pages/RealtorDashboard/RealtorDashboard'
 import RealtorPending from './pages/RealtorDashboard/RealtorPending'
 import RealtorRespond from './pages/RealtorRespond/RealtorRespond'
@@ -44,6 +45,7 @@ function App() {
 
             {/* 고객용 비공개 화면 묶음: customer가 아니면 각자 홈으로, 미로그인이면 /login으로 즉시 리다이렉트 */}
             <Route element={<CustomerRoute />}>
+              <Route path="/request/success/:requestId" element={<RequestSuccess />} />
               <Route path="/requests/:requestId" element={<ResponseStatus />} />
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/property/:propertyId" element={<PropertyDetail />} />

@@ -36,20 +36,22 @@ export default function SignUp({ mode = 'signup' }) {
   const [done, setDone] = useState(false) // 가입 완료 (바로 로그인된 상태)
   const [awaitingEmailConfirm, setAwaitingEmailConfirm] = useState(false) // 이메일 인증 대기
   const [pendingRequestError, setPendingRequestError] = useState(null)
-  const [submittedRequestId, setSubmittedRequestId] = useState(null)
 
-  // 로그인 없이 조건 요청서를 작성하다가 가입하러 온 경우, 가입이 끝나자마자 그 내용을 이어서 제출
+  // 로그인 없이 조건 요청서를 작성하다가 로그인/가입하러 온 경우, 완료되자마자 그 내용을 이어서 제출
+  // 반환값: 제출 성공 시 생성된 request id, 대기 중인 요청이 없거나 실패하면 null
+  // (성공 시 호출부가 공통 Success 화면(/request/success/:id)으로 이동시킴)
   async function submitPendingRequestIfAny() {
     const raw = localStorage.getItem(PENDING_REQUEST_KEY)
-    if (!raw) return
+    if (!raw) return null
     localStorage.removeItem(PENDING_REQUEST_KEY)
     try {
       const payload = JSON.parse(raw)
       const { data, error } = await createRequest(payload)
-      if (error) setPendingRequestError(error)
-      else setSubmittedRequestId(data.id)
+      if (error) { setPendingRequestError(error); return null }
+      return data.id
     } catch {
       // 저장된 내용을 읽지 못하면 조용히 무시 (가입 자체는 이미 성공한 상태이므로)
+      return null
     }
   }
 
@@ -104,8 +106,13 @@ export default function SignUp({ mode = 'signup' }) {
     if (loginError) { setLoading(false); setError(loginError); return }
 
     const { data: profile } = await getCurrentProfile()
-    await submitPendingRequestIfAny()
+    const requestId = await submitPendingRequestIfAny()
     setLoading(false)
+    if (requestId) {
+      // replace: 완료 화면에서 뒤로가기를 눌러도 로그인 화면이 다시 나타나지 않도록 함
+      navigate(`/request/success/${requestId}`, { replace: true })
+      return
+    }
     redirectForRole(navigate, profile?.role)
   }
 
@@ -117,8 +124,13 @@ export default function SignUp({ mode = 'signup' }) {
       const { error } = await updateOwnProfile({ nickname: nickTrimmed, preferredLanguage: lang })
       setLoading(false)
       if (error) { setError(error); return }
+      const requestId = await submitPendingRequestIfAny()
+      if (requestId) {
+        // replace: 완료 화면에서 뒤로가기를 눌러도 가입 화면이 다시 나타나지 않도록 함
+        navigate(`/request/success/${requestId}`, { replace: true })
+        return
+      }
       setDone(true)
-      await submitPendingRequestIfAny()
       return
     }
 
@@ -133,8 +145,13 @@ export default function SignUp({ mode = 'signup' }) {
     if (error) { setError(error); return }
 
     if (data?.session) {
+      const requestId = await submitPendingRequestIfAny()
+      if (requestId) {
+        // replace: 완료 화면에서 뒤로가기를 눌러도 가입 화면이 다시 나타나지 않도록 함
+        navigate(`/request/success/${requestId}`, { replace: true })
+        return
+      }
       setDone(true)
-      await submitPendingRequestIfAny()
     } else {
       // Supabase 프로젝트의 "이메일 확인" 설정이 켜져 있으면 세션 없이 가입만 되고, 이메일 인증 후 로그인 가능
       setAwaitingEmailConfirm(true)
@@ -310,7 +327,7 @@ export default function SignUp({ mode = 'signup' }) {
           <div className="done-title">{t.doneTitle}<br /><span className="accent">{nickTrimmed}</span></div>
           <div className="done-sub">{t.doneSub}</div>
           {pendingRequestError && <div className="rt-error-text" style={{ marginBottom: 12 }}>{pendingRequestError}</div>}
-          <button className="rt-btn-primary" onClick={() => navigate(submittedRequestId ? `/requests/${submittedRequestId}` : '/')}>{t.doneBtn}</button>
+          <button className="rt-btn-primary" onClick={() => navigate('/')}>{t.doneBtn}</button>
         </div>
       )}
 

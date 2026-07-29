@@ -4,7 +4,6 @@ import { WashingMachine, Snowflake, SquareParking, PawPrint, Flame } from 'lucid
 import { useLanguage } from '../../context/LanguageContext'
 import { getSession } from '../../api/auth.api'
 import { createRequest } from '../../api/requests.api'
-import logo from '../../assets/roomting-symbol.svg'
 import { requestText } from './translations'
 import './RequestWizard.css'
 
@@ -35,8 +34,6 @@ export default function RequestWizard() {
 
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [newRequestId, setNewRequestId] = useState(null)
 
   function toggleRoomType(code) {
     setRoomTypes((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]))
@@ -74,16 +71,16 @@ export default function RequestWizard() {
       // 로그인 안 된 상태 - 입력한 내용을 저장해두고 로그인 화면으로 이동
       // (기존 회원은 그대로 로그인, 신규 회원은 화면 내 "회원가입" 링크로 이동)
       // (로그인/가입 완료 직후 SignUp 화면에서 이 내용을 그대로 이어서 제출함)
+      // replace: 완료 화면에서 뒤로가기를 눌러도 이 작성 화면이 다시 나타나지 않도록 함
       localStorage.setItem(PENDING_REQUEST_KEY, JSON.stringify(payload))
-      navigate('/login/customer')
+      navigate('/login/customer', { replace: true })
       return
     }
 
     const { data: created, error: submitError } = await createRequest(payload)
     setLoading(false)
     if (submitError) { setError(submitError); return }
-    setNewRequestId(created.id)
-    setSuccess(true)
+    navigate(`/request/success/${created.id}`, { replace: true })
   }
 
   return (
@@ -239,15 +236,6 @@ export default function RequestWizard() {
       <div className="bottom-cta">
         <button className="rt-btn-primary" disabled={loading} onClick={handleSubmit}>{t.submitLabel}</button>
       </div>
-
-      {success && (
-        <div className="success-overlay">
-          <div className="success-icon-wrap"><img src={logo} alt="roomting" /></div>
-          <div className="success-title">{t.successTitle}</div>
-          <div className="success-desc">{t.successDesc}</div>
-          <button className="rt-btn-secondary" onClick={() => navigate(newRequestId ? `/requests/${newRequestId}` : '/')}>{t.successClose}</button>
-        </div>
-      )}
     </div>
   )
 }
