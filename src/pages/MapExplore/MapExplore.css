@@ -122,3 +122,28 @@
 .card-location { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--pink); }
 .card-location svg { flex-shrink: 0; }
 .card-location span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── 지도 핀 클릭 시 뜨는 공개 Preview Modal (bottom-sheet와 별개, 하단 고정 카드) ── */
+.preview-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 60;
+}
+.preview-card {
+  position: relative; width: 100%; max-width: 430px; background: var(--white);
+  border-radius: 22px 22px 0 0; padding: 18px 18px 28px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+}
+.preview-close {
+  position: absolute; top: 14px; right: 14px; width: 26px; height: 26px;
+  background: var(--line); border: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink);
+  z-index: 1;
+}
+.preview-img { width: 100%; height: 160px; border-radius: 14px; overflow: hidden; background: var(--line); }
+.preview-body { padding: 14px 2px 4px; display: flex; flex-direction: column; gap: 6px; }
+.preview-price { font-size: 16px; font-weight: 800; color: var(--ink); letter-spacing: -0.3px; }
+.preview-price .deposit { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-top: 3px; }
+.preview-location { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--pink); }
+.preview-actions { display: flex; gap: 10px; margin-top: 14px; }
+.preview-actions button { flex: 1; }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { List, Locate, MapPin, Home, Heart, Search, X, Lock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { List, Locate, MapPin, Home, Heart, Search, X } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile } from '../../api/auth.api'
 import { listPublicProperties } from '../../api/properties.api'
@@ -10,6 +10,7 @@ import { sortedImageUrls } from '../../utils/propertyImages'
 import { loadKakaoMaps, searchAddressCandidates } from '../../lib/kakaoMaps'
 import ImageCarousel from '../../components/ImageCarousel'
 import BottomTabBar from '../../components/BottomTabBar'
+import PropertyPreviewModal from './PropertyPreviewModal'
 import { mapText } from './translations'
 import './MapExplore.css'
 
@@ -39,24 +40,27 @@ export default function MapExplore() {
   const [favoriteIds, setFavoriteIds] = useState(new Set())
   const [activeId, setActiveId] = useState(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [previewProperty, setPreviewProperty] = useState(null)
   const [error, setError] = useState(null)
   const [mapReady, setMapReady] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
 
+  // 매물 조회는 로그인 여부와 무관하게 항상 실행 (Phase 3: 비로그인 방문자도 지도 탐색 가능).
+  // 찜 목록만 로그인한 경우에만 조회 - listMyFavoriteIds 자체도 비로그인이면 빈 배열을 주지만,
+  // 굳이 불필요한 요청을 보내지 않도록 여기서 먼저 분기함
   useEffect(() => {
     async function load() {
       const { data: profileData } = await getCurrentProfile()
       setProfile(profileData ?? null)
-      if (!profileData) return
 
-      const [{ data, error: listError }, { data: favoriteIdList }] = await Promise.all([
+      const [{ data, error: listError }, favoriteResult] = await Promise.all([
         listPublicProperties(),
-        listMyFavoriteIds(),
+        profileData ? listMyFavoriteIds() : Promise.resolve({ data: [] }),
       ])
       if (listError) setError(listError)
       else setProperties(data)
-      setFavoriteIds(new Set(favoriteIdList))
+      setFavoriteIds(new Set(favoriteResult.data))
     }
     load()
   }, [])
@@ -64,6 +68,7 @@ export default function MapExplore() {
   // 낙관적으로 먼저 UI를 바꾸고, 실패하면 되돌림 (지도 카드에서 바로바로 반응하도록)
   async function handleToggleFavorite(e, propertyId) {
     e.stopPropagation()
+    if (!profile) { navigate('/login'); return }
     const wasFavorited = favoriteIds.has(propertyId)
     setFavoriteIds((prev) => {
       const next = new Set(prev)
@@ -115,9 +120,10 @@ export default function MapExplore() {
     )
   }
 
-  // 지도 인스턴스는 한 번만 생성
+  // 지도 인스턴스는 한 번만 생성. profile===undefined(최초 로딩중)에만 대기하고,
+  // null(비로그인)이든 객체(로그인)든 지도는 동일하게 띄운다 (Phase 3: 비로그인도 지도 탐색 가능)
   useEffect(() => {
-    if (!profile) return
+    if (profile === undefined) return
     if (!import.meta.env.VITE_KAKAO_MAP_API_KEY) { setError(t.noApiKey); return }
 
     let cancelled = false
@@ -144,8 +150,20 @@ export default function MapExplore() {
     }
   }
 
+  // 지도 핀 클릭 전용: 카드 목록(bottom sheet)을 열지 않고 공개 Preview Modal만 띄운다
+  function handleMarkerClick(property) {
+    setActiveId(property.id)
+    if (mapRef.current && window.kakao) {
+      const kakao = window.kakao
+      mapRef.current.setLevel(ACTIVE_ZOOM_LEVEL)
+      mapRef.current.panTo(new kakao.maps.LatLng(property.display_lat, property.display_lng))
+    }
+    setPreviewProperty(property)
+  }
+
   function handleCardTap(property) {
     if (activeId === property.id) {
+      if (!profile) { navigate('/login'); return }
       navigate(`/property/${property.id}`, { state: { property } })
     } else {
       selectProperty(property)
@@ -169,7 +187,7 @@ export default function MapExplore() {
       const el = document.createElement('div')
       el.className = 'price-marker'
       el.textContent = formatMarkerPrice(p)
-      el.addEventListener('click', () => selectProperty(p))
+      el.addEventListener('click', () => handleMarkerClick(p))
       markerElsRef.current[p.id] = el
 
       const overlay = new kakao.maps.CustomOverlay({ position, content: el, yAnchor: 1.3, clickable: true })
@@ -192,18 +210,6 @@ export default function MapExplore() {
 
   if (profile === undefined) {
     return <div className="frame"><div className="me-guard">{t.loading}</div></div>
-  }
-
-  if (!profile) {
-    return (
-      <div className="frame">
-        <div className="me-guard">
-          <Lock size={32} strokeWidth={1.75} />
-          <p style={{ fontWeight: 700 }}>{t.needLogin}</p>
-          <Link to="/login" style={{ color: 'var(--pink)', fontWeight: 700 }}>{t.goLogin}</Link>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -279,6 +285,14 @@ export default function MapExplore() {
           </div>
         </div>
       </div>
+
+      {previewProperty && (
+        <PropertyPreviewModal
+          property={previewProperty}
+          isLoggedIn={!!profile}
+          onClose={() => setPreviewProperty(null)}
+        />
+      )}
 
       <BottomTabBar />
     </div>
