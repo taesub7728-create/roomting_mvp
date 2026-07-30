@@ -11,13 +11,12 @@ import { mapText } from './translations'
 // (get_public_listings가 이미 마스킹해서 내려줌).
 // 실제 상세 조회/채팅 생성은 여기서 직접 하지 않고 PropertyDetail 화면에 위임한다
 // (버튼은 이동만 담당, API 직접 호출 없음).
-export default function PropertyPreviewModal({ property, isLoggedIn, onClose }) {
+export default function PropertyPreviewModal({ property, onClose }) {
   const navigate = useNavigate()
   const { lang } = useLanguage()
   const t = mapText[lang]
 
   function goToDetail() {
-    if (!isLoggedIn) { navigate('/login'); return }
     navigate(`/property/${property.id}`, { state: { property } })
   }
 

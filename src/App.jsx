@@ -41,6 +41,7 @@ function App() {
               <Route path="/" element={<Landing />} />
               <Route path="/request" element={<RequestWizard />} />
               <Route path="/map" element={<MapExplore />} />
+              <Route path="/property/:propertyId" element={<PropertyDetail />} />
             </Route>
 
             {/* 고객용 비공개 화면 묶음: customer가 아니면 각자 홈으로, 미로그인이면 /login으로 즉시 리다이렉트 */}
@@ -48,7 +49,6 @@ function App() {
               <Route path="/request/success/:requestId" element={<RequestSuccess />} />
               <Route path="/requests/:requestId" element={<ResponseStatus />} />
               <Route path="/mypage" element={<MyPage />} />
-              <Route path="/property/:propertyId" element={<PropertyDetail />} />
             </Route>
 
             {/* 채팅은 customer/realtor 둘 다 쓰는 공유 화면이라 아직 도메인별 Route Guard로 나누지 않음

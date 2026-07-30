@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Heart, MapPin, MessageCircle, ImageOff } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile } from '../../api/auth.api'
@@ -54,6 +54,7 @@ export default function PropertyDetail() {
   }, [propertyId, property])
 
   async function handleContact() {
+    if (!profile) { navigate('/login'); return }
     setConnecting(true)
     const { error: chatError } = await getOrCreatePropertyChatRoom(propertyId)
     setConnecting(false)
@@ -71,17 +72,6 @@ export default function PropertyDetail() {
 
   if (profile === undefined || loading) {
     return <div className="frame"><div className="pd-guard">불러오는 중...</div></div>
-  }
-
-  if (!profile) {
-    return (
-      <div className="frame">
-        <div className="pd-guard">
-          <p style={{ fontWeight: 700 }}>로그인해야 볼 수 있는 화면이에요</p>
-          <Link to="/login" style={{ color: 'var(--pink)', fontWeight: 700 }}>로그인하러 가기</Link>
-        </div>
-      </div>
-    )
   }
 
   if (error || !property) {
