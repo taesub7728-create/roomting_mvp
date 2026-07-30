@@ -1,104 +1,97 @@
-/* roomting-landing-v5.html 프로토타입 스타일을 그대로 옮김 (색상/간격은 theme.css 공통 변수 사용) */
+/* Landing 전용 레이아웃 컨테이너 + 섹션 공통 스타일(공유 .frame/theme.css 토큰은 그대로 재사용).
+   개별 섹션의 세부 스타일은 components/*.css에 있음 */
 
-.landing-header {
-  display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 8px 10px;
-  padding: 18px 22px 16px;
-  background: var(--paper);
+/* 공개 마케팅 페이지라 데스크톱에서는 다른 앱 화면(.frame 430px)보다 넓게 확장한다.
+   1024px는 BottomTabBar가 하단바→좌측 사이드바로 바뀌는 것과 동일한 기준점.
+   1200px은 Stitch 시안의 컨테이너 스펙(max-width:1200px)을 따름 */
+@media (min-width: 1024px) {
+  .landing-frame {
+    max-width: 1200px;
+  }
 }
 
-.header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
-.lang-box { position: relative; }
-.lang-btn {
-  background: var(--white); border: 1px solid var(--line);
-  border-radius: 20px; padding: 7px 12px;
-  font-size: 12.5px; font-weight: 600; color: var(--ink);
-  cursor: pointer; display: flex; align-items: center; gap: 5px;
-  font-family: 'Noto Sans KR', sans-serif;
-  white-space: nowrap;
-}
-.lang-dd {
-  display: none; position: absolute; top: calc(100% + 8px); right: 0;
-  background: white; border-radius: 14px; border: 1px solid var(--line);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden; min-width: 130px; z-index: 100;
-}
-.lang-dd.open { display: block; }
-.lang-dd div { padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); }
-.lang-dd div:hover { background: var(--pink-soft); }
-
-.auth-links { display: flex; align-items: center; gap: 8px; }
-
-.login-link {
-  font-size: 12.5px; font-weight: 700; color: var(--ink);
-  text-decoration: none; padding: 8px 14px;
-  border-radius: 20px; border: 1px solid var(--line);
-  white-space: nowrap;
+/* 헤더+히어로+CTA 구간에만 적용되는 은은한 그라데이션 캔버스.
+   나머지 섹션(How it works 이하)은 흰 배경 그대로 - 히어로만 시각적으로 구분되는 구역이라는
+   인상을 주기 위함(Stitch 원본의 hero-gradient 스코프를 그대로 따름) */
+.hero-canvas {
+  background: linear-gradient(180deg, var(--pink-soft) 0%, var(--paper) 78%);
 }
 
-.signup-link {
-  font-size: 12.5px; font-weight: 700; color: white;
-  text-decoration: none; padding: 8px 14px;
-  border-radius: 20px; background: var(--pink);
-  white-space: nowrap;
+/* 모바일: hero-text-col 안의 섹션들이 그냥 세로로 쌓임, hero-graphic은 숨김 */
+.hero-group { position: relative; }
+.hero-graphic { display: none; }
+
+/* 데스크톱: 좌(텍스트)/우(그래픽) 2컬럼. 텍스트가 그래픽보다 약간 넓음 */
+@media (min-width: 1024px) {
+  .hero-group {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: center;
+    gap: 48px;
+    padding: 0 48px 56px;
+  }
+
+  .hero-graphic {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  .hero-graphic::before {
+    content: '';
+    position: absolute;
+    width: 340px;
+    height: 340px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--pink-soft) 0%, rgba(253, 238, 241, 0) 72%);
+  }
+
+  .hero-graphic img {
+    width: 128px;
+    height: 128px;
+    position: relative;
+    filter: drop-shadow(0 12px 32px rgba(240, 90, 126, 0.18));
+  }
+
+  /* 텍스트 컬럼: 헤드라인 줄은 항상 한 줄 전체, CTA 두 개는 같은 줄에 나란히 배치 */
+  .hero-group .hero-text-col {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 16px;
+  }
+  .hero-group .hero-section { flex: 1 1 100%; }
+  .hero-group .request-cta,
+  .hero-group .browse-cta {
+    flex: 0 0 auto;
+  }
 }
 
-.profile-box { position: relative; }
-.profile-btn {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: var(--pink-soft); border: 1.5px solid var(--pink-dim);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px; cursor: pointer; flex-shrink: 0;
-  font-family: 'Noto Sans KR', sans-serif; font-weight: 700; color: var(--ink);
+/* 스크롤 등장 효과(useScrollReveal) 공통 트랜지션 - Fold 안에 있는 Hero/CTA는 이 클래스를 쓰지 않음 */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
 }
-.profile-dd {
-  display: none; position: absolute; top: calc(100% + 8px); right: 0;
-  background: white; border-radius: 14px; border: 1px solid var(--line);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden; min-width: 150px; z-index: 100;
-}
-.profile-dd.open { display: block; }
-.profile-dd div, .profile-dd a {
-  padding: 11px 14px; font-size: 13px; font-weight: 600; color: var(--ink);
-  cursor: pointer; display: flex; align-items: center; gap: 8px;
-  text-decoration: none;
-}
-.profile-dd div:hover, .profile-dd a:hover { background: var(--pink-soft); }
-.profile-dd .dd-logout { color: var(--pink); border-top: 1px solid var(--line); }
-
-.hero { padding: 8px 22px 0; display: flex; flex-direction: column; }
-.hero h1 {
-  font-size: 25px; font-weight: 800; color: var(--ink);
-  line-height: 1.32; letter-spacing: -0.6px;
-  margin-bottom: 22px; white-space: pre-line;
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.cards { padding: 4px 22px 0; display: flex; flex-direction: column; gap: 10px; }
-.card {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 28px 24px; border-radius: var(--radius);
-  text-decoration: none;
-  transition: transform .15s;
-}
-.card:active { transform: scale(0.99); }
-
-.card.primary { background: var(--pink); }
-
-.card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-
-.card-title { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.35; color: var(--ink); }
-.card-desc { font-size: 13px; font-weight: 500; line-height: 1.5; color: var(--ink-soft); }
-.card.primary .card-title { color: #fff; }
-.card.primary .card-desc { color: rgba(255,255,255,0.85); }
-
-.card-arrow { flex-shrink: 0; color: var(--ink); transition: transform .15s; }
-.card.primary .card-arrow { color: #fff; }
-.card:hover .card-arrow { transform: translateX(3px); }
-
-.trust-line {
-  margin: 20px 22px 0; padding-top: 18px;
-  border-top: 1px solid var(--line);
-  text-align: center; font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    transition: none;
+    transform: none;
+  }
 }
 
-.landing-footer { margin-top: auto; text-align: center; padding: 28px 24px 96px; font-size: 12px; color: var(--ink-soft); font-weight: 500; }
-.landing-footer a { color: var(--pink); font-weight: 700; text-decoration: none; }
+.section-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.3px;
+}
+
+@media (min-width: 1024px) {
+  .section-title { font-size: 24px; }
+}

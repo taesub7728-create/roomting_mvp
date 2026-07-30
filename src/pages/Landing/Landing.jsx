@@ -1,121 +1,41 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, User, LogOut } from 'lucide-react'
-import { useLanguage } from '../../context/LanguageContext'
-import { getCurrentProfile, signOut } from '../../api/auth.api'
 import BottomTabBar from '../../components/BottomTabBar'
-import logo from '../../assets/roomting-symbol.svg'
-import { landingText, langOptions } from './translations'
+import LandingHeader from './components/LandingHeader'
+import HeroSection from './components/HeroSection'
+import RequestCTA from './components/RequestCTA'
+import BrowseCTA from './components/BrowseCTA'
+import HowItWorks from './components/HowItWorks'
+import WhyRoomting from './components/WhyRoomting'
+import RealtorCTA from './components/RealtorCTA'
+import Footer from './components/Footer'
+import logoMark from '../../assets/roomting-symbol.svg'
 import './Landing.css'
 
+// 공개 허브 역할의 Landing. 섹션 순서/카피 변경은 아래 조합과 translations.js만 건드리면 됨.
+//
+// hero-canvas: 헤더+히어로+CTA 구간에만 은은한 그라데이션을 적용하는 시각적 구역 경계.
+// hero-group: 모바일에서는 그냥 세로로 쌓이고, 데스크톱(1024px~)에서만 좌(텍스트)/우(그래픽) 2컬럼
+// grid로 바뀐다 - hero-graphic은 매물/지도 스크린샷이 아니라 브랜드 심볼만 사용
+// (검색·탐색 서비스처럼 보이지 않게 하려는 의도적 선택, roomting-design-system.md 0번 참고)
 export default function Landing() {
-  const { lang, setLang } = useLanguage()
-  const t = landingText[lang]
-
-  const [langOpen, setLangOpen] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [profile, setProfile] = useState(null)
-  const [profileError, setProfileError] = useState(null)
-  const langBoxRef = useRef(null)
-  const profileBoxRef = useRef(null)
-
-  useEffect(() => {
-    let cancelled = false
-    async function loadProfile() {
-      const { data, error } = await getCurrentProfile()
-      if (cancelled) return
-      if (error) setProfileError(error)
-      else setProfile(data)
-    }
-    loadProfile()
-    return () => { cancelled = true }
-  }, [])
-
-  useEffect(() => {
-    function handleOutsideClick(e) {
-      if (langBoxRef.current && !langBoxRef.current.contains(e.target)) setLangOpen(false)
-      if (profileBoxRef.current && !profileBoxRef.current.contains(e.target)) setProfileOpen(false)
-    }
-    document.addEventListener('click', handleOutsideClick)
-    return () => document.removeEventListener('click', handleOutsideClick)
-  }, [])
-
-  const currentLangOption = langOptions.find((o) => o.code === lang) ?? langOptions[0]
-
-  async function handleLogout() {
-    const { error } = await signOut()
-    if (error) {
-      setProfileError(error)
-      return
-    }
-    setProfile(null)
-    setProfileOpen(false)
-  }
-
   return (
-    <div className="frame">
-      <header className="landing-header">
-        <div className="rt-logo">
-          <div className="rt-logo-mark"><img src={logo} alt="roomting" /></div>
-          <span className="rt-logo-name">roomting</span>
-        </div>
-
-        <div className="header-actions">
-          <div className="lang-box" ref={langBoxRef}>
-            <button className="lang-btn" onClick={() => setLangOpen((v) => !v)}>
-              <span>{currentLangOption.flag}</span>
-              <span>{currentLangOption.label}</span>
-            </button>
-            <div className={`lang-dd${langOpen ? ' open' : ''}`}>
-              {langOptions.map((o) => (
-                <div key={o.code} onClick={() => { setLang(o.code); setLangOpen(false) }}>
-                  {o.flag} {o.label}
-                </div>
-              ))}
-            </div>
+    <div className="frame landing-frame">
+      <div className="hero-canvas">
+        <LandingHeader />
+        <div className="hero-group">
+          <div className="hero-text-col">
+            <HeroSection />
+            <RequestCTA />
+            <BrowseCTA />
           </div>
-
-          {profile ? (
-            <div className="profile-box" ref={profileBoxRef}>
-              <button className="profile-btn" onClick={() => setProfileOpen((v) => !v)}>
-                {(profile.nickname || '?').charAt(0).toUpperCase()}
-              </button>
-              <div className={`profile-dd${profileOpen ? ' open' : ''}`}>
-                <Link to="/mypage" onClick={() => setProfileOpen(false)}><User size={16} strokeWidth={2} /> {t.mypage}</Link>
-                <div className="dd-logout" onClick={handleLogout}><LogOut size={16} strokeWidth={2} /> {t.logout}</div>
-              </div>
-            </div>
-          ) : (
-            <div className="auth-links">
-              <Link className="login-link" to="/login">{t.login}</Link>
-              <Link className="signup-link" to="/signup">{t.signup}</Link>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {profileError && <div className="rt-error-text" style={{ padding: '0 22px' }}>{profileError}</div>}
-
-      <div className="hero">
-        <h1>{t.heroTitle}</h1>
-      </div>
-
-      <div className="cards">
-        <Link className="card primary" to="/request">
-          <div className="card-top">
-            <div className="card-title">{t.cardRequestTitle}</div>
-            <ArrowRight className="card-arrow" size={26} strokeWidth={2} />
+          <div className="hero-graphic" aria-hidden="true">
+            <img src={logoMark} alt="" />
           </div>
-          <div className="card-desc">{t.cardRequestDesc}</div>
-        </Link>
+        </div>
       </div>
-
-      <div className="trust-line">{t.trustLine}</div>
-
-      <footer className="landing-footer">
-        {t.footerHelp} <a href="#">{t.footerContact}</a>
-      </footer>
-
+      <HowItWorks />
+      <WhyRoomting />
+      <RealtorCTA />
+      <Footer />
       <BottomTabBar />
     </div>
   )

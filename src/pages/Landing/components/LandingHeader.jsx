@@ -1,0 +1,99 @@
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { User, LogOut } from 'lucide-react'
+import { useLanguage } from '../../../context/LanguageContext'
+import { getCurrentProfile, signOut } from '../../../api/auth.api'
+import logo from '../../../assets/roomting-symbol.svg'
+import { landingText, langOptions } from '../translations'
+import './LandingHeader.css'
+
+// 로그인 상태 표시(언어 선택 + 프로필/로그인 링크)만 담당하는 헤더.
+// Landing 재구성 이전 코드의 헤더 로직을 그대로 옮긴 것 - 기능 변경 없음
+export default function LandingHeader() {
+  const { lang, setLang } = useLanguage()
+  const t = landingText[lang]
+
+  const [langOpen, setLangOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [profile, setProfile] = useState(null)
+  const [profileError, setProfileError] = useState(null)
+  const langBoxRef = useRef(null)
+  const profileBoxRef = useRef(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadProfile() {
+      const { data, error } = await getCurrentProfile()
+      if (cancelled) return
+      if (error) setProfileError(error)
+      else setProfile(data)
+    }
+    loadProfile()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    function handleOutsideClick(e) {
+      if (langBoxRef.current && !langBoxRef.current.contains(e.target)) setLangOpen(false)
+      if (profileBoxRef.current && !profileBoxRef.current.contains(e.target)) setProfileOpen(false)
+    }
+    document.addEventListener('click', handleOutsideClick)
+    return () => document.removeEventListener('click', handleOutsideClick)
+  }, [])
+
+  const currentLangOption = langOptions.find((o) => o.code === lang) ?? langOptions[0]
+
+  async function handleLogout() {
+    const { error } = await signOut()
+    if (error) {
+      setProfileError(error)
+      return
+    }
+    setProfile(null)
+    setProfileOpen(false)
+  }
+
+  return (
+    <header className="landing-header">
+      <div className="rt-logo">
+        <div className="rt-logo-mark"><img src={logo} alt="roomting" /></div>
+        <span className="rt-logo-name">roomting</span>
+      </div>
+
+      <div className="header-actions">
+        <div className="lang-box" ref={langBoxRef}>
+          <button className="lang-btn" onClick={() => setLangOpen((v) => !v)}>
+            <span>{currentLangOption.flag}</span>
+            <span>{currentLangOption.label}</span>
+          </button>
+          <div className={`lang-dd${langOpen ? ' open' : ''}`}>
+            {langOptions.map((o) => (
+              <div key={o.code} onClick={() => { setLang(o.code); setLangOpen(false) }}>
+                {o.flag} {o.label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {profile ? (
+          <div className="profile-box" ref={profileBoxRef}>
+            <button className="profile-btn" onClick={() => setProfileOpen((v) => !v)}>
+              {(profile.nickname || '?').charAt(0).toUpperCase()}
+            </button>
+            <div className={`profile-dd${profileOpen ? ' open' : ''}`}>
+              <Link to="/mypage" onClick={() => setProfileOpen(false)}><User size={16} strokeWidth={2} /> {t.mypage}</Link>
+              <div className="dd-logout" onClick={handleLogout}><LogOut size={16} strokeWidth={2} /> {t.logout}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="auth-links">
+            <Link className="login-link" to="/login">{t.login}</Link>
+            <Link className="signup-link" to="/signup">{t.signup}</Link>
+          </div>
+        )}
+      </div>
+
+      {profileError && <div className="rt-error-text" style={{ padding: '0 22px' }}>{profileError}</div>}
+    </header>
+  )
+}

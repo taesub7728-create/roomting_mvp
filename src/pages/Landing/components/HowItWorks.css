@@ -1,0 +1,59 @@
+.how-it-works {
+  padding: 64px 22px 0;
+}
+
+.how-it-works-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-top: 28px;
+}
+
+.how-it-works-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Stitch 시안처럼 아이콘을 배경 박스 없이 단독으로, 텍스트 위에 쌓는 구조 */
+.how-it-works-icon {
+  color: var(--pink);
+  display: flex;
+}
+
+.how-it-works-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pink);
+  letter-spacing: 0.4px;
+  margin-bottom: 3px;
+}
+
+.how-it-works-step-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+}
+
+.how-it-works-step-desc {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin-top: 3px;
+}
+
+@media (min-width: 1024px) {
+  .how-it-works { padding: 96px 48px 0; }
+
+  .how-it-works-steps {
+    flex-direction: row;
+    gap: 40px;
+  }
+
+  .how-it-works-step {
+    flex: 1;
+  }
+}

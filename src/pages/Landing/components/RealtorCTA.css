@@ -1,0 +1,37 @@
+.realtor-cta {
+  padding: 56px 22px 0;
+}
+
+.realtor-cta-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  transition: border-color 150ms ease-out;
+}
+
+.realtor-cta-link strong {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.realtor-cta-link:hover {
+  border-color: #DDD5D0;
+}
+
+.realtor-cta-link svg {
+  flex-shrink: 0;
+  color: var(--ink-soft);
+}
+
+@media (min-width: 1024px) {
+  .realtor-cta { padding: 72px 48px 0; }
+}

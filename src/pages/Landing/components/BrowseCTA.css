@@ -1,0 +1,45 @@
+.browse-cta {
+  padding: 12px 22px 0;
+  animation: browse-cta-in 0.5s ease-out 0.16s both;
+}
+
+.browse-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: var(--white);
+  color: var(--ink-soft);
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  padding: 13px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out;
+}
+
+.browse-cta-btn:hover {
+  border-color: #DDD5D0;
+  color: var(--ink);
+}
+
+.browse-cta-btn:active {
+  transform: scale(0.98);
+}
+
+@keyframes browse-cta-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .browse-cta { animation: none; }
+}
+
+/* 데스크톱: Primary와 같은 줄, 버튼 폭은 콘텐츠 크기만큼만 */
+@media (min-width: 1024px) {
+  .hero-group .browse-cta { padding: 32px 0 0; }
+  .hero-group .browse-cta-btn { width: auto; padding: 13px 26px; }
+}

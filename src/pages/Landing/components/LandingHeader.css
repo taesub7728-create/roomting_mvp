@@ -1,0 +1,71 @@
+.landing-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px 10px;
+  padding: 18px 22px 16px;
+  background: var(--paper);
+  position: relative;
+  z-index: 30;
+}
+
+.header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.lang-box { position: relative; }
+.lang-btn {
+  background: var(--white); border: 1px solid var(--line);
+  border-radius: 20px; padding: 7px 12px;
+  font-size: 12.5px; font-weight: 600; color: var(--ink);
+  cursor: pointer; display: flex; align-items: center; gap: 5px;
+  font-family: 'Noto Sans KR', sans-serif;
+  white-space: nowrap;
+}
+.lang-dd {
+  display: none; position: absolute; top: calc(100% + 8px); right: 0;
+  background: white; border-radius: 14px; border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden; min-width: 130px; z-index: 100;
+}
+.lang-dd.open { display: block; }
+.lang-dd div { padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); }
+.lang-dd div:hover { background: var(--pink-soft); }
+
+.auth-links { display: flex; align-items: center; gap: 8px; }
+
+.login-link {
+  font-size: 12.5px; font-weight: 700; color: var(--ink);
+  text-decoration: none; padding: 8px 14px;
+  border-radius: 20px; border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.signup-link {
+  font-size: 12.5px; font-weight: 700; color: white;
+  text-decoration: none; padding: 8px 14px;
+  border-radius: 20px; background: var(--pink);
+  white-space: nowrap;
+}
+
+.profile-box { position: relative; }
+.profile-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--pink-soft); border: 1.5px solid var(--pink-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; cursor: pointer; flex-shrink: 0;
+  font-family: 'Noto Sans KR', sans-serif; font-weight: 700; color: var(--ink);
+}
+.profile-dd {
+  display: none; position: absolute; top: calc(100% + 8px); right: 0;
+  background: white; border-radius: 14px; border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden; min-width: 150px; z-index: 100;
+}
+.profile-dd.open { display: block; }
+.profile-dd div, .profile-dd a {
+  padding: 11px 14px; font-size: 13px; font-weight: 600; color: var(--ink);
+  cursor: pointer; display: flex; align-items: center; gap: 8px;
+  text-decoration: none;
+}
+.profile-dd div:hover, .profile-dd a:hover { background: var(--pink-soft); }
+.profile-dd .dd-logout { color: var(--pink); border-top: 1px solid var(--line); }
+
+/* 데스크톱: 히어로와 함께 넓어진 컨테이너 폭에 맞춰 헤더 좌우 여백도 함께 확장 */
+@media (min-width: 1024px) {
+  .landing-header { padding: 24px 48px; }
+}
