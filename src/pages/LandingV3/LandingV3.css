@@ -1,0 +1,72 @@
+/* LandingV3 전용 레이아웃 컨테이너 + 섹션 공통 스타일. V1의 Landing.css/theme.css 클래스는
+   재사용하지 않는다(완전 별도 네임스페이스 원칙) - 색상 토큰(--pink 등)만 theme.css 공용 값 사용 */
+
+@media (min-width: 1024px) {
+  .v3-frame {
+    max-width: 1200px;
+  }
+}
+
+.v3-hero-canvas {
+  background: radial-gradient(circle at 50% 0%, var(--pink-soft) 0%, var(--paper) 62%);
+}
+
+.v3-hero-group { position: relative; }
+
+/* 모바일: text-col이 그냥 평범한 블록 컨테이너로 세로로 쌓임 */
+.v3-hero-text-col { display: flex; flex-direction: column; }
+
+/* 데스크톱: 좌(텍스트+CTA)/우(그래픽) 2컬럼. text-col을 display:contents로 풀어서
+   안의 자식들(Hero/Graphic/CTA)을 v3-hero-group 그리드에 직접 배치한다 */
+@media (min-width: 1024px) {
+  .v3-hero-group {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    column-gap: 48px;
+    align-items: center;
+    padding: 0 48px 64px;
+  }
+
+  .v3-hero-text-col { display: contents; }
+
+  .v3-hero-group .hero-v3,
+  .v3-hero-group .request-cta-v3,
+  .v3-hero-group .browse-cta-v3 {
+    grid-column: 1;
+  }
+
+  .v3-hero-group .hero-flow-graphic {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: center;
+    justify-self: center;
+  }
+}
+
+.reveal-v3 {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
+}
+.reveal-v3.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-v3 {
+    transition: none;
+    transform: none;
+  }
+}
+
+.section-title-v3 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.3px;
+}
+
+@media (min-width: 1024px) {
+  .section-title-v3 { font-size: 24px; }
+}

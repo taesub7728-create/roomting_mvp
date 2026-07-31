@@ -22,6 +22,7 @@ import Chat from './pages/Chat/Chat'
 import MyPage from './pages/MyPage/MyPage'
 import MapExplore from './pages/MapExplore/MapExplore'
 import PropertyDetail from './pages/PropertyDetail/PropertyDetail'
+import LandingV3 from './pages/LandingV3/LandingV3'
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
 import AdminLogin from './pages/AdminDashboard/AdminLogin'
 import ComingSoon from './pages/ComingSoon/ComingSoon'
@@ -42,6 +43,8 @@ function App() {
               <Route path="/request" element={<RequestWizard />} />
               <Route path="/map" element={<MapExplore />} />
               <Route path="/property/:propertyId" element={<PropertyDetail />} />
+              {/* V3 브랜드 탐색 시안 - 임시 검토용, 어디에도 링크 없음. 최종 채택 시 이 라우트를 승격/정리한다 */}
+              <Route path="/landing-v3" element={<LandingV3 />} />
             </Route>
 
             {/* 고객용 비공개 화면 묶음: customer가 아니면 각자 홈으로, 미로그인이면 /login으로 즉시 리다이렉트 */}

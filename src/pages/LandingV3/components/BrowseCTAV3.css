@@ -1,0 +1,21 @@
+.browse-cta-v3 {
+  padding: 12px 22px 0;
+  text-align: center;
+}
+
+.browse-cta-v3-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 150ms ease-out;
+}
+
+.browse-cta-v3-link:hover {
+  color: var(--ink);
+}
+
+@media (min-width: 1024px) {
+  .v3-hero-group .browse-cta-v3 { padding: 12px 0 0; text-align: left; }
+}

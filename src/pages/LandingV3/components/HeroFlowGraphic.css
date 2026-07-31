@@ -1,0 +1,58 @@
+.hero-flow-graphic {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  margin: 0 auto;
+  padding: 0 22px;
+  overflow: hidden;
+}
+
+.hero-flow-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-flow-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 84px;
+  padding: 12px 8px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(28, 26, 25, 0.08);
+  color: var(--pink);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.hero-flow-node {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  background: var(--white);
+  border: 1px solid var(--pink-dim);
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(28, 26, 25, 0.07);
+  color: var(--pink);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .hero-flow-graphic { height: 320px; max-width: 380px; }
+  .hero-flow-node { font-size: 12px; padding: 9px 13px; }
+  .hero-flow-center { width: 104px; font-size: 13px; padding: 16px 10px; }
+}

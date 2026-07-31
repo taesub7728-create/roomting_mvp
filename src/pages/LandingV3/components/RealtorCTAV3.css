@@ -1,0 +1,26 @@
+.realtor-cta-v3 {
+  padding: 56px 22px 0;
+  text-align: center;
+}
+
+.realtor-cta-v3 p {
+  display: inline-block;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.realtor-cta-v3-link {
+  color: var(--ink);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (min-width: 1024px) {
+  .realtor-cta-v3 { padding: 72px 48px 0; }
+}
