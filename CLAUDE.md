@@ -142,3 +142,23 @@ Route Guard(RealtorRoute/CustomerRoute/AdminRoute)는 이 경우 ProfileMissingE
 
 현재는 OAuth 콜백/회원가입 흐름과의 충돌 가능성을 줄이기 위해 의도적으로 보류한다.
 Step 1.5(로그인 UX 정리) 진행 시 함께 처리한다.
+
+## 색상 규칙
+
+- 새 화면·컴포넌트에서 hex 색상을 직접 쓰지 않는다.
+  theme.css의 토큰(var(--coral) 등)만 사용한다.
+- 흰색 텍스트/아이콘이 올라가는 요소는 var(--coral-action)을 쓴다.
+  (--coral은 흰 글씨 대비 2.73으로 WCAG AA 미달)
+- 흰색이 지배 캔버스다. 코랄은 CTA·선택 상태·브랜드 아이덴티티에만 쓴다.
+  전면 코랄 배경은 Splash나 마케팅 히어로처럼
+  의도된 브랜드 모먼트에만 허용.
+  상세는 roomting-design-system.md의 Brand Philosophy 참조.
+- 예외: SVG 파일 내부는 CSS 변수가 적용되지 않으므로 hex 허용.
+  단 로고 등 색이 고정된 자산에 한한다.
+- 팔레트에 없는 새 색이 필요하면 임의로 추가하지 말고 먼저 확인받는다.
+- --pink, --pink-accent, --pink-soft, --pink-dim은 폐기된 토큰이다. 새로 사용하지 마라.
+- 투명도가 필요한 그림자·글로우·오버레이는
+  rgba(var(--coral-rgb), alpha) 형식을 사용한다.
+- rgba(), rgb(), hsl(), hsla()에 브랜드 색상 채널값을 직접 하드코딩하지 않는다.
+- 브랜드 색상 변경 시 hex뿐 아니라 rgb/rgba/hsl/hsla/SVG 표현까지 함께 검색한다.
+- 새 RGB 동반 토큰(예: --coral-rgb)은 실제 투명도 표현에 필요한 기존 팔레트 색에만 허용한다.

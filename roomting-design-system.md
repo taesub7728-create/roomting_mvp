@@ -11,7 +11,7 @@ Claude Code가 전 화면에 일관되게 적용할 때 참고용으로 씁니�
   여백, 모서리 둥글기, 카드·버튼 모양, 요소 배치 등 "시각적으로
   얼마나 조화롭고 세련되어 보이는가"에 관한 전부
 - **Stitch가 결정하지 않는 것 (고정, Stitch 제안이 와도 반영 안 함)**:
-  브랜드 컬러(`--pink` #F05A7E), 화면에 어떤 내용을 넣고 뺄지
+  브랜드 컬러(`--coral` #FF6F61), 화면에 어떤 내용을 넣고 뺄지
   (정보구조), 기능 흐름. 예: "조건 입력 전에는 매물 미리보기를
   보여주지 않는다", "지도 카드를 홈 화면에서 다시 보여주지 않는다"
   같은 결정은 시각 디자인이 아니라 전략적 판단이라 Stitch 제안과
@@ -34,7 +34,7 @@ Claude Code가 전 화면에 일관되게 적용할 때 참고용으로 씁니�
 
 ## 2. 공통 토큰 (모바일 · 관리자 공용)
 
-### 왜 이 색(핑크 #F05A7E)인가 — 2026-07-26 확정, 2026-07-28 코랄 톤(#F05A7E)으로 재확정, 4色 비교 테스트 거침, 2026-07-31 톤 미세조정(#F26559) + Accent 신설(#ED6445)
+### 왜 이 색(코랄)인가 — 2026-07-26 확정, 2026-07-28 코랄 톤(#F05A7E)으로 재확정, 4色 비교 테스트 거침, 2026-07-31 톤 미세조정(#F26559) + Accent 신설(#ED6445), 2026-08-01 Living Coral(#FF6F61)로 최종 확정
 
 - **카테고리 내 공백**: 직방(주황) · 다방(파랑) · 네모(빨강) 등 국내
   부동산 앱들이 이미 각자 색을 선점한 상태에서, 핑크 계열은
@@ -82,11 +82,39 @@ Claude Code가 전 화면에 일관되게 적용할 때 참고용으로 씁니�
 않는다고 판단해 적용함. `--ink`/`--paper` 등 중립색 토큰은 이번
 조정 대상이 아니므로 변경하지 않았다.
 
+#### 2026-08-01 Living Coral 최종 확정 — 토큰 체계 재정리
+
+색상 카테고리(코랄)와 근거는 그대로 유지하되, 톤을 `#FF6F61`(Living
+Coral)로 확정하고 토큰 이름을 `--pink*` → `--coral*`로 전면 교체했다.
+동시에 흰 텍스트/아이콘 대비 문제를 토큰 두 개로 명확히 분리:
+
+- `--coral`(#FF6F61): 로고·아이콘·강조 텍스트·선택 상태·인디케이터 등
+  기본 브랜드색. 흰 글씨를 얹으면 대비 2.73으로 WCAG AA 큰 글씨
+  기준(3.0) 미달.
+- `--coral-action`(#F26559, 기존 `--pink` 값과 동일): 흰 글씨/아이콘이
+  올라가는 채워진 요소(CTA 버튼, 채워진 뱃지, Notification Badge,
+  Filled Chip) 전용. 대비 3.10으로 통과.
+- `--pink-soft`(#FBF2F1)는 `--paper-soft`(#FFF2EF)로, `--pink-dim`
+  (#F7D6D4)은 border 용도는 `--border`(#F2E8E4)로, 색을 유지해야 하는
+  나머지는 `--coral`로 흡수. `--pink-accent`(#ED6445)는 근접값인
+  `--coral-action`으로 통합.
+- 35개 파일 88곳을 전수 분류(흰 텍스트/아이콘 여부)해 개별 교체했고,
+  `--pink*` 계열 alias는 전량 제거함 — 현재 코드베이스에 `--pink`로
+  시작하는 토큰은 존재하지 않는다.
+- 로고 SVG 6개(`roomting-symbol.svg`, `roomting-symbol-b1.svg`,
+  `roomting-lockup.svg`, `roomting-icon-white-bg.svg`,
+  `public/favicon.svg`는 `#FF6F61`, 흰 아이콘이 배경 위에 얹히는
+  `roomting-icon-pink-bg.svg`만 예외로 `#F26559`)도 함께 갱신함.
+- 그림자/글로우처럼 투명도가 필요한 곳은 `--coral-rgb`(255, 111, 97)를
+  둬서 `rgba(var(--coral-rgb), alpha)` 형식으로 쓴다. 새 색이 아니라
+  `--coral`의 RGB 채널 표현이다.
+
 ```css
---pink: #F26559;        /* 브랜드 컬러, primary CTA (2026-07-31: #F05A7E에서 명도만 조정, WCAG 대비 확보) */
---pink-soft: #FBF2F1;   /* 배경/active 상태 */
---pink-dim: #F7D6D4;    /* 보더 */
---pink-accent: #ED6445; /* 알림 배지 등 강조점 전용 (2026-07-31 신설, CTA에는 --pink 사용) */
+--coral: #FF6F61;         /* 브랜드 컬러, 로고/아이콘/강조 텍스트/선택 상태 (2026-08-01: #F26559에서 톤 확정) */
+--coral-rgb: 255, 111, 97; /* --coral의 RGB 채널값 — rgba(var(--coral-rgb), alpha) 형식 전용 */
+--coral-action: #F26559;  /* 흰 글씨/아이콘이 올라가는 채워진 요소 전용 (WCAG AA 대비 확보, 기존 --pink 값과 동일) */
+--paper-soft: #FFF2EF;    /* 옅은 배경/active 상태 (기존 --pink-soft #FBF2F1 흡수) */
+--border: #F2E8E4;        /* 브랜드 톤이 살짝 도는 보더 (기존 --pink-dim #F7D6D4 중 border 용도 흡수) */
 --ink: #1C1A19;         /* 본문 텍스트 */
 --ink-soft: #8A8480;   /* 보조 텍스트 (기존 #6B6562보다 밝게 통일) */
 --line: #EFEBE7;       /* 구분선 */
@@ -152,7 +180,7 @@ Claude Code가 전 화면에 일관되게 적용할 때 참고용으로 씁니�
 > 문서 다른 곳에 컬러 사용에 관한 서술이 남아있다면 이 섹션을 따르도록 정리한다.
 
 ### 철학
-브랜드 컬러(#F05A7E)는 ROOMTING의 정체성을 표현하는 색이지만,
+브랜드 컬러(--coral #FF6F61)는 ROOMTING의 정체성을 표현하는 색이지만,
 UI 전체를 채우는 색이 아니라 "사용자의 행동(Action)"을 강조하는 포인트 컬러로만 사용한다.
 
 ROOMTING는 Airbnb와 같은 철학을 따른다.
@@ -160,6 +188,22 @@ ROOMTING는 Airbnb와 같은 철학을 따른다.
 나머지 UI는 White + Neutral Gray 중심으로 구성한다.
 
 집 사진과 콘텐츠가 항상 브랜드 컬러보다 먼저 보여야 한다.
+
+---
+
+### Brand Philosophy (2026-08-01 확정)
+
+ROOMTING uses Living Coral as its primary brand color.
+White is the dominant canvas.
+
+Coral is reserved for
+- Primary CTA
+- Selected states
+- Brand identity
+- Progress emphasis
+
+Do not use Brand Coral as a full-page accent unless intentionally
+creating a brand moment (e.g. Splash, marketing hero).
 
 ---
 
@@ -174,14 +218,14 @@ ROOMTING는 Airbnb와 같은 철학을 따른다.
 - 기존 Dark Neutral(`--ink` 등)
 
 10%
-- Brand Pink (`--pink` #F05A7E)
+- Brand Coral (`--coral` #FF6F61 / `--coral-action` #F26559)
 - 아래 용도로만 사용
 
 ---
 
-### Brand Pink 사용 가능 영역
+### Brand Coral 사용 가능 영역
 
-브랜드 핑크는 아래에서만 사용한다.
+브랜드 코랄은 아래에서만 사용한다.
 
 - 화면당 가장 중요한 Primary CTA 버튼 1개
 - 선택된 Bottom Navigation / Tab
@@ -193,9 +237,9 @@ ROOMTING는 Airbnb와 같은 철학을 따른다.
 
 ---
 
-### Brand Pink 사용 금지
+### Brand Coral 사용 금지
 
-다음 용도로는 브랜드 핑크를 사용하지 않는다.
+다음 용도로는 브랜드 코랄을 사용하지 않는다.
 
 - 카드 전체 배경
 - 일반 본문 텍스트
@@ -212,17 +256,17 @@ ROOMTING는 Airbnb와 같은 철학을 따른다.
 **Button**
 
 Primary
-- Pink Background
+- Coral(Action) Background
 - White Text
 
 Secondary
 - White Background
-- Pink Border
-- Pink Text
+- Coral Border
+- Coral Text
 
 Ghost
 - Transparent
-- Pink Text
+- Coral Text
 
 Danger
 - Error Color
@@ -244,7 +288,7 @@ Danger
 - `--ink-soft`
 
 활성
-- Brand Pink
+- Brand Coral
 
 **Sizing**
 
@@ -300,7 +344,7 @@ Danger
 
 구성: **홈 / 지도 / 채팅 / MY** (4개 고정)
 - "요청서" 탭은 없앰 — 조건 입력은 홈의 메인 CTA로 충분, 자주 안 쓰는 화면은 MY 안으로
-- active 상태: 아이콘에 `--pink-soft` 배경의 둥근 사각형(10px radius) 적용, 라벨은 `--pink`
+- active 상태: 아이콘에 `--paper-soft` 배경의 둥근 사각형(10px radius) 적용, 라벨은 `--coral`
 - inactive 상태: 아이콘/라벨 모두 연한 회색(#C3BCB6), 배경 없음
 - `position: fixed; bottom: 0`, 화면 전환 시에도 유지 (매번 다시 로드 X)
 
@@ -308,8 +352,13 @@ Danger
 
 ## 7. 스플래시 스크린 (앱 최초 진입시 1회만)
 
-- 흰 배경(`--paper`) + 로고 마크 + 워드마크, scale(0.88→1) + fade-in, 0.7s
-- 1.1초 유지 후 전체 fade-out(0.5s)하며 메인 화면 노출
+- **2026-08-01 기준**: proposal-feed 히어로 구조로 재설계됨(`Splash.jsx`/`Splash.css`,
+  커밋 `2d37e40`). 전체화면 배경은 `--coral`(브랜드 모먼트 예외 허용, 3번 섹션
+  Brand Philosophy 참조) — 워드마크·헤드라인이 그 위에 흰 텍스트로 직접
+  얹힘(대비 미달 이슈는 14번 Pending Decisions 참조)
+- 아래는 이전(2026-07-25) 버전 규칙, 현재 화면과 다름 — 참고용으로만 남김:
+  흰 배경(`--paper`) + 로고 마크 + 워드마크, scale(0.88→1) + fade-in, 0.7s,
+  1.1초 유지 후 전체 fade-out(0.5s)하며 메인 화면 노출
 - **탭 이동 시에는 절대 재노출 금지** — 앱 콜드 스타트(첫 로드) 시에만
 
 ---
@@ -351,8 +400,8 @@ Danger
 
 ## 11. UI States
 
-- **Loading**: 기본은 `--ink-soft` 뉴트럴. 진행 상태를 강조해야 하는 경우에 한해 3번 Color Usage Rules의 "진행 상태(Active)" 허용 영역에 따라 Brand Pink 사용 가능. 전환에는 `--transition-fast`를 사용한다.
-- **Empty**: 텍스트는 `--ink-soft`. Brand Pink는 사용하지 않는다(3번 Color Usage Rules "Brand Pink 사용 금지" 원칙). 안내 CTA가 필요하면 화면당 1개까지만 허용한다(5번 레이아웃 원칙 "한 화면 = 주요 액션 1개").
+- **Loading**: 기본은 `--ink-soft` 뉴트럴. 진행 상태를 강조해야 하는 경우에 한해 3번 Color Usage Rules의 "진행 상태(Active)" 허용 영역에 따라 Brand Coral 사용 가능. 전환에는 `--transition-fast`를 사용한다.
+- **Empty**: 텍스트는 `--ink-soft`. Brand Coral은 사용하지 않는다(3번 Color Usage Rules "Brand Coral 사용 금지" 원칙). 안내 CTA가 필요하면 화면당 1개까지만 허용한다(5번 레이아웃 원칙 "한 화면 = 주요 액션 1개").
 - **Error**: Button "Danger" 변형과 동일한 Error Color를 사용한다(3번 Color Usage Rules Component 적용 원칙 참조). Error Color의 정확한 토큰 값은 아직 미확정 — 14번 Pending Decisions 참조.
 
 ---
@@ -377,6 +426,17 @@ Danger
 
 ## 14. Pending Decisions
 
+- **[완료 2026-08-01]** Living Coral(`#FF6F61`) 최종 확정, 2번 섹션 "2026-08-01
+  Living Coral 최종 확정" 참조. 이전 항목(아래 2026-07-31)에서 미해결로 남았던
+  로고 SVG 8개 중 실제 사용 중인 6개(`roomting-symbol.svg`,
+  `roomting-symbol-b1.svg`, `roomting-lockup.svg`, `roomting-icon-white-bg.svg`,
+  `roomting-icon-pink-bg.svg`, `public/favicon.svg`)를 이번에 함께 갱신함.
+  `--pink*` 토큰은 코드베이스에서 완전히 제거됨(0건 확인).
+  **신규 미해결**: `Splash.css`의 `.splash` 전체화면 배경을 `--coral`로 확정하며
+  그 위에 직접 얹히는 `.splash-wordmark`/`.splash-headline`(둘 다 흰색, 800
+  weight, 24px 이상)의 WCAG 대비가 2.73으로 큰 글씨 기준(3.0) 미달임을 확인함.
+  이번 작업은 토큰 교체만이 목적이라 수정하지 않았고, 접근성 개선 항목으로
+  남김 — 배경을 `--coral-action`으로 바꾸거나 텍스트 색을 조정하는 대안 검토 필요.
 - **[완료 2026-07-31]** 브랜드 컬러 톤 조정 및 Accent 신설 (2번 섹션 "2026-07-31 톤 미세조정 + Accent 신설" 근거 참조).
   `theme.css`의 `--pink`(`#F05A7E→#F26559`), `--pink-soft`(`#FDEEF1→#FBF2F1`),
   `--pink-dim`(`#F8D6DE→#F7D6D4`)를 교체하고 `--pink-accent`(`#ED6445`)를 신설함.
