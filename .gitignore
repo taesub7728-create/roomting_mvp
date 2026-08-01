@@ -17,6 +17,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# 화면 미리보기용 standalone HTML (실제 컴포넌트와 별개, 프로덕션 코드 아님)
+prototypes/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
