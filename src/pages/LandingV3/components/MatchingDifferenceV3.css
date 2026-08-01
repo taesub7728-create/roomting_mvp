@@ -18,7 +18,7 @@
 }
 
 .diff-col-v3-new {
-  border-color: var(--pink-dim);
+  border-color: var(--border);
   box-shadow: 0 12px 28px rgba(240, 90, 126, 0.1);
 }
 

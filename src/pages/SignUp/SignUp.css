@@ -8,8 +8,8 @@
 
 .step-bar { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 24px 24px 0; position: relative; z-index: 1; }
 .step-dot { width: 6px; height: 6px; border-radius: 3px; background: var(--line); transition: all .3s ease; }
-.step-dot.active { width: 20px; background: var(--pink); }
-.step-dot.done { background: var(--pink-dim); }
+.step-dot.active { width: 20px; background: var(--coral); }
+.step-dot.done { background: var(--coral); }
 
 .top-logo { padding: 18px 24px 0; position: relative; z-index: 1; }
 

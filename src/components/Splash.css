@@ -200,7 +200,7 @@
   width: clamp(16px, 4.5vw, 19px);
   height: clamp(16px, 4.5vw, 19px);
   border-radius: 50%;
-  background: var(--pink-accent);
+  background: var(--coral-action);
 }
 
 .splash-bc {
@@ -310,7 +310,7 @@
   justify-content: center;
 }
 .splash-proposal-thumb svg { width: 52%; height: 52%; }
-.splash-proposal-thumb path { stroke: var(--pink-accent); }
+.splash-proposal-thumb path { stroke: var(--coral); }
 
 .splash-proposal-body {
   flex: 1;
@@ -352,7 +352,7 @@
   font-weight: 800;
   font-size: clamp(9.5px, 2.6vw, 10.5px);
   letter-spacing: 0.02em;
-  color: var(--pink-accent);
+  color: var(--coral);
 }
 
 .splash-proposal-type {

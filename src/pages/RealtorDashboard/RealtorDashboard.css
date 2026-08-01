@@ -7,7 +7,7 @@
 .rd-profile-row { display: flex; align-items: center; gap: 12px; padding: 0 20px 18px; }
 .rd-profile-avatar {
   width: 44px; height: 44px; border-radius: 14px;
-  background: var(--pink-soft); border: 1.5px solid var(--pink-dim);
+  background: var(--pink-soft); border: 1.5px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   font-size: 18px; font-weight: 800; color: var(--pink); font-family: 'Manrope', sans-serif; flex-shrink: 0;
 }
@@ -114,7 +114,7 @@
 
 .rd-address-selected {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  background: var(--pink-soft); border: 1.5px solid var(--pink-dim); border-radius: 13px; padding: 13px 15px;
+  background: var(--pink-soft); border: 1.5px solid var(--border); border-radius: 13px; padding: 13px 15px;
 }
 .rd-address-selected span { font-size: 13.5px; font-weight: 700; color: var(--ink); }
 .rd-address-change { background: none; border: none; color: var(--pink); font-weight: 700; font-size: 12.5px; cursor: pointer; flex-shrink: 0; }

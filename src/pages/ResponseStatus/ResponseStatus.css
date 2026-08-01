@@ -10,7 +10,7 @@
 .rs-request-summary { display: flex; flex-wrap: wrap; gap: 7px; }
 .rs-summary-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 50px; padding: 5px 11px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
 
-.rs-timer-card { background: var(--white); border: 1.5px solid var(--pink-dim); border-radius: var(--radius); padding: 20px; text-align: center; }
+.rs-timer-card { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
 .rs-timer-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 14px; }
 .rs-timer-display { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 10px; }
 .rs-timer-block { display: flex; flex-direction: column; align-items: center; gap: 3px; }
@@ -33,7 +33,7 @@
 .rs-agency-addr { font-size: 11px; font-weight: 500; color: var(--ink-soft); margin-top: 1px; }
 .rs-price { font-size: 19px; font-weight: 800; color: var(--ink); letter-spacing: -0.4px; margin-bottom: 8px; }
 .rs-price .rs-deposit { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); margin-left: 6px; }
-.rs-message { background: var(--paper); border-radius: 11px; padding: 10px 12px; font-size: 12.5px; font-weight: 500; color: var(--ink); line-height: 1.6; margin-bottom: 12px; border-left: 2.5px solid var(--pink-dim); }
+.rs-message { background: var(--paper); border-radius: 11px; padding: 10px 12px; font-size: 12.5px; font-weight: 500; color: var(--ink); line-height: 1.6; margin-bottom: 12px; border-left: 2.5px solid var(--border); }
 .rs-actions { display: flex; gap: 8px; }
 .rs-btn { flex: 1; padding: 11px; border-radius: 12px; border: none; cursor: pointer; font-size: 13px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; text-align: center; text-decoration: none; display: block; }
 .rs-btn-secondary { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
@@ -44,4 +44,4 @@
 .rs-waiting-text { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); line-height: 1.6; white-space: pre-line; }
 
 .rs-bottom-cta { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; padding: 14px 22px 32px; background: linear-gradient(to top, var(--paper) 75%, transparent); z-index: 30; }
-.rs-end-btn { width: 100%; background: var(--white); color: var(--pink); border: 1.5px solid var(--pink-dim); border-radius: 14px; padding: 15px; font-size: 14px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; }
+.rs-end-btn { width: 100%; background: var(--white); color: var(--pink); border: 1.5px solid var(--border); border-radius: 14px; padding: 15px; font-size: 14px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; }

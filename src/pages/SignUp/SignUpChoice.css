@@ -7,7 +7,7 @@
   border-radius: var(--radius); padding: 20px 18px; cursor: pointer;
   font-family: 'Noto Sans KR', sans-serif; transition: border-color .15s, transform .15s;
 }
-.sc-choice-card:hover { border-color: var(--pink-dim); transform: translateY(-1px); }
+.sc-choice-card:hover { border-color: var(--border); transform: translateY(-1px); }
 .sc-choice-card:active { transform: scale(0.99); }
 .sc-choice-emoji { font-size: 26px; }
 .sc-choice-title { font-size: 15px; font-weight: 800; color: var(--ink); }

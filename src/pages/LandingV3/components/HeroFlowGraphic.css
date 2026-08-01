@@ -42,7 +42,7 @@
   gap: 5px;
   padding: 7px 10px;
   background: var(--white);
-  border: 1px solid var(--pink-dim);
+  border: 1px solid var(--border);
   border-radius: 999px;
   box-shadow: 0 6px 16px rgba(28, 26, 25, 0.07);
   color: var(--pink);
