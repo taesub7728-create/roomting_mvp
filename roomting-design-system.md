@@ -426,6 +426,38 @@ Danger
 
 ## 14. Pending Decisions
 
+- **[완료 2026-08-01]** R자 모노그램 심볼 공식 채택 (커밋 `f0ffc6c`).
+  `assets/roomting-symbol-solid.svg`(1000×1000 viewBox, R자 모노그램 형태)를
+  공식 심볼로 확정하고 `src/assets/roomting-symbol.svg`/
+  `roomting-icon-white-bg.svg` 내용을 교체, `roomting-symbol-black.svg`/
+  `roomting-symbol-white.svg`를 신규 배치. 기존 9곳의 import 경로
+  (`src/assets/roomting-symbol.svg`)는 변경하지 않아 화면단 코드 수정 없이
+  전 화면에 반영됨. 색상은 `#FF6F61`(로고/아이콘 기본).
+  - 기존 문/열쇠 아크형 심볼은 신규 사용 중단. 파일 자체는 검증 완료 후
+    폐기 여부 결정 예정(즉시 삭제하지 않음).
+  - favicon/앱 아이콘 세트(`favicon.svg`, `favicon-16/32/48x16.png`,
+    `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`)
+    `npm run icons`로 전량 재생성 완료.
+  - 소형 렌더링 검증(16/32/48/180px) Playwright로 통과 — 기존 심볼(가는
+    스트로크)은 16px에서 형태가 거의 뭉개졌던 반면, 새 심볼은 작은 크기에서
+    오히려 식별성이 향상됨.
+  - 아이콘 정렬 개선: 기존 `roomting-icon-white-bg.svg`는 잉크 bounding box
+    기준 캔버스 중심에서 `(-32.75, -33.5)`px 벗어나 있었음(비대칭 배치).
+    신규 아이콘은 잉크 bbox 기준 `(0, 0)` 정중앙 정렬(근거: 이미 제작되어
+    있던 `assets/roomting-app-icon-1024.png`의 잉크 점유율 폭50.6%/높이
+    60.9%를 그대로 적용, `translate(82.95,82.95) scale(0.3461)`).
+  - **미검증**: 가입완료 화면 2곳(`SignUp.jsx` 36px, `RealtorSignUp.jsx`
+    56px)은 실제 Supabase 계정 생성이 필요해 이번엔 진행하지 않고, 동일
+    CSS 클래스를 격리 렌더링해서 대체 확인함(실제 화면 검증 아님).
+  - `assets/validation/REPORT.md`의 "적용 여부 별도 결정 필요" 상태를
+    "2026-08-01 공식 채택 및 프로덕션 적용 완료"로 갱신함.
+  - **TODO**: PWA manifest 또는 Capacitor 도입 시 `icon-192.png`/
+    `icon-512.png`가 실제로 연결되는지 재검토 필요(현재는 생성만 되고
+    manifest 자체가 프로젝트에 없어 참조되지 않는 상태).
+  - **참고**: 이 심볼은 아래 "[완료 2026-07-31]" 항목에서 언급된
+    `src/assets/roomting-symbol-b1.svg`(바람개비 형태)와는 다른 도형이다.
+    "B1"이라는 명칭이 서로 다른 시점의 다른 탐색안을 가리켜서 생긴 혼선이며,
+    `roomting-symbol-b1.svg`는 정리 대상으로 별도 분류됨(아래 참조).
 - **[완료 2026-08-01]** Living Coral(`#FF6F61`) 최종 확정, 2번 섹션 "2026-08-01
   Living Coral 최종 확정" 참조. 이전 항목(아래 2026-07-31)에서 미해결로 남았던
   로고 SVG 8개 중 실제 사용 중인 6개(`roomting-symbol.svg`,
