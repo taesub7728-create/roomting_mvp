@@ -35,7 +35,7 @@
 
 .tab-item.active .tab-icon {
   background: var(--pink-soft);
-  color: var(--pink);
+  color: var(--coral);
 }
 
 .tab-label {
@@ -44,7 +44,7 @@
 }
 
 .tab-item.active .tab-label {
-  color: var(--pink);
+  color: var(--coral);
   font-weight: 700;
 }
 

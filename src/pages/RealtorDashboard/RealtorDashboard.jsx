@@ -211,7 +211,7 @@ export default function RealtorDashboard() {
     <div className={`frame rd-root${isDesktop ? ' rd-root--desktop' : ''}`}>
       <div className="rd-header">
         <div className="rd-title">roomting partners</div>
-        <button className="mp-logout" style={{ background: 'none', border: 'none', color: 'var(--pink)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }} onClick={handleLogout}>로그아웃</button>
+        <button className="mp-logout" style={{ background: 'none', border: 'none', color: 'var(--coral)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }} onClick={handleLogout}>로그아웃</button>
       </div>
 
       <div className="rd-profile-row">

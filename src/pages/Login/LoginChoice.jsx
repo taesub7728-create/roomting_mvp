@@ -36,19 +36,19 @@ export default function LoginChoice() {
 
           <div className="sc-choice-list">
             <button className="sc-choice-card" onClick={() => navigate('/login/customer')}>
-              <Home size={26} strokeWidth={1.75} color="var(--pink)" />
+              <Home size={26} strokeWidth={1.75} color="var(--coral)" />
               <span className="sc-choice-title">{t.choiceCustomerTitle}</span>
               <span className="sc-choice-desc">{t.choiceCustomerDesc}</span>
             </button>
             <button className="sc-choice-card" onClick={() => navigate('/login/realtor')}>
-              <Building2 size={26} strokeWidth={1.75} color="var(--pink)" />
+              <Building2 size={26} strokeWidth={1.75} color="var(--coral)" />
               <span className="sc-choice-title">{t.choiceRealtorTitle}</span>
               <span className="sc-choice-desc">{t.choiceRealtorDesc}</span>
             </button>
           </div>
 
           <div className="login-signup-link" style={{ marginTop: 20, textAlign: 'center', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-soft)' }}>
-            {t.noAccount} <Link to="/signup" style={{ color: 'var(--pink)', fontWeight: 700, textDecoration: 'none' }}>{t.signupLink}</Link>
+            {t.noAccount} <Link to="/signup" style={{ color: 'var(--coral)', fontWeight: 700, textDecoration: 'none' }}>{t.signupLink}</Link>
           </div>
         </div>
       </div>

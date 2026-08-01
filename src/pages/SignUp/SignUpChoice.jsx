@@ -60,12 +60,12 @@ export default function SignUpChoice() {
 
             <div className="sc-choice-list">
               <button className="sc-choice-card" onClick={() => navigate('/signup/customer')}>
-                <Home size={26} strokeWidth={1.75} color="var(--pink)" />
+                <Home size={26} strokeWidth={1.75} color="var(--coral)" />
                 <span className="sc-choice-title">{t.choiceCustomerTitle}</span>
                 <span className="sc-choice-desc">{t.choiceCustomerDesc}</span>
               </button>
               <button className="sc-choice-card" onClick={() => navigate('/signup/realtor')}>
-                <Building2 size={26} strokeWidth={1.75} color="var(--pink)" />
+                <Building2 size={26} strokeWidth={1.75} color="var(--coral)" />
                 <span className="sc-choice-title">{t.choiceRealtorTitle}</span>
                 <span className="sc-choice-desc">{t.choiceRealtorDesc}</span>
               </button>

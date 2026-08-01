@@ -25,7 +25,7 @@
   max-width: 78%; padding: 10px 14px; border-radius: 16px;
   font-size: 13.5px; line-height: 1.55; word-break: break-word;
 }
-.chat-msg-row.mine .chat-bubble { background: var(--pink); color: white; border-bottom-right-radius: 4px; }
+.chat-msg-row.mine .chat-bubble { background: var(--coral-action); color: white; border-bottom-right-radius: 4px; }
 .chat-msg-row:not(.mine) .chat-bubble { background: var(--white); border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 4px; }
 
 .chat-original { }
@@ -47,9 +47,9 @@
   flex: 1; background: var(--white); border: 1.5px solid var(--line); border-radius: 22px;
   padding: 11px 16px; font-size: 14px; font-family: 'Noto Sans KR', sans-serif; outline: none;
 }
-.chat-input:focus { border-color: var(--pink); }
+.chat-input:focus { border-color: var(--coral); }
 .chat-send-btn {
-  width: 44px; height: 44px; border-radius: 50%; background: var(--pink); color: white;
+  width: 44px; height: 44px; border-radius: 50%; background: var(--coral-action); color: white;
   border: none; cursor: pointer; font-size: 16px; flex-shrink: 0;
 }
 .chat-send-btn:disabled { opacity: 0.4; cursor: default; }

@@ -14,7 +14,7 @@
   margin: 0 20px 20px; padding: 14px 16px; background: var(--pink-soft);
   border-radius: 14px; font-size: 13px; color: var(--ink); line-height: 1.6;
 }
-.rr-summary b { color: var(--pink); }
+.rr-summary b { color: var(--coral); }
 
 .rr-body { padding: 0 20px 40px; display: flex; flex-direction: column; gap: 16px; }
 .rr-field label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
@@ -27,7 +27,7 @@
   color: var(--ink); font-family: 'Noto Sans KR', sans-serif;
   outline: none; transition: border-color .15s, background .15s;
 }
-.rr-input:focus, .rr-textarea:focus { border-color: var(--pink); background: var(--white); }
+.rr-input:focus, .rr-textarea:focus { border-color: var(--coral); background: var(--white); }
 .rr-input::placeholder, .rr-textarea::placeholder { color: var(--ink-soft); font-weight: 500; }
 .rr-textarea { resize: none; height: 86px; line-height: 1.6; }
 

@@ -24,7 +24,7 @@
   align-items: center;
   justify-content: center;
 }
-.how-it-works-v3-icon.step-pink { background: var(--pink-soft); color: var(--pink); }
+.how-it-works-v3-icon.step-pink { background: var(--pink-soft); color: var(--coral); }
 .how-it-works-v3-icon.step-neutral { background: var(--line); color: var(--ink); }
 .how-it-works-v3-icon.step-success { background: var(--success-soft); color: var(--success); }
 

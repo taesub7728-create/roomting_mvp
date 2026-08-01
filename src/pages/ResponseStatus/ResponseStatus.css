@@ -2,7 +2,7 @@
 
 .rs-request-card { background: var(--white); border-radius: var(--radius); padding: 16px 18px; border: 1px solid var(--line); }
 .rs-request-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.rs-request-label { font-size: 11.5px; font-weight: 700; color: var(--pink); background: var(--pink-soft); border-radius: 50px; padding: 4px 10px; }
+.rs-request-label { font-size: 11.5px; font-weight: 700; color: var(--coral); background: var(--pink-soft); border-radius: 50px; padding: 4px 10px; }
 .rs-request-status { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--success); }
 .rs-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
 .rs-request-status.closed { color: var(--ink-soft); }
@@ -14,14 +14,14 @@
 .rs-timer-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 14px; }
 .rs-timer-display { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 10px; }
 .rs-timer-block { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.rs-timer-num { background: var(--pink-soft); border-radius: 11px; padding: 8px 13px; font-size: 24px; font-weight: 800; color: var(--pink); font-family: 'Manrope', sans-serif; letter-spacing: -0.5px; min-width: 48px; text-align: center; }
+.rs-timer-num { background: var(--pink-soft); border-radius: 11px; padding: 8px 13px; font-size: 24px; font-weight: 800; color: var(--coral); font-family: 'Manrope', sans-serif; letter-spacing: -0.5px; min-width: 48px; text-align: center; }
 .rs-timer-unit { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); }
 .rs-timer-colon { font-size: 22px; font-weight: 800; color: var(--ink-soft); margin-bottom: 14px; }
 .rs-timer-sub { font-size: 11.5px; font-weight: 500; color: var(--ink-soft); }
 
 .rs-section-header { display: flex; align-items: center; justify-content: space-between; padding: 0 2px; }
 .rs-section-title { font-size: 15px; font-weight: 800; color: var(--ink); letter-spacing: -0.2px; }
-.rs-section-count { font-size: 11.5px; font-weight: 700; color: var(--pink); background: var(--pink-soft); border-radius: 50px; padding: 3px 9px; }
+.rs-section-count { font-size: 11.5px; font-weight: 700; color: var(--coral); background: var(--pink-soft); border-radius: 50px; padding: 3px 9px; }
 
 .rs-card { background: var(--white); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); }
 .rs-img { width: 100%; height: 120px; display: flex; align-items: center; justify-content: center; font-size: 40px; position: relative; background: var(--line); }
@@ -37,11 +37,11 @@
 .rs-actions { display: flex; gap: 8px; }
 .rs-btn { flex: 1; padding: 11px; border-radius: 12px; border: none; cursor: pointer; font-size: 13px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; text-align: center; text-decoration: none; display: block; }
 .rs-btn-secondary { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
-.rs-btn-primary { background: var(--pink); color: white; }
+.rs-btn-primary { background: var(--coral-action); color: white; }
 
 .rs-waiting-card { background: var(--white); border-radius: var(--radius); padding: 24px 18px; text-align: center; border: 1.5px dashed var(--line); }
 .rs-waiting-emoji { font-size: 28px; margin-bottom: 8px; opacity: 0.6; }
 .rs-waiting-text { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); line-height: 1.6; white-space: pre-line; }
 
 .rs-bottom-cta { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; padding: 14px 22px 32px; background: linear-gradient(to top, var(--paper) 75%, transparent); z-index: 30; }
-.rs-end-btn { width: 100%; background: var(--white); color: var(--pink); border: 1.5px solid var(--border); border-radius: 14px; padding: 15px; font-size: 14px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; }
+.rs-end-btn { width: 100%; background: var(--white); color: var(--coral); border: 1.5px solid var(--border); border-radius: 14px; padding: 15px; font-size: 14px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; }

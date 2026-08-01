@@ -22,14 +22,14 @@
 
 .email-form { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
 
-.signup-back-link { text-align: center; font-size: 12.5px; color: var(--pink); font-weight: 700; text-decoration: none; margin-top: 4px; }
+.signup-back-link { text-align: center; font-size: 12.5px; color: var(--coral); font-weight: 700; text-decoration: none; margin-top: 4px; }
 
 .signup-no-account { text-align: center; font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
-.signup-inline-link { color: var(--pink); font-weight: 700; text-decoration: none; }
+.signup-inline-link { color: var(--coral); font-weight: 700; text-decoration: none; }
 
 .nick-hint { font-size: 12px; font-weight: 600; margin-top: 8px; }
 .nick-hint.ok { color: var(--success); }
-.nick-hint.err { color: var(--pink); }
+.nick-hint.err { color: var(--coral); }
 
 .bottom-area {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
@@ -49,5 +49,5 @@
 }
 .done-icon-wrap img { width: 36px; height: 36px; object-fit: contain; }
 .done-title { font-size: 22px; font-weight: 800; color: var(--ink); text-align: center; line-height: 1.35; margin-bottom: 10px; letter-spacing: -0.4px; }
-.done-title .accent { color: var(--pink); }
+.done-title .accent { color: var(--coral); }
 .done-sub { font-size: 13.5px; font-weight: 500; color: var(--ink-soft); text-align: center; line-height: 1.65; margin-bottom: 36px; white-space: pre-line; }

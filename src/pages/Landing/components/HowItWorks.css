@@ -18,14 +18,14 @@
 
 /* Stitch 시안처럼 아이콘을 배경 박스 없이 단독으로, 텍스트 위에 쌓는 구조 */
 .how-it-works-icon {
-  color: var(--pink);
+  color: var(--coral);
   display: flex;
 }
 
 .how-it-works-eyebrow {
   font-size: 11px;
   font-weight: 700;
-  color: var(--pink);
+  color: var(--coral);
   letter-spacing: 0.4px;
   margin-bottom: 3px;
 }

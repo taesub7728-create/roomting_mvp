@@ -3,14 +3,14 @@
 .progress-wrap { padding: 16px 20px 0; }
 .progress-label { font-size: 11.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 8px; display: flex; justify-content: space-between; }
 .progress-bar { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
-.progress-fill { height: 100%; background: var(--pink); border-radius: 2px; transition: width 0.4s ease; }
+.progress-fill { height: 100%; background: var(--coral); border-radius: 2px; transition: width 0.4s ease; }
 
 .form-body { padding: 22px 20px 130px; display: flex; flex-direction: column; gap: 26px; }
 .rw-section { display: flex; flex-direction: column; gap: 12px; }
 .rw-section-header { display: flex; align-items: baseline; gap: 8px; }
 .rw-section-title { font-size: 14.5px; font-weight: 800; color: var(--ink); letter-spacing: -0.2px; }
 .rw-section-sub { font-size: 12px; font-weight: 500; color: var(--ink-soft); }
-.rw-required { font-size: 11px; color: var(--pink); font-weight: 700; }
+.rw-required { font-size: 11px; color: var(--coral); font-weight: 700; }
 
 .rw-input, .rw-textarea {
   width: 100%; background: var(--line);
@@ -19,7 +19,7 @@
   color: var(--ink); font-family: 'Noto Sans KR', sans-serif;
   outline: none; transition: border-color .15s, background .15s;
 }
-.rw-input:focus, .rw-textarea:focus { border-color: var(--pink); background: var(--white); }
+.rw-input:focus, .rw-textarea:focus { border-color: var(--coral); background: var(--white); }
 .rw-input::placeholder, .rw-textarea::placeholder { color: var(--ink-soft); font-weight: 500; }
 .rw-textarea { resize: none; height: 86px; line-height: 1.6; }
 
@@ -35,13 +35,13 @@
 
 .slider-card { background: var(--line); border: 1.5px solid var(--line); border-radius: 14px; padding: 16px; }
 .slider-display { display: flex; align-items: baseline; justify-content: center; gap: 4px; margin-bottom: 14px; }
-.slider-value { font-size: 23px; font-weight: 800; color: var(--pink); letter-spacing: -0.5px; }
+.slider-value { font-size: 23px; font-weight: 800; color: var(--coral); letter-spacing: -0.5px; }
 .slider-unit { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
 
 .rw-range { width: 100%; height: 4px; border-radius: 4px; background: var(--line); outline: none; border: none; padding: 0; cursor: pointer; -webkit-appearance: none; }
 .rw-range::-webkit-slider-thumb {
   -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
-  background: var(--white); border: 3px solid var(--pink); box-shadow: 0 2px 6px rgba(0,0,0,0.15); cursor: pointer;
+  background: var(--white); border: 3px solid var(--coral); box-shadow: 0 2px 6px rgba(0,0,0,0.15); cursor: pointer;
 }
 .range-labels { display: flex; justify-content: space-between; margin-top: 9px; font-size: 11px; font-weight: 600; color: var(--ink-soft); }
 
@@ -50,17 +50,17 @@
   background: var(--line); border: 1.5px solid var(--line);
   border-radius: 14px; padding: 14px 16px; cursor: pointer;
 }
-.toggle-row.on { border-color: var(--pink); background: var(--pink-soft); }
+.toggle-row.on { border-color: var(--coral); background: var(--pink-soft); }
 .toggle-left { flex: 1; padding-right: 10px; }
 .toggle-main { font-size: 13.5px; font-weight: 700; color: var(--ink); }
 .toggle-desc { font-size: 11.5px; color: var(--ink-soft); font-weight: 500; margin-top: 2px; }
-.toggle-row.on .toggle-main { color: var(--pink); }
+.toggle-row.on .toggle-main { color: var(--coral); }
 .rw-switch { width: 42px; height: 24px; border-radius: 12px; background: var(--line); position: relative; transition: background .2s; flex-shrink: 0; }
 .rw-switch::after {
   content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%;
   background: white; top: 3px; left: 3px; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
-.toggle-row.on .rw-switch { background: var(--pink); }
+.toggle-row.on .rw-switch { background: var(--coral-action); }
 .toggle-row.on .rw-switch::after { transform: translateX(18px); }
 
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -72,7 +72,7 @@
   color: var(--ink); font-family: 'Noto Sans KR', sans-serif;
   outline: none;
 }
-.date-input:focus { border-color: var(--pink); background: var(--white); }
+.date-input:focus { border-color: var(--coral); background: var(--white); }
 
 .bottom-cta {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);

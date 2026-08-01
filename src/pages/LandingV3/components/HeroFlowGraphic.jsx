@@ -24,8 +24,8 @@ export default function HeroFlowGraphic() {
       <svg className="hero-flow-lines" viewBox="0 0 100 100" preserveAspectRatio="none">
         <defs>
           <linearGradient id="v3-flow-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="var(--pink)" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="var(--pink)" stopOpacity="0.08" />
+            <stop offset="0%" stopColor="var(--coral)" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="var(--coral)" stopOpacity="0.08" />
           </linearGradient>
         </defs>
         {PATHS.map((d) => (

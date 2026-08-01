@@ -27,7 +27,7 @@ export default function RealtorPending() {
         <p style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>승인되면 안내드릴게요. 조금만 기다려주세요</p>
         <button
           className="mp-logout"
-          style={{ background: 'none', border: 'none', color: 'var(--pink)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', marginTop: 8 }}
+          style={{ background: 'none', border: 'none', color: 'var(--coral)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', marginTop: 8 }}
           onClick={startSignOut}
         >
           로그아웃

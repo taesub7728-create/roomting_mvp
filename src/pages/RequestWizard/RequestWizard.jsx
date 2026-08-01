@@ -204,7 +204,7 @@ export default function RequestWizard() {
       <div className="progress-wrap">
         <div className="progress-label">
           <span>{t.progressLabel}</span>
-          <span style={{ color: 'var(--pink)', fontWeight: 800 }}>{progressPct}%</span>
+          <span style={{ color: 'var(--coral)', fontWeight: 800 }}>{progressPct}%</span>
         </div>
         <div className="progress-bar"><div className="progress-fill" style={{ width: `${progressPct}%` }}></div></div>
       </div>
@@ -294,7 +294,7 @@ export default function RequestWizard() {
           <div className="rw-section-header"><div className="rw-section-title">{t.s5title}</div></div>
           <div className="two-col">
             <div>
-              <div className="rw-section-sub" style={{ marginBottom: 8 }}>{t.moveinLabel} <span style={{ color: 'var(--pink)' }}>*</span></div>
+              <div className="rw-section-sub" style={{ marginBottom: 8 }}>{t.moveinLabel} <span style={{ color: 'var(--coral)' }}>*</span></div>
               <input
                 className="date-input"
                 type="date"
@@ -306,7 +306,7 @@ export default function RequestWizard() {
               <div className="rw-section-sub" style={{ marginBottom: 8 }}>{t.contractLabel}</div>
               <div className="slider-card" style={{ padding: '11px 13px' }}>
                 <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--pink)' }}>{contractMonths}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--coral)' }}>{contractMonths}</span>
                   <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', marginLeft: 2 }}>{t.contractUnit}</span>
                 </div>
                 <input className="rw-range" type="range" min={1} max={24} step={1} value={contractMonths} onChange={(e) => setContractMonths(Number(e.target.value))} />

@@ -28,7 +28,7 @@
 .v3-signup-link {
   font-size: 12.5px; font-weight: 700; color: white;
   text-decoration: none; padding: 8px 14px;
-  border-radius: 20px; background: var(--pink);
+  border-radius: 20px; background: var(--coral-action);
   white-space: nowrap;
 }
 
@@ -52,7 +52,7 @@
   text-decoration: none;
 }
 .v3-profile-dd a:hover, .v3-dd-logout:hover { background: var(--pink-soft); }
-.v3-dd-logout { color: var(--pink); border-top: 1px solid var(--line); }
+.v3-dd-logout { color: var(--coral); border-top: 1px solid var(--line); }
 
 @media (min-width: 1024px) {
   .v3-header { padding: 24px 48px; }

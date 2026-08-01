@@ -93,7 +93,7 @@ body {
 /* 여러 화면에서 재사용하는 기본 버튼 */
 .rt-btn-primary {
   width: 100%;
-  background: var(--pink);
+  background: var(--coral-action);
   color: white;
   border: none;
   border-radius: 14px;
@@ -134,7 +134,7 @@ body {
   outline: none;
   transition: border-color .15s;
 }
-.rt-input:focus { border-color: var(--pink); }
+.rt-input:focus { border-color: var(--coral); }
 .rt-input::placeholder { color: #C9C2BC; font-weight: 500; }
 
 /* 화면 하단에 고정되는 안내 문구용 에러 메시지 (Supabase 등 외부 요청 실패 시 표시) */
@@ -163,7 +163,7 @@ body {
 .input-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; display: block; }
 
 /* 언어 선택 카드 (첫 실행 언어선택 화면, 회원가입 화면에서 공통 사용) */
-.slide-eyebrow { font-size: 12px; font-weight: 700; color: var(--pink); margin-bottom: 10px; letter-spacing: 0.2px; }
+.slide-eyebrow { font-size: 12px; font-weight: 700; color: var(--coral); margin-bottom: 10px; letter-spacing: 0.2px; }
 .slide-title { font-size: 19px; font-weight: 800; color: var(--ink); line-height: 1.35; letter-spacing: -0.3px; margin-bottom: 6px; white-space: pre-line; }
 .slide-sub { font-size: 13px; font-weight: 500; color: var(--ink-soft); line-height: 1.6; margin-bottom: 22px; }
 
@@ -173,10 +173,10 @@ body {
   display: flex; align-items: center; gap: 11px; transition: border-color .15s;
 }
 .lang-card:hover { border-color: #DDD5D0; }
-.lang-card.selected { border-color: var(--pink); background: var(--pink-soft); }
+.lang-card.selected { border-color: var(--coral); background: var(--pink-soft); }
 .lang-card-flag { font-size: 22px; }
 .lang-card-name { font-size: 14px; font-weight: 700; color: var(--ink); }
-.lang-card.selected .lang-card-name { color: var(--pink); }
+.lang-card.selected .lang-card-name { color: var(--coral); }
 
 /* 소셜 로그인 버튼 (회원가입/로그인 화면에서 공통 사용) */
 .social-btns { display: flex; flex-direction: column; gap: 10px; }

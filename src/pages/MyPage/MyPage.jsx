@@ -72,7 +72,7 @@ export default function MyPage() {
       <div className="frame">
         <div className="mp-empty">
           로그인이 필요해요<br />
-          <Link to="/login" style={{ color: 'var(--pink)', fontWeight: 700 }}>로그인하러 가기</Link>
+          <Link to="/login" style={{ color: 'var(--coral)', fontWeight: 700 }}>로그인하러 가기</Link>
         </div>
       </div>
     )

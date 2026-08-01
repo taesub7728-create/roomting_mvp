@@ -140,7 +140,7 @@ export default function RealtorSignUp({ initialMode = 'apply' }) {
           </button>
 
           <div className="login-signup-link" style={{ marginTop: 18 }}>
-            <span onClick={() => setMode('apply')} style={{ cursor: 'pointer', color: 'var(--pink)', fontWeight: 700 }}>
+            <span onClick={() => setMode('apply')} style={{ cursor: 'pointer', color: 'var(--coral)', fontWeight: 700 }}>
               아직 지원하지 않으셨나요? 지원서 작성하기
             </span>
           </div>
@@ -246,7 +246,7 @@ export default function RealtorSignUp({ initialMode = 'apply' }) {
         </button>
 
         <div className="rsu-link">
-          <span onClick={() => setMode('login')} style={{ cursor: 'pointer', color: 'var(--pink)', fontWeight: 700 }}>
+          <span onClick={() => setMode('login')} style={{ cursor: 'pointer', color: 'var(--coral)', fontWeight: 700 }}>
             이미 계정이 있으신가요? 로그인
           </span>
         </div>
