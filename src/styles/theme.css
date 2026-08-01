@@ -3,6 +3,7 @@
 :root {
   /* Living Coral 브랜드 팔레트 — 2026-08-01 최종 확정 (#E8547A → #F05A7E → #FF6F61) */
   --coral: #FF6F61;         /* 기본 브랜드색: 로고/아이콘/강조 텍스트/선택 상태/인디케이터 */
+  --coral-rgb: 255, 111, 97; /* --coral의 RGB 채널값 — 그림자/글로우 등 투명도가 필요한 곳에서 rgba(var(--coral-rgb), alpha) 형식으로 사용, 새 색이 아니라 --coral의 다른 표현 */
   --coral-action: #F26559;  /* 흰 글씨·아이콘이 올라가는 요소 전용 (--coral은 흰 글씨 대비 2.73으로 WCAG AA 미달, 이 값은 3.10으로 통과) */
   --paper-soft: #FFF2EF;
   --border: #F2E8E4;

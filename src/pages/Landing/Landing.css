@@ -51,7 +51,7 @@
     width: 128px;
     height: 128px;
     position: relative;
-    filter: drop-shadow(0 12px 32px rgba(240, 90, 126, 0.18));
+    filter: drop-shadow(0 12px 32px rgba(var(--coral-rgb), 0.18));
   }
 
   /* 텍스트 컬럼: 헤드라인 줄은 항상 한 줄 전체, CTA 두 개는 같은 줄에 나란히 배치 */

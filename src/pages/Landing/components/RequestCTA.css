@@ -17,12 +17,12 @@
   font-weight: 800;
   letter-spacing: -0.2px;
   text-decoration: none;
-  box-shadow: 0 12px 32px rgba(240, 90, 126, 0.28);
+  box-shadow: 0 12px 32px rgba(var(--coral-rgb), 0.28);
   transition: transform 150ms ease-out, box-shadow 150ms ease-out, opacity 150ms ease-out;
 }
 
 .request-cta-btn:hover {
-  box-shadow: 0 14px 36px rgba(240, 90, 126, 0.36);
+  box-shadow: 0 14px 36px rgba(var(--coral-rgb), 0.36);
 }
 
 .request-cta-btn:active {

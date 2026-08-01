@@ -98,7 +98,7 @@
   cursor: pointer; transition: transform .18s, border-color .15s; flex-shrink: 0; border: 1px solid var(--line);
 }
 .listing-card:active { transform: scale(.97); }
-.listing-card.highlighted { border-color: var(--pink-dim); box-shadow: 0 4px 16px rgba(232,84,122,0.18); }
+.listing-card.highlighted { border-color: var(--border); box-shadow: 0 4px 16px rgba(var(--coral-rgb),0.18); }
 
 .card-img { width: 112px; flex-shrink: 0; background: var(--line); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .card-img img { width: 100%; height: 100%; object-fit: cover; }

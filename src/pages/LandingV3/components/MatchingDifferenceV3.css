@@ -19,7 +19,7 @@
 
 .diff-col-v3-new {
   border-color: var(--border);
-  box-shadow: 0 12px 28px rgba(240, 90, 126, 0.1);
+  box-shadow: 0 12px 28px rgba(var(--coral-rgb), 0.1);
 }
 
 .diff-col-v3-badge {
