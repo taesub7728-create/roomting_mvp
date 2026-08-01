@@ -8,14 +8,50 @@ const LanguageContext = createContext(null)
 const STORAGE_KEY = 'roomting_lang'
 const SUPPORTED_LANGS = ['ko', 'ja', 'zh', 'en']
 
+function normalizeToSupported(code) {
+  if (typeof code !== 'string') return null
+  const base = code.toLowerCase().split('-')[0]
+  return SUPPORTED_LANGS.includes(base) ? base : null
+}
+
+function readStoredLang() {
+  if (typeof window === 'undefined') return null
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY)
+    return SUPPORTED_LANGS.includes(saved) ? saved : null
+  } catch {
+    return null // 사파리 프라이빗 모드 등 localStorage 접근이 막힌 환경
+  }
+}
+
+// 외국인 대상 서비스라 최초 방문 폴백은 'ko'가 아니라 'en'.
+// 우선순위: 저장된 값 → navigator.languages(브라우저 선호 순서) → navigator.language → 'en'
+function detectInitialLanguage() {
+  const stored = readStoredLang()
+  if (stored) return stored
+
+  if (typeof navigator === 'undefined') return 'en'
+  const candidates = [...new Set([
+    ...(Array.isArray(navigator.languages) ? navigator.languages : []),
+    navigator.language,
+  ].filter(Boolean))]
+
+  for (const candidate of candidates) {
+    const normalized = normalizeToSupported(candidate)
+    if (normalized) return normalized
+  }
+  return 'en'
+}
+
 export function LanguageProvider({ children }) {
-  const [lang, setLangState] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    return SUPPORTED_LANGS.includes(saved) ? saved : 'ko'
-  })
+  const [lang, setLangState] = useState(detectInitialLanguage)
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, lang)
+    try {
+      localStorage.setItem(STORAGE_KEY, lang)
+    } catch {
+      // 저장 실패해도 화면 언어 자체는 이미 바뀐 상태라 조용히 무시
+    }
   }, [lang])
 
   const setLang = (code) => {
