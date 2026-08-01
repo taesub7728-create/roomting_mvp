@@ -50,7 +50,7 @@
   background: var(--line); border: 1.5px solid var(--line);
   border-radius: 14px; padding: 14px 16px; cursor: pointer;
 }
-.toggle-row.on { border-color: var(--coral); background: var(--pink-soft); }
+.toggle-row.on { border-color: var(--coral); background: var(--paper-soft); }
 .toggle-left { flex: 1; padding-right: 10px; }
 .toggle-main { font-size: 13.5px; font-weight: 700; color: var(--ink); }
 .toggle-desc { font-size: 11.5px; color: var(--ink-soft); font-weight: 500; margin-top: 2px; }

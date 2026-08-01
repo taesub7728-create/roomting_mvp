@@ -7,7 +7,7 @@
 .rd-profile-row { display: flex; align-items: center; gap: 12px; padding: 0 20px 18px; }
 .rd-profile-avatar {
   width: 44px; height: 44px; border-radius: 14px;
-  background: var(--pink-soft); border: 1.5px solid var(--border);
+  background: var(--paper-soft); border: 1.5px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   font-size: 18px; font-weight: 800; color: var(--coral); font-family: 'Manrope', sans-serif; flex-shrink: 0;
 }
@@ -51,7 +51,7 @@
 
 .rd-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .rd-tag {
-  padding: 4px 10px; border-radius: 50px; background: var(--pink-soft);
+  padding: 4px 10px; border-radius: 50px; background: var(--paper-soft);
   font-size: 11.5px; font-weight: 700; color: var(--coral);
 }
 .rd-tag.neutral { background: var(--line); color: var(--ink-soft); }
@@ -64,7 +64,7 @@
 .rd-empty { padding: 60px 20px; text-align: center; color: var(--ink-soft); font-size: 13.5px; }
 
 .rd-thumb {
-  width: 44px; height: 44px; border-radius: 10px; background: var(--pink-soft);
+  width: 44px; height: 44px; border-radius: 10px; background: var(--paper-soft);
   display: flex; align-items: center; justify-content: center; font-size: 18px;
   overflow: hidden; flex-shrink: 0;
 }
@@ -109,12 +109,12 @@
   box-shadow: 0 8px 20px rgba(0,0,0,.08); overflow: hidden;
 }
 .rd-address-option { padding: 11px 14px; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; }
-.rd-address-option:hover { background: var(--pink-soft); }
+.rd-address-option:hover { background: var(--paper-soft); }
 .rd-address-option + .rd-address-option { border-top: 1px solid var(--line); }
 
 .rd-address-selected {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  background: var(--pink-soft); border: 1.5px solid var(--border); border-radius: 13px; padding: 13px 15px;
+  background: var(--paper-soft); border: 1.5px solid var(--border); border-radius: 13px; padding: 13px 15px;
 }
 .rd-address-selected span { font-size: 13.5px; font-weight: 700; color: var(--ink); }
 .rd-address-change { background: none; border: none; color: var(--coral); font-weight: 700; font-size: 12.5px; cursor: pointer; flex-shrink: 0; }
@@ -134,7 +134,7 @@
   padding: 5px 10px; font-size: 11.5px; font-weight: 700; color: var(--coral);
   cursor: pointer; font-family: 'Noto Sans KR', sans-serif; white-space: nowrap;
 }
-.rd-listing-edit-btn:hover { background: var(--pink-soft); }
+.rd-listing-edit-btn:hover { background: var(--paper-soft); }
 
 .rd-existing-photos { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .rd-existing-photo { width: 52px; height: 52px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); flex-shrink: 0; }
@@ -168,7 +168,7 @@
   }
   .rd-table td { padding: 14px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink); }
   .rd-table tbody tr { transition: background .12s; }
-  .rd-table tbody tr:hover { background: var(--pink-soft); }
+  .rd-table tbody tr:hover { background: var(--paper-soft); }
   .rd-table tbody tr.rd-row-clickable { cursor: pointer; }
   .rd-td-region { font-weight: 800; white-space: nowrap; }
   .rd-td-region .rd-tag { margin-left: 6px; }

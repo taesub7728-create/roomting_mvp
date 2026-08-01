@@ -6,7 +6,7 @@
 .mp-profile-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
 .mp-avatar {
   width: 56px; height: 56px; border-radius: 16px;
-  background: var(--pink-soft); border: 1.5px solid var(--border);
+  background: var(--paper-soft); border: 1.5px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   font-size: 22px; font-weight: 800; color: var(--coral);
   font-family: 'Manrope', sans-serif; flex-shrink: 0;
@@ -51,7 +51,7 @@
 .mp-req-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .mp-req-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 50px; padding: 4px 10px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
 
-.mp-req-responses { background: var(--pink-soft); border-radius: 11px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
+.mp-req-responses { background: var(--paper-soft); border-radius: 11px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
 .mp-req-responses.closed { background: #F3F0ED; }
 .mp-req-resp-count { font-size: 12.5px; font-weight: 700; color: var(--coral); }
 .mp-req-resp-count.closed { color: var(--ink-soft); }

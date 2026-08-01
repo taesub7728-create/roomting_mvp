@@ -44,7 +44,7 @@
   padding: 40px; z-index: 100;
 }
 .done-icon-wrap {
-  width: 72px; height: 72px; border-radius: 20px; background: var(--pink-soft);
+  width: 72px; height: 72px; border-radius: 20px; background: var(--paper-soft);
   display: flex; align-items: center; justify-content: center; margin-bottom: 24px;
 }
 .done-icon-wrap img { width: 36px; height: 36px; object-fit: contain; }

@@ -7,12 +7,6 @@
   --coral-action: #F26559;  /* 흰 글씨·아이콘이 올라가는 요소 전용 (--coral은 흰 글씨 대비 2.73으로 WCAG AA 미달, 이 값은 3.10으로 통과) */
   --paper-soft: #FFF2EF;
   --border: #F2E8E4;
-
-  /* 폐기 예정 alias — src 참조를 --coral/--coral-action으로 전량 교체한 뒤 제거 예정 (커밋 3단계) */
-  --pink: var(--coral-action); /* 기존 값(#F26559)과 hex 동일 → 이 alias 자체는 시각적 변화 없음. 실제 교체는 파일별로 --coral 또는 --coral-action으로 직접 지정 */
-  --pink-soft: var(--paper-soft);
-  --pink-accent: var(--coral-action); /* 기존 값(#ED6445)과 근사치 — Splash.css 3곳은 개별 교체 예정 */
-  --pink-dim: #F7D6D4; /* 신규 팔레트에 대응 토큰 없음 — border 용도 16곳은 --border로, step-dot 2곳은 --coral로 개별 교체 후 제거 */
   --ink: #1C1A19;
   --ink-soft: #8A8480;
   --line: #EFEBE7;
@@ -173,7 +167,7 @@ body {
   display: flex; align-items: center; gap: 11px; transition: border-color .15s;
 }
 .lang-card:hover { border-color: #DDD5D0; }
-.lang-card.selected { border-color: var(--coral); background: var(--pink-soft); }
+.lang-card.selected { border-color: var(--coral); background: var(--paper-soft); }
 .lang-card-flag { font-size: 22px; }
 .lang-card-name { font-size: 14px; font-weight: 700; color: var(--ink); }
 .lang-card.selected .lang-card-name { color: var(--coral); }

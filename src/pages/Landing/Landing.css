@@ -14,7 +14,7 @@
    나머지 섹션(How it works 이하)은 흰 배경 그대로 - 히어로만 시각적으로 구분되는 구역이라는
    인상을 주기 위함(Stitch 원본의 hero-gradient 스코프를 그대로 따름) */
 .hero-canvas {
-  background: linear-gradient(180deg, var(--pink-soft) 0%, var(--paper) 78%);
+  background: linear-gradient(180deg, var(--paper-soft) 0%, var(--paper) 78%);
 }
 
 /* 모바일: hero-text-col 안의 섹션들이 그냥 세로로 쌓임, hero-graphic은 숨김 */
@@ -44,7 +44,7 @@
     width: 340px;
     height: 340px;
     border-radius: 50%;
-    background: radial-gradient(circle, var(--pink-soft) 0%, rgba(253, 238, 241, 0) 72%);
+    background: radial-gradient(circle, var(--paper-soft) 0%, rgba(253, 238, 241, 0) 72%);
   }
 
   .hero-graphic img {

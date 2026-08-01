@@ -304,7 +304,7 @@
   width: clamp(60px, 17.5vw, 70px);
   height: clamp(60px, 17.5vw, 70px);
   border-radius: clamp(14px, 4vw, 16px);
-  background: var(--pink-soft);
+  background: var(--paper-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -359,7 +359,7 @@
   flex: none;
   padding: 3px clamp(8px, 2.3vw, 10px);
   border-radius: 999px;
-  background: var(--pink-soft);
+  background: var(--paper-soft);
   color: var(--coral);
   font-family: 'Noto Sans KR', sans-serif;
   font-weight: 700;

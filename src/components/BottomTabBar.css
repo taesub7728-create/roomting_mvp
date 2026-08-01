@@ -34,7 +34,7 @@
 }
 
 .tab-item.active .tab-icon {
-  background: var(--pink-soft);
+  background: var(--paper-soft);
   color: var(--coral);
 }
 
@@ -77,7 +77,7 @@
   }
 
   .tab-item.active {
-    background: var(--pink-soft);
+    background: var(--paper-soft);
   }
 
   .tab-icon {

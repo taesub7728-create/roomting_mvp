@@ -25,7 +25,7 @@
 }
 .lang-dd.open { display: block; }
 .lang-dd div { padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); }
-.lang-dd div:hover { background: var(--pink-soft); }
+.lang-dd div:hover { background: var(--paper-soft); }
 
 .auth-links { display: flex; align-items: center; gap: 8px; }
 
@@ -46,7 +46,7 @@
 .profile-box { position: relative; }
 .profile-btn {
   width: 34px; height: 34px; border-radius: 50%;
-  background: var(--pink-soft); border: 1.5px solid var(--border);
+  background: var(--paper-soft); border: 1.5px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; cursor: pointer; flex-shrink: 0;
   font-family: 'Noto Sans KR', sans-serif; font-weight: 700; color: var(--ink);
@@ -62,7 +62,7 @@
   cursor: pointer; display: flex; align-items: center; gap: 8px;
   text-decoration: none;
 }
-.profile-dd div:hover, .profile-dd a:hover { background: var(--pink-soft); }
+.profile-dd div:hover, .profile-dd a:hover { background: var(--paper-soft); }
 .profile-dd .dd-logout { color: var(--coral); border-top: 1px solid var(--line); }
 
 /* 데스크톱: 히어로와 함께 넓어진 컨테이너 폭에 맞춰 헤더 좌우 여백도 함께 확장 */

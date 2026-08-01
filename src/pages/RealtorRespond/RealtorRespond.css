@@ -11,7 +11,7 @@
 .rr-title { font-size: 16px; font-weight: 800; color: var(--ink); }
 
 .rr-summary {
-  margin: 0 20px 20px; padding: 14px 16px; background: var(--pink-soft);
+  margin: 0 20px 20px; padding: 14px 16px; background: var(--paper-soft);
   border-radius: 14px; font-size: 13px; color: var(--ink); line-height: 1.6;
 }
 .rr-summary b { color: var(--coral); }

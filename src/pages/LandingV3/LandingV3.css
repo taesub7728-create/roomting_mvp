@@ -8,7 +8,7 @@
 }
 
 .v3-hero-canvas {
-  background: radial-gradient(circle at 50% 0%, var(--pink-soft) 0%, var(--paper) 62%);
+  background: radial-gradient(circle at 50% 0%, var(--paper-soft) 0%, var(--paper) 62%);
 }
 
 .v3-hero-group { position: relative; }

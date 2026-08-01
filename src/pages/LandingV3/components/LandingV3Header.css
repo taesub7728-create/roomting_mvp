@@ -35,7 +35,7 @@
 .v3-profile-box { position: relative; }
 .v3-profile-btn {
   width: 34px; height: 34px; border-radius: 50%;
-  background: var(--pink-soft); border: 1.5px solid var(--border);
+  background: var(--paper-soft); border: 1.5px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; cursor: pointer; flex-shrink: 0;
   font-weight: 700; color: var(--ink);
@@ -51,7 +51,7 @@
   cursor: pointer; display: flex; align-items: center; gap: 8px;
   text-decoration: none;
 }
-.v3-profile-dd a:hover, .v3-dd-logout:hover { background: var(--pink-soft); }
+.v3-profile-dd a:hover, .v3-dd-logout:hover { background: var(--paper-soft); }
 .v3-dd-logout { color: var(--coral); border-top: 1px solid var(--line); }
 
 @media (min-width: 1024px) {
