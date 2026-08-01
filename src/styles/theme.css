@@ -1,10 +1,17 @@
 /* 룸팅 전체 화면에서 공통으로 쓰는 색상/간격 값과 기본 리셋
    프로토타입(roomting-*.html)의 :root 변수 값을 그대로 가져옴 - 디자인 톤 유지 */
 :root {
-  --pink: #F26559;
-  --pink-soft: #FBF2F1;
-  --pink-dim: #F7D6D4;
-  --pink-accent: #ED6445; /* 알림 배지 등 강조점 전용 — 2026-07-31 신설, CTA에는 --pink 사용 */
+  /* Living Coral 브랜드 팔레트 — 2026-08-01 최종 확정 (#E8547A → #F05A7E → #FF6F61) */
+  --coral: #FF6F61;         /* 기본 브랜드색: 로고/아이콘/강조 텍스트/선택 상태/인디케이터 */
+  --coral-action: #F26559;  /* 흰 글씨·아이콘이 올라가는 요소 전용 (--coral은 흰 글씨 대비 2.73으로 WCAG AA 미달, 이 값은 3.10으로 통과) */
+  --paper-soft: #FFF2EF;
+  --border: #F2E8E4;
+
+  /* 폐기 예정 alias — src 참조를 --coral/--coral-action으로 전량 교체한 뒤 제거 예정 (커밋 3단계) */
+  --pink: var(--coral-action); /* 기존 값(#F26559)과 hex 동일 → 이 alias 자체는 시각적 변화 없음. 실제 교체는 파일별로 --coral 또는 --coral-action으로 직접 지정 */
+  --pink-soft: var(--paper-soft);
+  --pink-accent: var(--coral-action); /* 기존 값(#ED6445)과 근사치 — Splash.css 3곳은 개별 교체 예정 */
+  --pink-dim: #F7D6D4; /* 신규 팔레트에 대응 토큰 없음 — border 용도 16곳은 --border로, step-dot 2곳은 --coral로 개별 교체 후 제거 */
   --ink: #1C1A19;
   --ink-soft: #8A8480;
   --line: #EFEBE7;
