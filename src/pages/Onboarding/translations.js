@@ -66,7 +66,7 @@ export const onboardingText = {
       },
       {
         id: 'onboarding_2',
-        headline: '複数の仲介会社から\nそれぞれ提案が届きます',
+        headline: '複数の仲介会社から\nそれぞれ提案します',
         sub: '1回のリクエストで複数の提案を受け取れます',
         cta: '次へ',
         skipVisible: true,
