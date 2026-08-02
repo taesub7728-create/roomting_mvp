@@ -25,6 +25,7 @@ import LandingV3 from './pages/LandingV3/LandingV3'
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
 import AdminLogin from './pages/AdminDashboard/AdminLogin'
 import ComingSoon from './pages/ComingSoon/ComingSoon'
+import Onboarding from './pages/Onboarding/Onboarding'
 
 function App() {
   return (
@@ -75,6 +76,9 @@ function App() {
               <Route path="/realtor/pending" element={<RealtorPending />} />
 
               <Route path="/coming-soon" element={<ComingSoon />} />
+              {/* Splash 이후 자동 진입 분기(open 요청서 직행/재방문 스킵)는 커밋 3에서 AppEntryGate가 연결한다.
+                  이 라우트는 그때까지 직접 URL 접근으로만 검증한다 */}
+              <Route path="/onboarding" element={<Onboarding />} />
 
               {/* 운영자 화면: role==='admin'만 허용, 아니면 로그아웃 후 /admin/login으로 */}
               <Route element={<AdminRoute />}>

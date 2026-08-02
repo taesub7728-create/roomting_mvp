@@ -1,0 +1,310 @@
+/* .frame(theme.css)이 max-width:430px 중앙 정렬 + flex column을 이미 제공한다.
+   여기서는 온보딩 전용 여백/타이포/목업만 추가한다. */
+.ob-frame {
+  padding-left: 24px;
+  padding-right: 24px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+}
+
+.ob-top {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 44px;
+}
+
+.ob-skip {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 11px 0;
+  background: none;
+  border: none;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: -0.1px;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.15s;
+}
+.ob-skip:active { opacity: 0.7; color: var(--ink); }
+
+.ob-headline {
+  margin-top: 32px;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 44px;
+  letter-spacing: -0.8px;
+  color: var(--ink);
+  text-align: center;
+  white-space: pre-line;
+}
+/* 화면 전환 시 스크린리더 사용자를 위해 프로그래밍적으로만 포커스 이동 - 시각적 링은 불필요 */
+.ob-headline:focus { outline: none; }
+
+.ob-sub {
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  letter-spacing: -0.1px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.ob-visual {
+  margin-top: 24px;
+  flex: 1;
+  min-height: 260px;
+  display: flex;
+  align-items: stretch;
+}
+
+.ob-card {
+  width: 100%;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ob-card-request { gap: 14px; }
+.ob-card-proposals { gap: 8px; }
+.ob-card-chat { gap: 14px; }
+
+.ob-card-title,
+.ob-chat-header {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: -0.1px;
+  color: var(--coral);
+}
+
+/* ---------- onboarding_1: 요청서 목업 ---------- */
+
+.ob-field-row {
+  display: flex;
+  gap: 14px;
+}
+.ob-field-row .ob-field { flex: 1; min-width: 0; }
+
+.ob-field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: -0.1px;
+  color: var(--muted);
+}
+.ob-field-label svg { color: var(--coral); flex-shrink: 0; }
+
+.ob-field-value {
+  margin-top: 6px;
+  padding: 11px 14px;
+  background: var(--paper-soft);
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: -0.1px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- onboarding_2: 제안 카드 목업 ---------- */
+
+.ob-proposal-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+.ob-proposal-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--paper-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--coral);
+}
+.ob-proposal-body { flex: 1; min-width: 0; }
+.ob-proposal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ob-proposal-name {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: -0.1px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ob-proposal-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--coral-action);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.ob-proposal-price {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ob-proposal-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--muted-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- onboarding_3: 번역 채팅 목업 ---------- */
+
+.ob-bubble {
+  border-radius: 20px;
+  max-width: 88%;
+}
+.ob-bubble-incoming {
+  align-self: flex-start;
+  background: var(--paper-soft);
+  padding: 12px 14px;
+}
+.ob-bubble-outgoing {
+  align-self: flex-end;
+  background: var(--coral-action);
+  padding: 14px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: -0.1px;
+  color: var(--white);
+}
+.ob-bubble-plain {
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: -0.1px;
+  color: var(--ink);
+}
+
+.ob-bubble-label {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  color: var(--muted);
+}
+.ob-bubble-translated {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: -0.1px;
+  color: var(--ink);
+}
+.ob-bubble-divider {
+  margin: 8px 0;
+  height: 1px;
+  background: var(--border);
+}
+.ob-bubble-original {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--muted-soft);
+}
+
+/* ---------- 인디케이터 ---------- */
+
+.ob-indicator {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+.ob-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+.ob-dot.active {
+  width: 24px;
+  background: var(--coral);
+}
+
+/* ---------- CTA ---------- */
+
+.ob-cta {
+  margin-top: 14px;
+  width: 100%;
+  min-height: 52px;
+  background: var(--coral-action);
+  color: var(--white);
+  border: none;
+  border-radius: 26px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  letter-spacing: -0.1px;
+  cursor: pointer;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.ob-cta:active {
+  opacity: 0.92;
+  transform: scale(0.98);
+}
+
+.ob-skip:focus-visible,
+.ob-cta:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-cta,
+  .ob-skip,
+  .ob-dot {
+    transition: none;
+  }
+  .ob-cta:active {
+    transform: none;
+  }
+}
