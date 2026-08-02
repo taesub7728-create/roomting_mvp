@@ -76,8 +76,7 @@ function App() {
               <Route path="/realtor/pending" element={<RealtorPending />} />
 
               <Route path="/coming-soon" element={<ComingSoon />} />
-              {/* Splash 이후 자동 진입 분기(open 요청서 직행/재방문 스킵)는 커밋 3에서 AppEntryGate가 연결한다.
-                  이 라우트는 그때까지 직접 URL 접근으로만 검증한다 */}
+              {/* AppEntryGate가 '/' 콜드 스타트 시 자동으로 이리로 보낼 수도 있고, 직접 URL로도 접근 가능 */}
               <Route path="/onboarding" element={<Onboarding />} />
 
               {/* 운영자 화면: role==='admin'만 허용, 아니면 로그아웃 후 /admin/login으로 */}

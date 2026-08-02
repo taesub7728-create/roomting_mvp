@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { MapPin, Wallet, Home as HomeIcon, Calendar, Building2 } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
+import { useAuth } from '../../shared/auth/useAuth'
+import { markOnboardingSeen, isOnboardingEligibleRole, findLatestOpenRequest } from '../../shared/routes/onboardingEntry'
 import { onboardingText } from './translations'
 import './Onboarding.css'
 
@@ -68,11 +71,14 @@ function ChatMockup({ data }) {
   )
 }
 
-// Splash 이후 진입 분기(open 요청서 직행 / 재방문 스킵)와 완료 상태 저장(roomting_onboarding_seen_v1)은
-// 커밋 3에서 연결한다. 이번 커밋은 /onboarding 직접 접근으로 화면 자체만 검증 가능하면 된다.
-// onComplete는 "마지막 장 CTA" 또는 "Skip"을 눌렀을 때 호출되는 콜백 자리만 미리 마련해둔 것.
-export default function Onboarding({ onComplete }) {
+// Splash 이후 진입 분기(open 요청서 직행 / 재방문 스킵)는 AppEntryGate가 담당하고, 여기서는
+// "완료 시점"에 같은 우선순위(open 요청서 > Home)로 이동한다 - AppEntryGate의 판단은 콜드
+// 스타트 시점 스냅샷이라, 온보딩을 보는 동안 상황이 바뀌었을 수 있어 완료 시점에 다시 확인한다.
+// /onboarding 직접 접근(딥링크)도 이 컴포넌트 하나로 그대로 지원된다.
+export default function Onboarding() {
   const { lang } = useLanguage()
+  const { user, profile } = useAuth()
+  const navigate = useNavigate()
   // 온보딩 진행 중 전역 언어가 바뀌어도 화면 수/문구가 어긋나지 않도록 진입 시점 언어를 고정한다.
   const [lockedLang] = useState(() => lang)
   const t = onboardingText[lockedLang]
@@ -81,6 +87,7 @@ export default function Onboarding({ onComplete }) {
   const [index, setIndex] = useState(0)
   const headlineRef = useRef(null)
   const isFirstRenderRef = useRef(true)
+  const completingRef = useRef(false) // Skip/Start 연타 시 navigate가 중복 호출되지 않도록 막는다
   const screen = screens[index]
   const isLast = index === screens.length - 1
 
@@ -93,13 +100,27 @@ export default function Onboarding({ onComplete }) {
     headlineRef.current?.focus()
   }, [index])
 
+  // Skip과 마지막 장 CTA 모두 동일한 완료 처리로 수렴한다: 완료 상태를 저장하고,
+  // 로그인 customer/pending_realtor에게 최신 open 요청서가 있으면 그리로, 없으면 홈으로 이동한다.
+  async function completeOnboarding() {
+    if (completingRef.current) return
+    completingRef.current = true
+
+    markOnboardingSeen()
+
+    const eligible = !!user && isOnboardingEligibleRole(profile?.role)
+    const openRequest = eligible ? await findLatestOpenRequest() : null
+
+    navigate(openRequest ? `/requests/${openRequest.id}` : '/', { replace: true })
+  }
+
   function handleNext() {
-    if (isLast) { onComplete?.(); return }
+    if (isLast) { completeOnboarding(); return }
     setIndex((i) => i + 1)
   }
 
   function handleSkip() {
-    onComplete?.()
+    completeOnboarding()
   }
 
   return (

@@ -18,6 +18,24 @@
   - 신청 대기 여부 → realtor_applications 기준
   - 실제 권한 → profiles.role 기준
 
+### pending_realtor 라우트 가드 불일치 (2026-08-02 발견)
+
+Splash/Onboarding 작업(AppEntryGate) 중 Playwright mock으로 발견한 기존 불일치:
+
+- `MyPage.jsx`는 `profile.role === 'pending_realtor'`를 **customer와 동일하게** 취급한다
+  (심사 대기 중인 고객으로 표시).
+- 반면 `homePathForRole()`(`src/shared/auth/homePathForRole.js`)과
+  `CustomerRoute`/`PublicCustomerRoute`(`useCustomerGuardChecks` 기반)는
+  `pending_realtor`를 **realtor 그룹**으로 취급해 `/realtor` 계열로 리다이렉트한다.
+- 실제 영향: AppEntryGate가 로그인 `pending_realtor` + open 요청서 보유 사용자를
+  `/requests/:id`로 보내려 해도, `PublicCustomerRoute`가 그보다 먼저 `/realtor`로
+  리다이렉트해버려서 실제로는 도달하지 못한다(Playwright mock으로 재현 확인,
+  `/realtor` → `/realtor/pending`으로 귀결됨).
+- 이번 커밋(AppEntryGate)에서는 이 기존 가드를 건드리지 않고 그대로 둠 - role/권한
+  체계 변경은 CLAUDE.md 규칙상 별도 분석·승인이 필요한 사안이라 범위 밖으로 남긴다.
+- 다음에 pending_realtor를 실제로 정리(위 "pending_realtor role 정리" 섹션)할 때
+  이 불일치도 함께 해소 대상으로 검토할 것.
+
 ## 장기 Role 정책
 
 profiles.role은 아래 4개 상태만 실제 운영 상태로 유지한다.
@@ -66,6 +84,23 @@ ProfileMissingError.jsx에 ko/ja/zh/en 번역을 적용함.
   미검증 상태로 남김.
 - 요청서 마법사(RequestWizard) 작업 때 로그인 플로우를 실제로 타게 되므로,
   그 과정에서 Chat.jsx/ProfileMissingError.jsx의 4개 언어 렌더도 함께 확인한다.
+
+## Splash/Onboarding 검증 미완료 항목 (2026-08-02)
+
+커밋 1~3(Splash 단순화, Onboarding, AppEntryGate 진입 분기)에서 실제 계정 없이는
+확인할 수 없었던 항목:
+
+- **safe-area 실기기 검증**: 헤드리스 Chromium은 `env(safe-area-inset-*)`를 항상 0으로
+  평가해서, CSS 패딩 계산은 시뮬레이션(고정 px 오버라이드)으로만 검증했다. `viewport-fit=cover`
+  적용 자체와 Onboarding 11개 화면의 여백 계산이 실제 노치 기기(iPhone 실기기/시뮬레이터)에서도
+  의도대로 동작하는지는 미검증.
+- **open 요청서 직행(customer/pending_realtor)**: 실제 로그인 계정이 없어 Playwright
+  route interception으로 Supabase 응답을 mock해서 검증했다(가짜 세션 localStorage 주입 +
+  `auth/v1/user`, `rest/v1/profiles`, `rest/v1/requests`, `rest/v1/realtor_applications`,
+  `rest/v1/properties` 응답 스텁). 코드 경로 자체는 mock으로 12개 시나리오 중 11개 통과 확인했지만,
+  실제 Supabase 세션·RLS를 통과하는 진짜 계정으로는 아직 검증 안 됨.
+- 요청서 마법사(RequestWizard) 작업 때 실제 로그인 플로우를 타게 되므로, 그때 위 두 항목과
+  더불어 Chat.jsx/ProfileMissingError.jsx 다국어 렌더(위 항목)까지 함께 실기기/실계정으로 확인한다.
 
 ## 향후 권한 모델 발전 방향
 
