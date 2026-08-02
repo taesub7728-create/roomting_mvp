@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Home, Send, TriangleAlert } from 'lucide-react'
+import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile } from '../../api/auth.api'
 import { getPropertyById } from '../../api/properties.api'
 import {
@@ -12,10 +13,13 @@ import {
   subscribeToRoomUpdates,
 } from '../../api/chat.api'
 import BottomTabBar from '../../components/BottomTabBar'
+import { chatText } from './translations'
 import './Chat.css'
 
 export default function Chat() {
   const { propertyId } = useParams()
+  const { lang } = useLanguage()
+  const t = chatText[lang]
 
   const [myProfile, setMyProfile] = useState(null)
   const [chatRoom, setChatRoom] = useState(null)
@@ -36,7 +40,7 @@ export default function Chat() {
 
     async function init() {
       const { data: profile, error: profileError } = await getCurrentProfile()
-      if (profileError || !profile) { setError(profileError || '로그인이 필요합니다.'); setLoading(false); return }
+      if (profileError || !profile) { setError(profileError || t.needLogin); setLoading(false); return }
       setMyProfile(profile)
 
       const { data: room, error: roomError } = await getOrCreatePropertyChatRoom(propertyId)
@@ -76,6 +80,7 @@ export default function Chat() {
       unsubscribeMessages()
       unsubscribeRoom()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyId])
 
   useEffect(() => {
@@ -97,7 +102,7 @@ export default function Chat() {
     if (sendError) setError(sendError)
   }
 
-  if (loading) return <div className="frame"><div style={{ padding: 20 }}>불러오는 중...</div></div>
+  if (loading) return <div className="frame"><div style={{ padding: 20 }}>{t.loading}</div></div>
   if (error) return <div className="frame"><div className="rt-error-text" style={{ padding: 20 }}>{error}</div></div>
 
   const isCustomer = chatRoom.customer_id === myProfile.id
@@ -111,7 +116,7 @@ export default function Chat() {
     <div className="frame">
       <div className="top-bar">
         <Link className="back-btn" to="/">←</Link>
-        <div className="top-title">{otherProfile?.nickname || '채팅'}</div>
+        <div className="top-title">{otherProfile?.nickname || t.defaultTitle}</div>
       </div>
 
       {property && (
@@ -122,14 +127,14 @@ export default function Chat() {
           <div className="chat-property-info">
             <div className="chat-property-title">{property.title}</div>
             <div className="chat-property-price">
-              보증금 {Number(property.deposit ?? 0).toLocaleString()}만원 / 월세 {property.monthly_rent ?? 0}만원
+              {t.priceLine(Number(property.deposit ?? 0).toLocaleString(), property.monthly_rent ?? 0)}
             </div>
           </div>
         </div>
       )}
 
       <div className="chat-body">
-        {messages.length === 0 && <div className="chat-empty">첫 메시지를 보내보세요</div>}
+        {messages.length === 0 && <div className="chat-empty">{t.emptyState}</div>}
         {messages.map((m, idx) => {
           const isMine = m.sender_id === myProfile.id
           // 상대방이 보낸 메시지는 나에게 맞게 번역된 텍스트를 우선 보여주고,
@@ -144,16 +149,16 @@ export default function Chat() {
           return (
             <div className={`chat-msg-row${isMine ? ' mine' : ''}`} key={m.id}>
               {isMine && isLastMineMessage && (
-                <span className="chat-read-mark">{isRead ? '읽음' : '전송됨'}</span>
+                <span className="chat-read-mark">{isRead ? t.read : t.sent}</span>
               )}
               <div className="chat-bubble">
                 <div className="chat-original">{primaryText}</div>
                 {showOriginalBelow && <div className="chat-translated">{m.original_text}</div>}
                 {!isMine && m.translation_status === 'failed' && (
-                  <div className="chat-translate-fail"><TriangleAlert size={12} strokeWidth={2} style={{ verticalAlign: -2, marginRight: 3 }} /> 번역 실패, 원문만 표시</div>
+                  <div className="chat-translate-fail"><TriangleAlert size={12} strokeWidth={2} style={{ verticalAlign: -2, marginRight: 3 }} /> {t.translateFailed}</div>
                 )}
                 {!isMine && m.translation_status === 'pending' && (
-                  <div className="chat-translate-fail">번역 중...</div>
+                  <div className="chat-translate-fail">{t.translating}</div>
                 )}
               </div>
             </div>
@@ -166,7 +171,7 @@ export default function Chat() {
         <input
           className="chat-input"
           type="text"
-          placeholder="메시지를 입력하세요"
+          placeholder={t.inputPlaceholder}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSend() }}
