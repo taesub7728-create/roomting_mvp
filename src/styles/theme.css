@@ -9,6 +9,8 @@
   --border: #F2E8E4;
   --ink: #1C1A19;
   --ink-soft: #8A8480;
+  --muted: #7D7672;      /* 보조 설명문 / Skip 버튼 / 카드 보조 텍스트 (--ink-soft와 다른 위계, Onboarding에서 도입) */
+  --muted-soft: #B3ABA6; /* 더 낮은 위계의 원문·placeholder·메타 정보(거리/시간 등) */
   --line: #EFEBE7;
   --paper: #FFFCFB;
   --white: #fff;

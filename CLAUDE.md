@@ -166,3 +166,9 @@ Step 1.5(로그인 UX 정리) 진행 시 함께 처리한다.
 - rgba(), rgb(), hsl(), hsla()에 브랜드 색상 채널값을 직접 하드코딩하지 않는다.
 - 브랜드 색상 변경 시 hex뿐 아니라 rgb/rgba/hsl/hsla/SVG 표현까지 함께 검색한다.
 - 새 RGB 동반 토큰(예: --coral-rgb)은 실제 투명도 표현에 필요한 기존 팔레트 색에만 허용한다.
+- var(--muted)/var(--muted-soft)는 2026-08-02 Onboarding 작업에서 추가된 회색 계열 토큰이다.
+  --ink-soft(#8A8480)와 역할이 겹치지 않게 구분해서 쓴다:
+  - --muted(#7D7672): 보조 설명문, Skip 버튼, 카드 보조 텍스트
+  - --muted-soft(#B3ABA6): 더 낮은 위계의 원문·placeholder·메타 정보(거리/시간 등)
+  - --ink-soft(#8A8480): 기존 화면(MyPage, PropertyDetail 등)의 보조 텍스트 — 기존 용법 그대로 유지
+  신규 화면에서 회색 텍스트가 필요하면 --ink-soft를 임의로 대체하지 말고 위계에 맞는 토큰을 고른다.
