@@ -54,6 +54,19 @@ Route Guard(CustomerRoute/RealtorRoute/AdminRoute)로 인증/권한 분리
 함수 추가, 심사 대기 중인 신청자가 API 직접 호출로 요청서를 생성하는 취약점 차단
 
 
+## 다국어(i18n) 검증 미완료 항목
+
+커밋 3(`d4be514`, 2026-08-02)에서 Chat.jsx/BottomTabBar.jsx/ComingSoon.jsx/
+ProfileMissingError.jsx에 ko/ja/zh/en 번역을 적용함.
+
+- BottomTabBar/ComingSoon은 Playwright 스크린샷으로 4개 언어 렌더 확인 완료.
+- Chat.jsx/ProfileMissingError.jsx는 실제 로그인 세션이 있어야 렌더되는
+  화면이라, 임의 테스트 계정을 만들지 않는 원칙상 이번엔 코드 검토
+  (하드코딩 한글 잔존 0건, build+lint 통과)로만 확인하고 브라우저 실렌더는
+  미검증 상태로 남김.
+- 요청서 마법사(RequestWizard) 작업 때 로그인 플로우를 실제로 타게 되므로,
+  그 과정에서 Chat.jsx/ProfileMissingError.jsx의 4개 언어 렌더도 함께 확인한다.
+
 ## 향후 권한 모델 발전 방향
 
 지금까지 검증된 원칙: role 하나만으로 권한을 판단하지 않는다.
