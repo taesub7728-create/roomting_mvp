@@ -111,10 +111,18 @@ ProfileMissingError.jsx에 ko/ja/zh/en 번역을 적용함.
 
 ## CustomerHome (모바일 로그인 고객 홈) 관련 (2026-08-02)
 
-- **데스크톱 로그인 고객 홈**: 모바일 전체 플로우가 완성되기 전까지는 1024px 이상에서
-  로그인 customer도 기존 Landing을 그대로 유지한다(`HomeRoute.jsx`). CustomerHome은
-  모바일 전용으로 설계돼 있어 데스크톱에 그대로 확장하면 어색하다. 데스크톱 재설계 시
-  CustomerHome의 넓은 화면 구조와 V1/V3 정리를 함께 진행한다.
+- **비로그인 랜딩 미완성 (2026-08-02 변경)**: 현재 모바일 비로그인 사용자는 CustomerHome의
+  no_request 상태를 본다. 서비스 소개 없이 CTA만 노출되는 임시 상태다. 데스크톱 재설계 시
+  비로그인 전용 랜딩(V1/V3 정리 포함)을 만들고, 모바일 비로그인도 그 랜딩을 볼지
+  CustomerHome을 유지할지 재결정한다.
+- **데스크톱 홈**: 1024px 이상에서는 로그인 여부와 무관하게 기존 Landing을 유지한다
+  (`HomeRoute.jsx`, 뷰포트만으로 분기). CustomerHome은 모바일 전용으로 설계돼 있어
+  데스크톱에 그대로 확장하면 어색하다. 데스크톱 재설계 시 로그인 고객용 화면 구조를
+  함께 결정한다.
+- **로그인 후 원래 위치 복귀 미구현**: 비로그인이 보호된 화면(예: `/mypage`)에 접근해
+  로그인 페이지로 리다이렉트된 뒤, 로그인 완료 후 원래 가려던 곳으로 돌아오는 처리가
+  없다(`location.state`/`redirectTo` 기반 복귀 로직 자체가 코드베이스에 없음을 확인).
+  요청서 마법사의 로그인 게이트 작업 시 함께 설계할 것.
 - **langOptions 중복 정의**: `Landing/translations.js`와 `SignUp/translations.js`가
   각자 `langOptions` 배열을 인라인 정의하고 있고, 이번에 `CustomerHome`도 `Landing/translations.js`
   것을 가져다 씀. 공통 `LanguageSwitcher` 컴포넌트로 추출하는 것을 검토. 우선순위 낮음.

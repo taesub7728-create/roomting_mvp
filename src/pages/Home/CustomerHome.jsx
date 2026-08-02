@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, Clock, CheckCircle2, MapPin, Home as HomeIcon, Wallet, Calendar, TriangleAlert } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
+import { useAuth } from '../../shared/auth/useAuth'
 import { listMyRequests } from '../../api/requests.api'
 import { deriveHomeState } from './deriveHomeState'
 import { getRoomTypeLabel } from '../../utils/roomTypeLabel'
@@ -232,12 +233,18 @@ function StatusCardSkeleton({ loadingLabel }) {
   )
 }
 
+// 비로그인 사용자에게는 요청서 자체가 존재할 수 없으므로 listMyRequests()를 호출하지 않고
+// 곧바로 no_request로 렌더한다 - 스켈레톤을 거치지 않는다(API 호출이 없으니 기다릴 것도 없다).
+const ANON_STATE = { status: 'no_request', request: null }
+
 export default function CustomerHome() {
   const { lang } = useLanguage()
+  const { user } = useAuth()
   const t = homeText[lang]
-  const [state, setState] = useState({ status: 'loading', request: null })
+  const [state, setState] = useState(() => (user ? { status: 'loading', request: null } : ANON_STATE))
 
   const load = useCallback(() => {
+    if (!user) { setState(ANON_STATE); return () => {} }
     setState({ status: 'loading', request: null })
     let cancelled = false
     listMyRequests().then(({ data, error }) => {
@@ -248,7 +255,7 @@ export default function CustomerHome() {
       setState(deriveHomeState(data))
     })
     return () => { cancelled = true }
-  }, [])
+  }, [user])
 
   useEffect(() => load(), [load])
 
