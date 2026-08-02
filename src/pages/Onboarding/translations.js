@@ -49,7 +49,7 @@ export const onboardingText = {
     screens: [
       {
         id: 'onboarding_1',
-        headline: '条件を送ると、\n不動産から提案が届きます',
+        headline: '条件を送ると、\n不動産から連絡が届きます',
         sub: 'エリア・予算・部屋タイプだけ教えてください',
         cta: '次へ',
         skipVisible: true,

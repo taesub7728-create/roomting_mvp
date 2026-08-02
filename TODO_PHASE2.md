@@ -90,17 +90,22 @@ ProfileMissingError.jsx에 ko/ja/zh/en 번역을 적용함.
 커밋 1~3(Splash 단순화, Onboarding, AppEntryGate 진입 분기)에서 실제 계정 없이는
 확인할 수 없었던 항목:
 
-- **safe-area 실기기 검증**: 헤드리스 Chromium은 `env(safe-area-inset-*)`를 항상 0으로
-  평가해서, CSS 패딩 계산은 시뮬레이션(고정 px 오버라이드)으로만 검증했다. `viewport-fit=cover`
-  적용 자체와 Onboarding 11개 화면의 여백 계산이 실제 노치 기기(iPhone 실기기/시뮬레이터)에서도
-  의도대로 동작하는지는 미검증.
+- **safe-area 실기기 검증 완료 (2026-08-02, iPhone Safari에서 확인)**.
 - **open 요청서 직행(customer/pending_realtor)**: 실제 로그인 계정이 없어 Playwright
   route interception으로 Supabase 응답을 mock해서 검증했다(가짜 세션 localStorage 주입 +
   `auth/v1/user`, `rest/v1/profiles`, `rest/v1/requests`, `rest/v1/realtor_applications`,
   `rest/v1/properties` 응답 스텁). 코드 경로 자체는 mock으로 12개 시나리오 중 11개 통과 확인했지만,
   실제 Supabase 세션·RLS를 통과하는 진짜 계정으로는 아직 검증 안 됨.
-- 요청서 마법사(RequestWizard) 작업 때 실제 로그인 플로우를 타게 되므로, 그때 위 두 항목과
+- 요청서 마법사(RequestWizard) 작업 때 실제 로그인 플로우를 타게 되므로, 그때 위 항목과
   더불어 Chat.jsx/ProfileMissingError.jsx 다국어 렌더(위 항목)까지 함께 실기기/실계정으로 확인한다.
+- **404 페이지 없음**: 존재하지 않는 경로 접근 시 완전 빈 화면(예: `/onbording` 오타).
+  catch-all 라우트 필요. 우선순위 낮음.
+- **데스크톱 온보딩 스킵 검토**: 1024px 이상에서는 랜딩의 설명 섹션과 역할이 중복되므로
+  온보딩을 건너뛰는 방안. 홈 화면 재설계 시 함께 판단.
+- **ja onboarding_2 헤드라인 위도우 발견 (2026-08-02)**: "複数の仲介会社から\nそれぞれ提案が届きます"가
+  375px에서 3줄로 줄바꿈되고 마지막 줄이 "ます"(2글자)만 남는다. 실측으로 2줄 대안 확인됨:
+  "複数の仲介会社から\nそれぞれ提案します"(제안 도착→제안함, 의미 유지) 또는
+  "複数の仲介会社から\n別々に提案します". 문구 변경 승인 후 적용 예정.
 
 ## 향후 권한 모델 발전 방향
 
