@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, Clock, CheckCircle2, MapPin, Home as HomeIcon, Wallet, Calendar, TriangleAlert } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
+import { listMyRequests } from '../../api/requests.api'
+import { deriveHomeState } from './deriveHomeState'
 import { getRoomTypeLabel } from '../../utils/roomTypeLabel'
 import { langOptions } from '../Landing/translations'
 import { homeText } from './translations'
@@ -230,30 +232,39 @@ function StatusCardSkeleton({ loadingLabel }) {
   )
 }
 
-// 커밋 1 단계: 더미 데이터로 4개 상태 UI만 확인한다. 실제 listMyRequests() 연결과
-// 상태 판정 로직은 커밋 2에서 이 자리에 들어간다.
-const DUMMY_REQUEST = {
-  id: 'dummy',
-  region_text: '홍대입구',
-  room_types: ['one_room'],
-  rent_max: 70,
-  deposit_max: 1000,
-  move_in_date: '2026-08-05',
-  response_count: 3,
-}
-
 export default function CustomerHome() {
   const { lang } = useLanguage()
   const t = homeText[lang]
+  const [state, setState] = useState({ status: 'loading', request: null })
+
+  const load = useCallback(() => {
+    setState({ status: 'loading', request: null })
+    let cancelled = false
+    listMyRequests().then(({ data, error }) => {
+      if (cancelled) return
+      // 조회 실패를 "요청 없음"으로 위장하지 않는다 - 실제 요청이 있는 사용자가
+      // 중복으로 새 요청을 작성하게 되는 것을 막기 위해 별도 오류 카드로 알린다.
+      if (error || !data) { setState({ status: 'error', request: null }); return }
+      setState(deriveHomeState(data))
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => load(), [load])
 
   return (
     <div className="frame ch-frame">
       <ChHeader t={t} />
-      <NoRequestCard t={t} />
+      {state.status === 'loading' && <StatusCardSkeleton loadingLabel={t.loading} />}
+      {state.status === 'error' && <ErrorCard t={t} onRetry={load} />}
+      {state.status === 'no_request' && <NoRequestCard t={t} />}
+      {state.status === 'waiting' && <WaitingCard t={t} lang={lang} request={state.request} />}
+      {state.status === 'waiting_empty' && <WaitingEmptyCard t={t} lang={lang} request={state.request} />}
+      {state.status === 'closed' && <ClosedCard t={t} lang={lang} request={state.request} />}
       <div className="ch-spacer" />
       <BottomTabBar />
     </div>
   )
 }
 
-export { NoRequestCard, WaitingCard, WaitingEmptyCard, ClosedCard, ErrorCard, StatusCardSkeleton, DUMMY_REQUEST }
+export { NoRequestCard, WaitingCard, WaitingEmptyCard, ClosedCard, ErrorCard, StatusCardSkeleton }
