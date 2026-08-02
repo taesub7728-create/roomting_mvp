@@ -1,0 +1,294 @@
+/* .frame(theme.css)이 max-width:430px 중앙 정렬 + flex column을 이미 제공한다. */
+.ch-frame {
+  padding-left: 24px;
+  padding-right: 24px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+  /* BottomTabBar가 position:fixed라 흐름에 공간을 남기지 않는다 - 실측한 탭바 높이만큼
+     프레임 하단에 여백을 확보해서 카드/CTA가 탭바 뒤로 들어가지 않게 한다 */
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
+}
+
+.ch-header {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ch-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ch-logo-mark {
+  width: 28px;
+  height: 28px;
+}
+.ch-logo-word {
+  font-family: 'Manrope', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 30px;
+  letter-spacing: -0.4px;
+  color: var(--ink);
+}
+
+.ch-lang-box { position: relative; }
+.ch-lang-btn {
+  min-width: 80px;
+  min-height: 44px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.ch-lang-btn:active { background: var(--paper-soft); opacity: 0.85; }
+
+.ch-lang-dd {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 140px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(28, 26, 25, 0.08);
+  overflow: hidden;
+  z-index: 100;
+}
+.ch-lang-dd.open { display: block; }
+.ch-lang-dd button {
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ch-lang-dd button:hover { background: var(--paper-soft); }
+
+.ch-lang-btn:focus-visible,
+.ch-lang-dd button:focus-visible,
+.ch-cta:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+/* ---------- 상태 카드 (공통) ---------- */
+
+.ch-card {
+  margin-top: 34px;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 24px 24px;
+  gap: 15px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: var(--paper);
+  box-shadow: 0 8px 24px rgba(28, 26, 25, 0.06);
+  animation: ch-card-fade-in 0.2s ease;
+  /* CJK 텍스트가 단어 중간(예: "이하"의 "이"/"하" 사이)에서 잘리지 않게 한다.
+     화면 전체가 아니라 이 카드 내부 텍스트에만 적용 - 다른 화면 회귀 방지 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+@keyframes ch-card-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ch-icon-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: var(--paper-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ch-card-title {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  text-align: center;
+}
+
+.ch-card-sub {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: -0.1px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---------- 조건 요약 ---------- */
+
+.ch-summary {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--paper-soft);
+}
+
+.ch-summary-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.ch-summary-icon { color: var(--muted); flex-shrink: 0; margin-top: 2px; }
+.ch-summary-text { display: flex; flex-direction: column; min-width: 0; }
+.ch-summary-label {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--muted);
+}
+.ch-summary-value {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: -0.1px;
+  color: var(--ink);
+}
+
+.ch-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ---------- 응답 카운트 ---------- */
+
+.ch-response {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 26px;
+  letter-spacing: -0.2px;
+  color: var(--ink);
+  text-align: center;
+}
+.ch-response-number {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 30px;
+  letter-spacing: -0.3px;
+  color: var(--coral);
+}
+
+/* ---------- 빈 응답 메시지 ---------- */
+
+.ch-empty-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.ch-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: -0.1px;
+  color: var(--ink);
+  text-align: center;
+}
+.ch-empty-sub {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: -0.1px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---------- CTA ---------- */
+
+.ch-cta {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  padding: 14px 20px;
+  background: var(--coral-action);
+  color: var(--white);
+  border: none;
+  border-radius: 26px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  letter-spacing: -0.1px;
+  text-decoration: none;
+  cursor: pointer;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.ch-cta:active { opacity: 0.92; transform: scale(0.98); }
+
+/* ---------- 스켈레톤 ---------- */
+
+.ch-skeleton { align-items: stretch; }
+.ch-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.ch-skel {
+  background: var(--paper-soft);
+  border-radius: 10px;
+  animation: ch-pulse 1.4s ease-in-out infinite;
+}
+.ch-skel-icon { width: 56px; height: 56px; border-radius: 999px; align-self: center; }
+.ch-skel-title { width: 70%; height: 28px; align-self: center; }
+.ch-skel-title-2 { width: 45%; height: 28px; align-self: center; margin-top: -8px; }
+.ch-skel-box { width: 100%; height: 90px; border-radius: 20px; margin-top: 8px; }
+.ch-skel-cta { width: 100%; height: 52px; border-radius: 26px; margin-top: auto; }
+
+@keyframes ch-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ---------- spacer ---------- */
+
+.ch-spacer { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ch-card { animation: none; }
+  .ch-skel { animation: none; opacity: 0.75; }
+  .ch-cta { transition: none; }
+  .ch-cta:active { transform: none; }
+}
