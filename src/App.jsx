@@ -6,7 +6,6 @@ import PublicCustomerRoute from './shared/routes/PublicCustomerRoute'
 import RealtorRoute from './shared/routes/RealtorRoute'
 import AdminRoute from './shared/routes/AdminRoute'
 import AppEntryGate from './shared/routes/AppEntryGate'
-import Landing from './pages/Landing/Landing'
 import LoginChoice from './pages/Login/LoginChoice'
 import SignUp from './pages/SignUp/SignUp'
 import SignUpChoice from './pages/SignUp/SignUpChoice'
@@ -26,6 +25,7 @@ import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
 import AdminLogin from './pages/AdminDashboard/AdminLogin'
 import ComingSoon from './pages/ComingSoon/ComingSoon'
 import Onboarding from './pages/Onboarding/Onboarding'
+import HomeRoute from './pages/Home/HomeRoute'
 
 function App() {
   return (
@@ -37,7 +37,7 @@ function App() {
               {/* 공개 허브: 비로그인 방문자도 그대로 접근 가능 (Public Entry Flow 승인안).
                   로그인한 사용자에게는 PublicCustomerRoute가 CustomerRoute와 동일한 role/심사 체크를 적용한다 */}
               <Route element={<PublicCustomerRoute />}>
-                <Route path="/" element={<Landing />} />
+                <Route path="/" element={<HomeRoute />} />
                 <Route path="/request" element={<RequestWizard />} />
                 <Route path="/map" element={<MapExplore />} />
                 <Route path="/property/:propertyId" element={<PropertyDetail />} />
