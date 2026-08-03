@@ -115,6 +115,23 @@
 }
 .date-input:focus { border-color: var(--coral); background: var(--white); }
 
+.date-field { position: relative; border-radius: 13px; }
+.date-field-native {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  margin: 0; padding: 0; border: none; opacity: 0; cursor: pointer;
+}
+.date-field-overlay {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--paper); border: 1.5px solid var(--border); border-radius: 13px;
+  padding: 13px 15px; pointer-events: none; transition: border-color .15s;
+}
+.date-field-text { font-size: 14px; font-weight: 600; color: var(--ink); }
+.date-field-text.placeholder { color: var(--muted-soft); font-weight: 500; }
+.date-field-icon { color: var(--ink-soft); flex-shrink: 0; }
+/* :focus-within: 안에 있는 opacity:0 네이티브 input이 실제로 포커스를 받았을 때
+   래퍼 전체에 명확한 focus-visible 표시를 준다(포커스는 살아있는데 표시가 없으면 안 됨). */
+.date-field:focus-within .date-field-overlay { border-color: var(--coral); }
+
 .bottom-cta {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 430px; padding: 14px 20px 32px;

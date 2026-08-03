@@ -1,4 +1,5 @@
 import { formatKrwAmount } from '../../../shared/format/krwAmount'
+import { formatMoveInDate } from '../../../shared/format/moveInDate'
 
 function SummaryRow({ label, value, warning, editLabel, onEdit }) {
   return (
@@ -44,7 +45,7 @@ export default function ReviewStep({ t, lang, form, onEditStep }) {
       <SummaryRow label={t.reviewDealTypeLabel} value={dealValue} editLabel={t.editLabel} onEdit={() => onEditStep('transaction')} />
       <SummaryRow label={t.reviewRoomTypeLabel} value={roomTypeLabel} editLabel={t.editLabel} onEdit={() => onEditStep('room_type')} />
       <SummaryRow label={t.reviewRegistrationLabel} value={form.jeonip ? t.registrationYes : t.registrationNo} editLabel={t.editLabel} onEdit={() => onEditStep('move_in')} />
-      <SummaryRow label={t.reviewMoveInLabel} value={form.moveInDate || t.noneValue} editLabel={t.editLabel} onEdit={() => onEditStep('move_in')} />
+      <SummaryRow label={t.reviewMoveInLabel} value={formatMoveInDate(lang, form.moveInDate) || t.noneValue} editLabel={t.editLabel} onEdit={() => onEditStep('move_in')} />
       <SummaryRow label={t.reviewContractLabel} value={`${form.contractMonths}${t.contractUnit}`} editLabel={t.editLabel} onEdit={() => onEditStep('move_in')} />
       <SummaryRow label={t.reviewExtraLabel} value={extraValue} editLabel={t.editLabel} onEdit={() => onEditStep('extra')} />
 

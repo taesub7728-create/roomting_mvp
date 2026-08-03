@@ -4,6 +4,7 @@ import RoomTypeStep from './steps/RoomTypeStep'
 import MoveInStep from './steps/MoveInStep'
 import ExtraStep from './steps/ExtraStep'
 import ReviewStep from './steps/ReviewStep'
+import { isValidLocalISODate, isPastLocalDate } from '../../shared/format/moveInDate'
 
 // 모든 카테고리 공유 - 앞쪽(지역/거래조건)
 const headSteps = [
@@ -57,7 +58,12 @@ const tailSteps = [
     headlineKey: 'moveInHeadline',
     subKey: 'moveInSub',
     isApplicable: () => true,
-    validate: (form) => form.moveInDate.length > 0,
+    // 존재 -> 형식 -> 과거 여부 순서로 검사(validateRequest()와 동일한 순서, 여긴 이유
+    // 설명 없이 "다음"만 막는다 - 이유 표시는 review 진입 전 최종 검증에서 담당).
+    validate: (form) =>
+      !!form.moveInDate &&
+      isValidLocalISODate(form.moveInDate) &&
+      !isPastLocalDate(form.moveInDate),
   },
   {
     id: 'extra',

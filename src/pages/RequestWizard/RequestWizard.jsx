@@ -6,6 +6,7 @@ import { createRequest } from '../../api/requests.api'
 import { requestText } from './translations'
 import { getApplicableSteps } from './steps'
 import { buildRequestPayload } from './buildRequestPayload'
+import { validateRequest } from './validateRequest'
 import './RequestWizard.css'
 
 export const PENDING_REQUEST_KEY = 'roomting_pending_request'
@@ -210,6 +211,10 @@ export default function RequestWizard() {
   async function handleSubmit() {
     if (submitBlocked) return
     setError(null)
+
+    const validationError = validateRequest(form, t)
+    if (validationError) { setError(validationError); return }
+
     const payload = buildRequestPayload(form)
 
     setLoading(true)
