@@ -280,3 +280,84 @@ categorySteps 구조는 이미 이번 작업에서 마련됨, 실제 office/reta
 자유 범위 입력으로 근본 해결. deposit_max(기존 컬럼, 월세와 공용)를 전세 최대
 보증금으로 재사용하고, deposit_min(신규)은 선택 입력. DB CHECK(양수 검증 포함)로
 범위 역전·음수 값을 서버 레벨에서 차단.
+
+## 지역 입력 구조화 (설계 조사 완료, 구현 결정 대기)
+
+region_text 자유 입력만으로는 "망원역", "회사 근처", 지도 핀 등 서로 다른 위치
+조건을 중개사 영업지역에 정확히 매칭하기 어렵다는 문제를 조사했다. **이번 조사는
+설계 방향 검토와 문서화만 진행했고, 실제 stations 테이블 생성·컬럼 추가·외부 API
+연동·UI 교체는 전혀 하지 않았다.** 아래 스키마는 전부 문서용 초안이다.
+
+### 확장 방향
+기존 region_text는 표시용 문구로 그대로 유지하고, 아래 구조로 확장 검토 중:
+```
+location_type      station | pin | text
+station_id          stations.id 참조 (location_type='station'일 때만)
+location_lat/lng     double precision
+location_radius_m    integer  -- 아래 "역 선택 시 탐색 범위" 참고, station 전용인지
+                                  station+pin 공통인지 미확정
+city_code / district_code   text 또는 별도 코드 테이블 참조
+```
+properties 테이블에 이미 lat/lng를 직접 컬럼으로 두는 전례(migration_009/011)가
+있어, 좌표를 별도 엔티티로 분리하지 않고 소유 테이블에 직접 두는 쪽이 이 프로젝트
+관례에 가깝다는 참고 근거로 남긴다(다만 최종 결정은 미확정 항목 참고).
+
+### 역 자동완성 (문서용 초안 — 실제 생성 안 함)
+```sql
+-- 문서용 초안 - 실제 실행하지 않음
+create table stations (
+  id uuid primary key default gen_random_uuid(),
+  name_ko text not null,
+  name_en text,
+  name_ja text,
+  name_zh text,
+  line text,             -- 미확정: 단일 값 vs 배열(환승역)
+  latitude double precision not null,
+  longitude double precision not null,
+  city text not null,
+  district text not null
+);
+```
+"망원역" 선택 시: 표시는 "망원역 · 서울 6호선 · 마포구", 내부 저장은 station_id +
+좌표 + district_code. region_text에는 계속 "망원역"류 표시 문자열을 같이 채워
+기존 화면이 안 깨지게 한다.
+
+### 지도 핀
+회사·학교 등 역이 아닌 위치는 location_type='pin' + location_lat/lng +
+location_radius_m. 지도 클러스터링 작업(위 섹션 참고)과 거리 계산 유틸을 공유할
+여지가 있음 - 실제 설계 시점에 재검토.
+
+### 역 선택 시 탐색 범위 (신규 미확정 항목)
+station_id + 좌표만으로는 "망원역 선택"이 무엇을 의미하는지 불명확하다(바로 인근 /
+도보 10분 / 반경 1km / 구 전체 중 무엇인지). 후보:
+- A. 반경(500m/1km/2km/3km) — MVP에 더 적합할 가능성, 추가 API 불필요
+- B. 도보 시간(5분/10분/15분/20분) — 실제 도로망 기반 경로 API가 필요할 수 있어
+  MVP에서는 A가 더 적합한지 추후 비교 필요
+
+이 때문에 location_radius_m을 pin 전용으로 확정하지 않는다. station과 pin이
+공통으로 쓰는 범위 필드로 둘 가능성을 미확정 항목에 포함한다.
+
+### 아직 확정되지 않은 항목 (사람이 직접 결정해야 함)
+- 한 요청에 지역을 하나만 허용할지 복수 지역을 허용할지
+- city_code/district_code가 행정동 기준인지 법정동 기준인지 (한국 행정구역 체계상
+  이 둘이 다를 수 있음)
+- 환승역처럼 하나의 역이 여러 노선에 속할 때 line을 단일 값으로 저장할지 배열로
+  저장할지
+- station과 pin의 반경 저장 방식 (location_radius_m을 공통 필드로 둘지 여부 포함)
+- 중개사 영업지역을 구/동/역/반경 중 어떤 단위로 등록받을지 (중개사 응답 화면
+  설계와 함께 결정 필요)
+- 역 선택 시 반경 입력을 받을지 도보 이동시간 입력을 받을지 (위 "역 선택 시 탐색
+  범위" 참고)
+- 사용자가 역이 아니라 회사 이름·주소를 검색하는 경우의 지오코딩 방식(외부 API
+  연동 여부 포함, 이번 조사에서 다루지 않음)
+- 좌표 원본(정확한 위치)과 공개용 표시 문구(마케팅/지도 노출용 근사치)를 어떻게
+  분리해서 개인정보를 처리할지 - properties.address_public의 근사 처리 방식
+  (migration_011)을 참고할 수 있으나 요청서(고객 위치)는 매물 공개와 성격이
+  달라 별도 검토 필요
+
+### 선행 조건
+서울 주요 역 데이터 확보(MVP는 전국이 아닌 서울 주요 역만으로 시작), 중개사
+화면에서 영업지역을 어떻게 등록받을지 먼저 설계.
+
+이번 조사 보고가 승인되면, 위 미확정 항목들에 대한 결정과 함께 "설계 완료, 구현
+대기"로 상태를 갱신한다. 실제 구현은 중개사 응답 화면 설계 이후 착수한다.
