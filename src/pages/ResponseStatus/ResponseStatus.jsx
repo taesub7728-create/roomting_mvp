@@ -5,8 +5,21 @@ import { useLanguage } from '../../context/LanguageContext'
 import { getRequestById, closeRequest } from '../../api/requests.api'
 import { listPropertiesForRequest } from '../../api/properties.api'
 import { getRoomTypeLabel } from '../../utils/roomTypeLabel'
+import { formatKrwAmount } from '../../shared/format/krwAmount'
 import { responseText } from './translations'
 import './ResponseStatus.css'
+
+// 요청서의 거래 조건 표시 문구. 전세는 rent_max가 항상 null이므로 별도 분기 없이
+// 기존 월세 표기(?? 0 폴백)를 그대로 쓰면 "월세 0만원"으로 잘못 보인다.
+function buildDealSummary(t, lang, request) {
+  if (request.deal_type === 'jeonse') {
+    const maxText = formatKrwAmount(request.deposit_max, lang)
+    return request.deposit_min != null
+      ? `${t.jeonseDepositLabel} ${t.jeonseRangeText(formatKrwAmount(request.deposit_min, lang), maxText)}`
+      : `${t.jeonseDepositLabel} ${t.jeonseMaxOnlyText(maxText)}`
+  }
+  return `${t.depositLabel} ${Number(request.deposit_max ?? 0).toLocaleString()}만원 / ${t.rentLabel} ${request.rent_max ?? 0}만원`
+}
 
 function splitRemaining(deadline) {
   const diffSec = Math.max(0, Math.floor((new Date(deadline).getTime() - Date.now()) / 1000))
@@ -82,7 +95,7 @@ export default function ResponseStatus() {
           </div>
           <div className="rs-request-summary">
             <span className="rs-summary-chip"><MapPin size={12} strokeWidth={2} style={{ verticalAlign: -2, marginRight: 3 }} /> {request.region_text}</span>
-            <span className="rs-summary-chip">{t.depositLabel} {Number(request.deposit_max ?? 0).toLocaleString()}만원 / {t.rentLabel} {request.rent_max ?? 0}만원</span>
+            <span className="rs-summary-chip">{buildDealSummary(t, lang, request)}</span>
             {(request.room_types || []).map((rt) => (
               <span className="rs-summary-chip" key={rt}><Home size={12} strokeWidth={2} style={{ verticalAlign: -2, marginRight: 3 }} /> {getRoomTypeLabel(lang, rt)}</span>
             ))}

@@ -3,9 +3,22 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getRequestById } from '../../api/requests.api'
 import { createPropertyResponse, uploadPropertyImages } from '../../api/properties.api'
 import { roomTypeLabels } from '../RealtorDashboard/roomTypeLabels'
+import { formatKrwAmount } from '../../shared/format/krwAmount'
 import './RealtorRespond.css'
 
 const ROOM_TYPE_CODES = ['one_room', 'two_room', 'goshiwon', 'share_house', 'officetel', 'apartment']
+
+// 요청서의 거래 조건 표시 문구. 전세는 rent_max가 항상 null이므로 기존 월세 표기(?? 0 폴백)를
+// 그대로 쓰면 "월세 0만원"으로 잘못 보인다.
+function dealSummaryText(request) {
+  if (request.deal_type === 'jeonse') {
+    const maxText = formatKrwAmount(request.deposit_max, 'ko')
+    return request.deposit_min != null
+      ? `전세보증금 ${formatKrwAmount(request.deposit_min, 'ko')} ~ ${maxText}`
+      : `전세보증금 ${maxText} 이하`
+  }
+  return `보증금 ${Number(request.deposit_max ?? 0).toLocaleString()}만원 / 월세 ${request.rent_max ?? 0}만원`
+}
 
 export default function RealtorRespond() {
   const { requestId } = useParams()
@@ -102,7 +115,7 @@ export default function RealtorRespond() {
 
       {request && (
         <div className="rr-summary">
-          <b>{request.region_text}</b> · 보증금 {Number(request.deposit_max ?? 0).toLocaleString()}만원 / 월세 {request.rent_max ?? 0}만원
+          <b>{request.region_text}</b> · {dealSummaryText(request)}
           {request.move_in_date && <> · 입주 희망일 {request.move_in_date}</>}
         </div>
       )}

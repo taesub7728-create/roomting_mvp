@@ -15,9 +15,22 @@ import { searchAddressCandidates } from '../../lib/kakaoMaps'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { useAuth } from '../../shared/auth/useAuth'
 import { roomTypeLabels } from './roomTypeLabels'
+import { formatKrwAmount } from '../../shared/format/krwAmount'
 import './RealtorDashboard.css'
 
 const ROOM_TYPE_FILTERS = ['one_room', 'two_room', 'goshiwon', 'share_house', 'officetel', 'apartment']
+
+// 요청서의 거래 조건 표시 문구. 전세는 rent_max가 항상 null이므로 기존 월세 표기(?? 0 폴백)를
+// 그대로 쓰면 "월세 0만원"으로 잘못 보인다.
+function dealSummaryText(r) {
+  if (r.deal_type === 'jeonse') {
+    const maxText = formatKrwAmount(r.deposit_max, 'ko')
+    return r.deposit_min != null
+      ? `전세보증금 ${formatKrwAmount(r.deposit_min, 'ko')} ~ ${maxText}`
+      : `전세보증금 ${maxText} 이하`
+  }
+  return `보증금 ${Number(r.deposit_max ?? 0).toLocaleString()}만원 / 월세 ${r.rent_max ?? 0}만원`
+}
 const LISTING_STATUS_LABELS = { active: '판매중', completed: '거래완료', hidden: '미노출' }
 
 function thumbnailUrl(property) {
@@ -284,7 +297,7 @@ export default function RealtorDashboard() {
                       {r.registration_required && <span className="rd-tag neutral">전입신고 필요</span>}
                       {r.move_in_date && <span className="rd-tag neutral">입주 {r.move_in_date}</span>}
                     </td>
-                    <td>보증금 {Number(r.deposit_max ?? 0).toLocaleString()}만원 / 월세 {r.rent_max ?? 0}만원</td>
+                    <td>{dealSummaryText(r)}</td>
                     <td>
                       <div className="rd-tags">
                         {(r.room_types || []).map((rt) => (
@@ -309,9 +322,7 @@ export default function RealtorDashboard() {
                   <span className="rd-region">{r.region_text}</span>
                   <span className="rd-time">{timeAgo(r.created_at)}</span>
                 </div>
-                <div className="rd-budget">
-                  보증금 {Number(r.deposit_max ?? 0).toLocaleString()}만원 / 월세 {r.rent_max ?? 0}만원
-                </div>
+                <div className="rd-budget">{dealSummaryText(r)}</div>
                 <div className="rd-tags">
                   {(r.room_types || []).map((rt) => (
                     <span className="rd-tag" key={rt}>{roomTypeLabels[rt] || rt}</span>

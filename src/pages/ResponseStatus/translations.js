@@ -10,6 +10,9 @@ export const responseText = {
     endBtn: '요청 종료하기', confirmMsg: '정말 요청을 종료할까요? 아직 응답이 더 올 수 있어요!',
     registrationYes: '전입신고 가능', registrationNo: '전입신고 불가',
     depositLabel: '보증금', rentLabel: '월세',
+    jeonseDepositLabel: '전세보증금',
+    jeonseRangeText: (min, max) => `${min} ~ ${max}`,
+    jeonseMaxOnlyText: (max) => `${max} 이하`,
   },
   ja: {
     topTitle: 'リクエスト応答状況', reqLabel: 'マイリクエスト',
@@ -22,6 +25,9 @@ export const responseText = {
     endBtn: 'リクエストを終了する', confirmMsg: 'リクエストを終了しますか？まだ返答が来るかもしれません！',
     registrationYes: '転入届可', registrationNo: '転入届不可',
     depositLabel: '保証金', rentLabel: '家賃',
+    jeonseDepositLabel: 'チョンセ保証金',
+    jeonseRangeText: (min, max) => `${min} ～ ${max}`,
+    jeonseMaxOnlyText: (max) => `${max}以下`,
   },
   zh: {
     topTitle: '请求响应状态', reqLabel: '我的请求',
@@ -34,6 +40,9 @@ export const responseText = {
     endBtn: '结束请求', confirmMsg: '确定要结束请求吗？可能还有更多回复！',
     registrationYes: '可迁入登记', registrationNo: '不可迁入登记',
     depositLabel: '押金', rentLabel: '月租',
+    jeonseDepositLabel: '全租保证金',
+    jeonseRangeText: (min, max) => `${min} ~ ${max}`,
+    jeonseMaxOnlyText: (max) => `${max}以下`,
   },
   en: {
     topTitle: 'Request Responses', reqLabel: 'My Request',
@@ -46,5 +55,8 @@ export const responseText = {
     endBtn: 'End Request', confirmMsg: 'End this request? More responses may still be coming!',
     registrationYes: 'Address reg. OK', registrationNo: 'No address reg.',
     depositLabel: 'Deposit', rentLabel: 'Rent',
+    jeonseDepositLabel: 'Jeonse Deposit',
+    jeonseRangeText: (min, max) => `${min} – ${max}`,
+    jeonseMaxOnlyText: (max) => `Up to ${max}`,
   },
 }
