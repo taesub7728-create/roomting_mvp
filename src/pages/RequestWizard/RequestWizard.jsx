@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { WashingMachine, Snowflake, SquareParking, PawPrint, Flame } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../../context/LanguageContext'
 import { getSession } from '../../api/auth.api'
 import { createRequest } from '../../api/requests.api'
 import { requestText } from './translations'
+import { getApplicableSteps } from './steps'
+import { buildRequestPayload } from './buildRequestPayload'
 import './RequestWizard.css'
 
 export const PENDING_REQUEST_KEY = 'roomting_pending_request'
@@ -12,12 +13,54 @@ export const PENDING_REQUEST_KEY = 'roomting_pending_request'
 // draft(작성 중 임시 저장)는 로그인 후 자동 제출용인 PENDING_REQUEST_KEY와
 // 역할이 다르므로 완전히 별도 key를 쓴다.
 export const REQUEST_DRAFT_KEY = 'roomting_request_draft'
-const DRAFT_VERSION = 1
+const DRAFT_VERSION = 2
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000
 const DRAFT_SAVE_DEBOUNCE_MS = 600
 
-// 폼 필드가 나중에 바뀌어도 오래된 draft로 폼이 깨지지 않도록 버전이 다르면 복원하지 않고 삭제한다.
-function loadValidDraft() {
+const DEFAULT_FORM = {
+  station: '',
+  dealType: 'rent',
+  rent: 70,
+  deposit: 1000,
+  jeonseDepositMin: null,
+  jeonseDepositMax: null,
+  jeonseLoanPlanned: null,
+  jeonseLoanDetail: '',
+  roomTypes: [],
+  jeonip: false,
+  moveInDate: '',
+  contractMonths: 6,
+  amenities: [],
+  extraNote: '',
+}
+
+// v1(단일 스크롤 폼) draft를 v2(단계형) 형태로 필드별 매핑한다. 필드 의미는 그대로라
+// 값 손실 없이 이전 가능하고, 신규 필드(전세 관련 등)는 안전한 기본값으로 채운다.
+// currentStep은 v1에 개념 자체가 없었으므로 0(1단계)으로 리셋한다 - 입력값은 보존하되
+// 진행 위치만 처음부터 다시 훑게 한다(과도한 추론으로 위치를 되짚지 않는다).
+function migrateV1ToV2(v1Draft) {
+  return {
+    form: {
+      ...DEFAULT_FORM,
+      station: v1Draft.station ?? '',
+      rent: v1Draft.rent ?? 70,
+      deposit: v1Draft.deposit ?? 1000,
+      roomTypes: v1Draft.roomTypes ?? [],
+      jeonip: v1Draft.jeonip ?? false,
+      moveInDate: v1Draft.moveInDate ?? '',
+      contractMonths: v1Draft.contractMonths ?? 6,
+      amenities: v1Draft.amenities ?? [],
+      extraNote: v1Draft.extraNote ?? '',
+    },
+    currentStep: 0,
+  }
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function loadValidDraft(maxStepIndex) {
   const raw = localStorage.getItem(REQUEST_DRAFT_KEY)
   if (!raw) return null
   let parsed
@@ -27,7 +70,7 @@ function loadValidDraft() {
     localStorage.removeItem(REQUEST_DRAFT_KEY)
     return null
   }
-  if (!parsed || parsed.version !== DRAFT_VERSION || !parsed.draft || typeof parsed.savedAt !== 'number') {
+  if (!parsed || typeof parsed.savedAt !== 'number' || !parsed.draft) {
     localStorage.removeItem(REQUEST_DRAFT_KEY)
     return null
   }
@@ -35,69 +78,63 @@ function loadValidDraft() {
     localStorage.removeItem(REQUEST_DRAFT_KEY)
     return null
   }
-  return parsed.draft
+  if (parsed.version === DRAFT_VERSION) {
+    return { form: parsed.draft, currentStep: clamp(parsed.currentStep ?? 0, 0, maxStepIndex) }
+  }
+  if (parsed.version === 1) {
+    return migrateV1ToV2(parsed.draft)
+  }
+  localStorage.removeItem(REQUEST_DRAFT_KEY)
+  return null
 }
 
 // draft를 저장할 만한 입력이 있는지 판단하는 단일 기준점.
 // draft를 저장하는 모든 경로는 이 함수를 거쳐야 한다 - 저장 조건을 다른 곳에 중복 구현하지 않는다.
-// 향후 필수 입력 항목이 바뀌면 이 함수만 수정하면 된다.
-function hasMeaningfulDraft(draft) {
-  return draft.station.trim().length > 0
-}
-
-const AMENITY_ICONS = {
-  washer: WashingMachine,
-  ac: Snowflake,
-  parking: SquareParking,
-  pet: PawPrint,
-  full_option: Flame,
+function hasMeaningfulDraft(form) {
+  return form.station.trim().length > 0
 }
 
 export default function RequestWizard() {
   const { lang } = useLanguage()
-  const t = requestText[lang]
   const navigate = useNavigate()
 
-  const [station, setStation] = useState('')
-  const [rent, setRent] = useState(70)
-  const [deposit, setDeposit] = useState(1000)
-  const [roomTypes, setRoomTypes] = useState([])
-  const [jeonip, setJeonip] = useState(false)
-  const [moveInDate, setMoveInDate] = useState('')
-  const [contractMonths, setContractMonths] = useState(6)
-  const [amenities, setAmenities] = useState([])
-  const [extraNote, setExtraNote] = useState('')
+  // 마법사 진행 중 전역 언어가 바뀌어도 단계 텍스트가 어긋나지 않도록 진입 시점 언어를 고정한다
+  // (Onboarding에서 이미 검증한 lockedLang 패턴 재사용).
+  const [lockedLang] = useState(() => lang)
+  const t = requestText[lockedLang]
+
+  // 지금은 residential만 구현 - office/retail이 열리면 이 값을 선택 가능하게 만들면 된다.
+  const applicableSteps = getApplicableSteps('residential')
+  const reviewIndex = applicableSteps.findIndex((s) => s.id === 'review')
+
+  const [form, setForm] = useState(DEFAULT_FORM)
+  const [currentStepIndex, setCurrentStepIndex] = useState(0)
+  // review에서 "수정"으로 진입한 경우 true - 다음 버튼이 "확인으로 돌아가기"로 바뀌고
+  // 클릭 시 index+1이 아니라 review로 직접 점프한다. 사용자 입력이 아니라 순수 UI 상태라 draft에는 저장하지 않는다.
+  const [returnToReview, setReturnToReview] = useState(false)
 
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  // 복원 여부를 물어보는 draft(있을 경우)와, 그 확인이 끝나기 전까지는 autosave를 켜지 않기 위한 플래그
   const [draftPrompt, setDraftPrompt] = useState(null)
   const [autosaveEnabled, setAutosaveEnabled] = useState(false)
   const lastSavedDraftRef = useRef(null)
 
-  // 마운트 시 1회만 유효한 draft 확인. 없으면 바로 autosave 시작, 있으면 사용자 선택을 기다린다.
   useEffect(() => {
-    const draft = loadValidDraft()
+    const draft = loadValidDraft(applicableSteps.length - 1)
     if (draft) {
       setDraftPrompt(draft)
     } else {
       setAutosaveEnabled(true)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handleResumeDraft() {
-    const d = draftPrompt
-    setStation(d.station ?? '')
-    setRent(d.rent ?? 70)
-    setDeposit(d.deposit ?? 1000)
-    setRoomTypes(d.roomTypes ?? [])
-    setJeonip(d.jeonip ?? false)
-    setMoveInDate(d.moveInDate ?? '')
-    setContractMonths(d.contractMonths ?? 6)
-    setAmenities(d.amenities ?? [])
-    setExtraNote(d.extraNote ?? '')
-    lastSavedDraftRef.current = JSON.stringify(d)
+    const { form: draftForm, currentStep } = draftPrompt
+    setForm(draftForm)
+    setCurrentStepIndex(currentStep)
+    lastSavedDraftRef.current = JSON.stringify({ form: draftForm, currentStep })
     setDraftPrompt(null)
     setAutosaveEnabled(true)
   }
@@ -108,16 +145,17 @@ export default function RequestWizard() {
     setAutosaveEnabled(true)
   }
 
-  // whitelist: 조건 필드만 저장 대상. error/loading 등 UI 상태나 개인정보 필드는 절대 포함하지 않는다.
+  // whitelist: 조건 필드(form)와 currentStep만 저장 대상. error/loading 등 UI 상태나
+  // returnToReview 같은 일시적 네비게이션 플래그는 절대 포함하지 않는다.
   useEffect(() => {
     if (!autosaveEnabled) return
 
-    const current = { station, rent, deposit, roomTypes, jeonip, moveInDate, contractMonths, amenities, extraNote }
+    const current = { form, currentStep: currentStepIndex }
     const serialized = JSON.stringify(current)
     if (serialized === lastSavedDraftRef.current) return
 
     const timer = setTimeout(() => {
-      if (!hasMeaningfulDraft(current)) {
+      if (!hasMeaningfulDraft(form)) {
         localStorage.removeItem(REQUEST_DRAFT_KEY)
         lastSavedDraftRef.current = serialized
         return
@@ -125,43 +163,54 @@ export default function RequestWizard() {
       localStorage.setItem(REQUEST_DRAFT_KEY, JSON.stringify({
         version: DRAFT_VERSION,
         savedAt: Date.now(),
-        draft: current,
+        draft: form,
+        currentStep: currentStepIndex,
       }))
       lastSavedDraftRef.current = serialized
     }, DRAFT_SAVE_DEBOUNCE_MS)
 
     return () => clearTimeout(timer)
-  }, [autosaveEnabled, station, rent, deposit, roomTypes, jeonip, moveInDate, contractMonths, amenities, extraNote])
+  }, [autosaveEnabled, form, currentStepIndex])
 
-  function toggleRoomType(code) {
-    setRoomTypes((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]))
-  }
-  function toggleAmenity(label) {
-    setAmenities((prev) => (prev.includes(label) ? prev.filter((a) => a !== label) : [...prev, label]))
+  function update(patch) {
+    setForm((prev) => ({ ...prev, ...patch }))
   }
 
-  // 프로토타입과 동일한 방식: 필수 입력 3개(지역, 입주일, 방타입) + 예산/계약기간은 항상 값이 있으니 기본 반영
-  const filledCount = [station.trim().length > 0, moveInDate.length > 0, roomTypes.length > 0].filter(Boolean).length + 2
-  const progressPct = Math.round((filledCount / 5) * 100)
+  const currentDef = applicableSteps[currentStepIndex]
+  const isReviewStep = currentStepIndex === reviewIndex
+  const canAdvance = currentDef.validate(form)
+  const submitBlocked = form.dealType === 'jeonse' && form.jeonseLoanPlanned == null
+  const progressPct = Math.round(((currentStepIndex + 1) / applicableSteps.length) * 100)
 
-  async function handleSubmit() {
-    setError(null)
-    if (!station.trim() || !moveInDate) {
-      setError(t.alertMsg)
+  function handleBack() {
+    if (currentStepIndex === 0) {
+      navigate('/')
       return
     }
+    setCurrentStepIndex((i) => i - 1)
+  }
 
-    const payload = {
-      regionText: station.trim(),
-      rentMax: rent,
-      depositMax: deposit,
-      roomTypes,
-      contractMonths,
-      amenities,
-      extraNote,
-      moveInDate,
-      registrationRequired: jeonip,
+  function handleNext() {
+    if (!canAdvance) return
+    if (returnToReview) {
+      setReturnToReview(false)
+      setCurrentStepIndex(reviewIndex)
+      return
     }
+    setCurrentStepIndex((i) => i + 1)
+  }
+
+  function handleEditStep(stepId) {
+    const idx = applicableSteps.findIndex((s) => s.id === stepId)
+    if (idx === -1) return
+    setReturnToReview(true)
+    setCurrentStepIndex(idx)
+  }
+
+  async function handleSubmit() {
+    if (submitBlocked) return
+    setError(null)
+    const payload = buildRequestPayload(form)
 
     setLoading(true)
     const session = await getSession()
@@ -182,6 +231,8 @@ export default function RequestWizard() {
     navigate(`/request/success/${created.id}`, { replace: true })
   }
 
+  const StepComponent = currentDef.component
+
   return (
     <div className="frame">
       {draftPrompt && (
@@ -197,155 +248,37 @@ export default function RequestWizard() {
       )}
 
       <div className="top-bar">
-        <Link className="back-btn" to="/">←</Link>
+        <button type="button" className="back-btn" onClick={handleBack} aria-label="back">←</button>
         <div className="top-title">{t.topTitle}</div>
       </div>
 
       <div className="progress-wrap">
         <div className="progress-label">
-          <span>{t.progressLabel}</span>
+          <span>{t.stepLabel(currentStepIndex + 1, applicableSteps.length)}</span>
           <span style={{ color: 'var(--coral)', fontWeight: 800 }}>{progressPct}%</span>
         </div>
         <div className="progress-bar"><div className="progress-fill" style={{ width: `${progressPct}%` }}></div></div>
       </div>
 
       <div className="form-body">
-        {/* 1. 지역/역 */}
-        <div className="rw-section">
-          <div className="rw-section-header">
-            <div className="rw-section-title">{t.s1title}</div>
-            <span className="rw-required">*</span>
-          </div>
-          <input
-            className="rw-input"
-            type="text"
-            placeholder={t.stationPlaceholder}
-            value={station}
-            onChange={(e) => setStation(e.target.value)}
-          />
-          <div className="chip-group">
-            {t.stationChips.map((name) => (
-              <div
-                key={name}
-                className={`chip${station === name ? ' active' : ''}`}
-                onClick={() => setStation(name)}
-              >
-                {name}
-              </div>
-            ))}
-          </div>
-        </div>
+        <h1 className="wizard-headline">{t[currentDef.headlineKey]}</h1>
+        <p className="wizard-sub">{t[currentDef.subKey]}</p>
 
-        {/* 2. 예산 */}
-        <div className="rw-section">
-          <div className="rw-section-header"><div className="rw-section-title">{t.s2title}</div></div>
-
-          <div className="slider-card">
-            <div className="rw-section-sub" style={{ marginBottom: 10 }}>{t.rentLabel}</div>
-            <div className="slider-display">
-              <span className="slider-value">{rent}</span>
-              <span className="slider-unit">{t.rentUnit}</span>
-            </div>
-            <input className="rw-range" type="range" min={20} max={300} step={10} value={rent} onChange={(e) => setRent(Number(e.target.value))} />
-            <div className="range-labels"><span>{t.rentRangeLabels[0]}</span><span>{t.rentRangeLabels[1]}</span></div>
-          </div>
-
-          <div className="slider-card">
-            <div className="rw-section-sub" style={{ marginBottom: 10 }}>{t.depositLabel}</div>
-            <div className="slider-display">
-              <span className="slider-value">{deposit.toLocaleString()}</span>
-              <span className="slider-unit">{t.depositUnit}</span>
-            </div>
-            <input className="rw-range" type="range" min={0} max={5000} step={100} value={deposit} onChange={(e) => setDeposit(Number(e.target.value))} />
-            <div className="range-labels"><span>{t.depositRangeLabels[0]}</span><span>{t.depositRangeLabels[1]}</span></div>
-          </div>
-        </div>
-
-        {/* 3. 방 타입 */}
-        <div className="rw-section">
-          <div className="rw-section-header"><div className="rw-section-title">{t.s3title}</div></div>
-          <div className="chip-group">
-            {t.roomTypes.map((rt) => (
-              <div
-                key={rt.code}
-                className={`chip${roomTypes.includes(rt.code) ? ' active' : ''}`}
-                onClick={() => toggleRoomType(rt.code)}
-              >
-                {rt.label}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 4. 전입신고 */}
-        <div className="rw-section">
-          <div className="rw-section-header"><div className="rw-section-title">{t.s4title}</div></div>
-          <div className={`toggle-row${jeonip ? ' on' : ''}`} onClick={() => setJeonip((v) => !v)}>
-            <div className="toggle-left">
-              <div className="toggle-main">{t.jeonipMain}</div>
-              <div className="toggle-desc">{t.jeonipDesc}</div>
-            </div>
-            <div className="rw-switch"></div>
-          </div>
-        </div>
-
-        {/* 5. 입주 일정 */}
-        <div className="rw-section">
-          <div className="rw-section-header"><div className="rw-section-title">{t.s5title}</div></div>
-          <div className="two-col">
-            <div>
-              <div className="rw-section-sub" style={{ marginBottom: 8 }}>{t.moveinLabel} <span style={{ color: 'var(--coral)' }}>*</span></div>
-              <input
-                className="date-input"
-                type="date"
-                value={moveInDate}
-                onChange={(e) => setMoveInDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <div className="rw-section-sub" style={{ marginBottom: 8 }}>{t.contractLabel}</div>
-              <div className="slider-card" style={{ padding: '11px 13px' }}>
-                <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--coral)' }}>{contractMonths}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', marginLeft: 2 }}>{t.contractUnit}</span>
-                </div>
-                <input className="rw-range" type="range" min={1} max={24} step={1} value={contractMonths} onChange={(e) => setContractMonths(Number(e.target.value))} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 6. 추가 요청 */}
-        <div className="rw-section">
-          <div className="rw-section-header"><div className="rw-section-title">{t.s6title}</div></div>
-          <div className="chip-group" style={{ marginBottom: 6 }}>
-            {t.amenities.map((a) => {
-              const Icon = AMENITY_ICONS[a.code]
-              return (
-                <div
-                  key={a.code}
-                  className={`chip${amenities.includes(a.code) ? ' active' : ''}`}
-                  onClick={() => toggleAmenity(a.code)}
-                >
-                  <Icon size={13} strokeWidth={2} style={{ marginRight: 5, verticalAlign: -2 }} />
-                  {a.label}
-                </div>
-              )
-            })}
-          </div>
-          <textarea
-            className="rw-textarea"
-            placeholder={t.textareaPlaceholder}
-            value={extraNote}
-            onChange={(e) => setExtraNote(e.target.value)}
-          />
-        </div>
+        <StepComponent t={t} lang={lockedLang} form={form} update={update} onEditStep={handleEditStep} />
 
         {error && <div className="rt-error-text">{error}</div>}
       </div>
 
       <div className="bottom-cta">
-        <button className="rt-btn-primary" disabled={loading} onClick={handleSubmit}>{t.submitLabel}</button>
+        {isReviewStep ? (
+          <button className="rt-btn-primary" disabled={loading || submitBlocked} onClick={handleSubmit}>
+            {t.submitLabel}
+          </button>
+        ) : (
+          <button className="rt-btn-primary" disabled={!canAdvance} onClick={handleNext}>
+            {returnToReview ? t.backToReviewLabel : t.nextLabel}
+          </button>
+        )}
       </div>
     </div>
   )
