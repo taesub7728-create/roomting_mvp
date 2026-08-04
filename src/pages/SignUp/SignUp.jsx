@@ -4,6 +4,7 @@ import { Mail } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { signUpWithEmail, signInWithEmail, signInWithOAuth, updateOwnProfile, getSession, getCurrentProfile } from '../../api/auth.api'
 import { createRequest, SESSION_REQUIRED_ERROR } from '../../api/requests.api'
+import { classifySubmitFailure } from '../../api/classifySubmitFailure'
 import { PENDING_REQUEST_KEY, PENDING_REQUEST_TTL_MS } from '../RequestWizard/RequestWizard'
 import { redirectForRole } from '../../utils/redirectForRole'
 import { useAuth } from '../../shared/auth/useAuth'
@@ -68,7 +69,10 @@ export default function SignUp({ mode = 'signup' }) {
   const [error, setError] = useState(null)
   const [done, setDone] = useState(false) // 가입 완료 (바로 로그인된 상태)
   const [awaitingEmailConfirm, setAwaitingEmailConfirm] = useState(false) // 이메일 인증 대기
-  const [pendingRequestError, setPendingRequestError] = useState(null) // status==='failed'일 때의 원문 에러 메시지
+  // submitPendingRequestIfAny()가 더 이상 'failed'/원문 에러 메시지를 반환하지 않아(분류된
+  // retryable/editable/unknown status만 반환) 이 값은 항상 null로 남는다 - done 오버레이의
+  // 해당 분기가 요청대로 그대로 남아있어 setter 없이 getter만 유지한다(범위 외 수정 금지).
+  const [pendingRequestError] = useState(null)
   const [pendingStatus, setPendingStatus] = useState(null) // submitPendingRequestIfAny()의 마지막 결과 status(로그인/가입 공용)
   const [isRetryingPending, setIsRetryingPending] = useState(false)
   const isSubmittingPendingRef = useRef(false)
@@ -81,21 +85,24 @@ export default function SignUp({ mode = 'signup' }) {
   const postAuthResolvedRef = useRef(false)
 
   // 로그인 없이 조건 요청서를 작성하다가 로그인/가입하러 온 경우, 완료되자마자 그 내용을 이어서 제출
-  // 반환값: { status, requestId, error }
+  // 반환값: { status, requestId }
   //   none: pending key 없음 (또는 이미 진행 중인 호출이 있어 이번 호출은 조용히 무시함)
   //   success: 제출 성공, key 삭제 완료
-  //   failed: 파싱은 성공했지만 DB/네트워크/예외로 실패, key 유지
+  //   retryable/editable/unknown: classifySubmitFailure() 분류 결과, key 유지(성공 후에만 삭제)
   //   session_required: SESSION_REQUIRED_ERROR와 정확히 일치, key 유지
   //   invalid: JSON.parse 실패 또는 wrapper 구조 손상, key 삭제
   //   expired: savedAt 기준 TTL 초과(또는 래퍼 도입 이전 legacy 포맷), createRequest 호출 없이 key 삭제
+  //
+  // 사용자 화면에는 DB 원본 메시지를 노출하지 않는다(분류된 status만 반환) - 원본은 아래
+  // console.error에만 남긴다. payload 전체나 extraNote 등 자유 입력 필드는 로그에 포함하지 않는다.
   async function submitPendingRequestIfAny() {
     const raw = localStorage.getItem(PENDING_REQUEST_KEY)
-    if (!raw) return { status: 'none', requestId: null, error: null }
+    if (!raw) return { status: 'none', requestId: null }
 
     if (isSubmittingPendingRef.current) {
       // 이미 진행 중인 호출이 있음 - 새로 제출을 시도하지 않고 조용히 무시(별도 에러 표시 없음).
       // 원래 진행 중이던 호출이 끝나면 그 결과가 정상적으로 반영된다.
-      return { status: 'none', requestId: null, error: null }
+      return { status: 'none', requestId: null }
     }
 
     const classification = classifyStoredPending(raw)
@@ -103,12 +110,12 @@ export default function SignUp({ mode = 'signup' }) {
     if (classification.status === 'invalid') {
       console.warn('[pending-submit] invalid/corrupted payload, discarding')
       localStorage.removeItem(PENDING_REQUEST_KEY)
-      return { status: 'invalid', requestId: null, error: null }
+      return { status: 'invalid', requestId: null }
     }
     if (classification.status === 'expired') {
       console.warn('[pending-submit] expired, discarding without submit')
       localStorage.removeItem(PENDING_REQUEST_KEY)
-      return { status: 'expired', requestId: null, error: null }
+      return { status: 'expired', requestId: null }
     }
 
     const { payload } = classification
@@ -126,7 +133,7 @@ export default function SignUp({ mode = 'signup' }) {
         hasMoveInDate: Boolean(payload?.moveInDate),
       })
       console.log('[pending-submit] calling createRequest')
-      const { data, error } = await createRequest(payload)
+      const { data, error, rawError } = await createRequest(payload)
       console.log('[pending-submit] createRequest returned', {
         hasData: Boolean(data),
         hasError: Boolean(error),
@@ -134,31 +141,29 @@ export default function SignUp({ mode = 'signup' }) {
       })
 
       if (error === SESSION_REQUIRED_ERROR) {
-        console.error('[pending-submit] session required:', { error })
-        setPendingRequestError(error)
-        return { status: 'session_required', requestId: null, error }
+        console.error('[pending-submit] session required')
+        return { status: 'session_required', requestId: null }
       }
       if (error) {
-        // createRequest()는 이미 toFriendlyError()를 거친 문자열을 반환하므로
-        // (원본 Supabase error.code/details/hint는 requests.api.js 안에서 이미 버려짐)
-        // 여기서는 그 문자열 자체를 출력한다.
-        console.error('[pending-submit] createRequest failed:', { error })
-        setPendingRequestError(error)
-        return { status: 'failed', requestId: null, error }
+        // 화면엔 절대 노출하지 않음 - code/message/details/hint만 콘솔에 남긴다(payload는 제외).
+        console.error('[pending-submit] createRequest failed:', {
+          code: rawError?.code,
+          message: rawError?.message,
+          details: rawError?.details,
+          hint: rawError?.hint,
+        })
+        return { status: classifySubmitFailure(rawError), requestId: null }
       }
 
       // 성공했을 때만 key를 지운다 - 실패 시에는 위에서 return하므로 이 줄에 도달하지 않는다
       localStorage.removeItem(PENDING_REQUEST_KEY)
       console.log('[pending-submit] success', { id: data.id })
-      return { status: 'success', requestId: data.id, error: null }
+      return { status: 'success', requestId: data.id }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
       console.error('[pending-submit] unexpected exception:', {
-        message,
-        stack: err instanceof Error ? err.stack : undefined,
+        message: err instanceof Error ? err.message : String(err),
       })
-      setPendingRequestError(message)
-      return { status: 'failed', requestId: null, error: message }
+      return { status: classifySubmitFailure(err), requestId: null }
     } finally {
       isSubmittingPendingRef.current = false
     }
@@ -344,6 +349,12 @@ export default function SignUp({ mode = 'signup' }) {
   // effect가 담당하고, 여기서는 그 판단이 끝날 때까지 화면만 비워둔다.
   if (authChecking) return null
 
+  // pendingStatus가 있다는 건 이미 인증이 끝난 뒤라는 뜻(checkExistingSession/login effect/
+  // handleLogin 전부 인증 성공 이후에만 pendingStatus를 세팅함) - 이 상태에서 로그인/가입
+  // 진입 UI(OAuth·이메일 폼)를 또 보여줄 필요가 없다. 예외는 session_required뿐 - 이 상태의
+  // 안내 문구가 "위에서 다시 로그인해주세요"를 가리키므로 그 폼이 계속 보여야 의미가 통한다.
+  const showAuthEntry = !pendingStatus || pendingStatus === 'session_required'
+
   return (
     <div className="frame signup-frame">
       <div className="ambient amb-1"></div>
@@ -367,67 +378,98 @@ export default function SignUp({ mode = 'signup' }) {
       {step === 0 && (
         <div className="slide-wrap">
           <div className="slide-content">
-            <div className="slide-eyebrow">{mode === 'login' ? t.loginEyebrow : t.t2eyebrow}</div>
-            <div className="slide-title">{mode === 'login' ? t.loginTitle : t.t2}</div>
-            <div className="slide-sub">{mode === 'login' ? t.loginSub : t.sub2}</div>
-
-            <div className="social-btns">
-              <button className="social-btn" disabled={loading} onClick={() => handleOAuth('google')}>
-                <span className="social-icon">G</span>
-                <span>{t.google}</span>
-              </button>
-              <button className="social-btn btn-kakao" disabled={loading} onClick={() => handleOAuth('kakao')}>
-                <span className="social-icon">K</span>
-                <span>{t.kakao}</span>
-              </button>
-              <button className="social-btn btn-line" disabled={loading} onClick={() => handleOAuth('line')}>
-                <span className="social-icon">L</span>
-                <span>{t.line}</span>
-              </button>
-
-              <div className="divider">
-                <div className="divider-line"></div>
-                <div className="divider-text">{t.or}</div>
-                <div className="divider-line"></div>
-              </div>
-
-              <button className="social-btn btn-email" onClick={chooseEmail}>
-                <span className="social-icon"><Mail size={16} strokeWidth={2} /></span>
-                <span>{t.email}</span>
-              </button>
-
-              {authMethod === 'email' && (
-                <div className="email-form">
-                  <div>
-                    <label className="input-label">{t.emailLabel}</label>
-                    <input
-                      className="rt-input"
-                      type="email"
-                      placeholder={t.emailPlaceholder}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="input-label">{t.pwLabel}</label>
-                    <input
-                      className="rt-input"
-                      type="password"
-                      placeholder={t.pwPlaceholder}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="terms">{t.terms}</div>
-            {error && <div className="rt-error-text">{error}</div>}
-
-            {pendingStatus === 'failed' && (
+            {showAuthEntry && (
               <>
-                <div className="rt-error-text">{pendingRequestError}</div>
+                <div className="slide-eyebrow">{mode === 'login' ? t.loginEyebrow : t.t2eyebrow}</div>
+                <div className="slide-title">{mode === 'login' ? t.loginTitle : t.t2}</div>
+                <div className="slide-sub">{mode === 'login' ? t.loginSub : t.sub2}</div>
+
+                <div className="social-btns">
+                  <button className="social-btn" disabled={loading} onClick={() => handleOAuth('google')}>
+                    <span className="social-icon">G</span>
+                    <span>{t.google}</span>
+                  </button>
+                  <button className="social-btn btn-kakao" disabled={loading} onClick={() => handleOAuth('kakao')}>
+                    <span className="social-icon">K</span>
+                    <span>{t.kakao}</span>
+                  </button>
+                  <button className="social-btn btn-line" disabled={loading} onClick={() => handleOAuth('line')}>
+                    <span className="social-icon">L</span>
+                    <span>{t.line}</span>
+                  </button>
+
+                  <div className="divider">
+                    <div className="divider-line"></div>
+                    <div className="divider-text">{t.or}</div>
+                    <div className="divider-line"></div>
+                  </div>
+
+                  <button className="social-btn btn-email" onClick={chooseEmail}>
+                    <span className="social-icon"><Mail size={16} strokeWidth={2} /></span>
+                    <span>{t.email}</span>
+                  </button>
+
+                  {authMethod === 'email' && (
+                    <div className="email-form">
+                      <div>
+                        <label className="input-label">{t.emailLabel}</label>
+                        <input
+                          className="rt-input"
+                          type="email"
+                          placeholder={t.emailPlaceholder}
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="input-label">{t.pwLabel}</label>
+                        <input
+                          className="rt-input"
+                          type="password"
+                          placeholder={t.pwPlaceholder}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="terms">{t.terms}</div>
+                {error && <div className="rt-error-text">{error}</div>}
+              </>
+            )}
+
+            {pendingStatus === 'retryable' && (
+              <>
+                <div className="slide-title">{t.pendingRetryableTitle}</div>
+                <div className="rt-error-text">{t.pendingRetryableHint}</div>
+                <div className="rt-error-text">{t.pendingRetryHint}</div>
+                <button
+                  type="button"
+                  className="rt-btn-secondary"
+                  disabled={isRetryingPending}
+                  onClick={handleRetryPendingSubmit}
+                >
+                  {isRetryingPending ? t.pendingRetrying : t.pendingRetryBtn}
+                </button>
+              </>
+            )}
+            {pendingStatus === 'editable' && (
+              <>
+                <div className="slide-title">{t.pendingEditableTitle}</div>
+                <div className="rt-error-text">{t.pendingEditableHint}</div>
+                {/* Phase 3에서 restoreRequestForm()으로 연결 예정 - 그 전까지는 비활성 */}
+                <button type="button" className="rt-btn-secondary" disabled>
+                  {t.pendingEditBtn}
+                </button>
+                <div className="rt-notice-text">{t.pendingEditComingSoon}</div>
+              </>
+            )}
+            {pendingStatus === 'unknown' && (
+              <>
+                <div className="slide-title">{t.pendingUnknownTitle}</div>
+                <div className="rt-error-text">{t.pendingUnknownHint}</div>
                 <div className="rt-error-text">{t.pendingRetryHint}</div>
                 <button
                   type="button"
@@ -440,10 +482,14 @@ export default function SignUp({ mode = 'signup' }) {
               </>
             )}
             {pendingStatus === 'session_required' && (
-              <div className="rt-error-text">{t.pendingSessionHint}</div>
+              // 오류가 아니라 안내이므로 rt-error-text(빨간 오류 박스)와 다른 스타일을 쓴다 -
+              // 위쪽 로그인 폼(showAuthEntry===true라 항상 함께 보임)을 가리키는 문구라 폼과
+              // 나란히 있어도 "또 다른 오류"처럼 보이지 않게 하기 위함.
+              <div className="rt-notice-text">{t.pendingSessionHint}</div>
             )}
             {pendingStatus === 'invalid' && (
               <>
+                <div className="slide-title">{t.pendingInvalidTitle}</div>
                 <div className="rt-error-text">{t.pendingInvalidHint}</div>
                 <button type="button" className="rt-btn-secondary" onClick={() => navigate('/request')}>
                   {t.pendingRewriteBtn}
@@ -452,11 +498,25 @@ export default function SignUp({ mode = 'signup' }) {
             )}
             {pendingStatus === 'expired' && (
               <>
+                <div className="slide-title">{t.pendingExpiredTitle}</div>
                 <div className="rt-error-text">{t.pendingExpiredHint}</div>
                 <button type="button" className="rt-btn-secondary" onClick={() => navigate('/request')}>
                   {t.pendingRewriteBtn}
                 </button>
               </>
+            )}
+
+            {/* showAuthEntry가 false인 모든 pending 상태 공통 이탈 경로. PENDING_REQUEST_KEY는
+                건드리지 않는다 - 다시 로그인하면 checkExistingSession/login effect가 재시도한다. */}
+            {!showAuthEntry && (
+              <button
+                type="button"
+                className="rt-btn-secondary"
+                style={{ marginTop: 10 }}
+                onClick={() => redirectForRole(navigate, profile?.role)}
+              >
+                {t.pendingLeaveBtn}
+              </button>
             )}
           </div>
         </div>
@@ -491,7 +551,7 @@ export default function SignUp({ mode = 'signup' }) {
       )}
 
       <div className="bottom-area">
-        {step === 0 && authMethod === 'email' && mode === 'login' && (
+        {showAuthEntry && step === 0 && authMethod === 'email' && mode === 'login' && (
           <button
             className="rt-btn-primary"
             disabled={!emailValid || !passwordValid || loading}
@@ -500,7 +560,7 @@ export default function SignUp({ mode = 'signup' }) {
             {t.loginBtn}
           </button>
         )}
-        {step === 0 && authMethod === 'email' && mode !== 'login' && (
+        {showAuthEntry && step === 0 && authMethod === 'email' && mode !== 'login' && (
           <>
             <button
               className="rt-btn-primary"

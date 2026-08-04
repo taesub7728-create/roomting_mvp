@@ -51,7 +51,9 @@ export async function createRequest({
     .select()
     .single()
 
-  if (error) return { data: null, error: toFriendlyError(error) }
+  // rawError: classifySubmitFailure()가 code/message를 볼 수 있도록 가공 전 원본을 함께
+  // 반환한다(다른 호출부는 이 필드를 그냥 무시하면 됨 - 기존 계약 안 깨짐).
+  if (error) return { data: null, error: toFriendlyError(error), rawError: error }
   return { data, error: null }
 }
 
