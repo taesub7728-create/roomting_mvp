@@ -71,6 +71,7 @@ export default function SignUp({ mode = 'signup' }) {
   const [awaitingEmailConfirm, setAwaitingEmailConfirm] = useState(false) // 이메일 인증 대기
   const [pendingRequestError, setPendingRequestError] = useState(null) // status==='failed'일 때의 원문 에러 메시지
   const [pendingStatus, setPendingStatus] = useState(null) // submitPendingRequestIfAny()의 마지막 결과 status(로그인/가입 공용)
+  const [isRetryingPending, setIsRetryingPending] = useState(false)
   const isSubmittingPendingRef = useRef(false)
 
   // 로그인 없이 조건 요청서를 작성하다가 로그인/가입하러 온 경우, 완료되자마자 그 내용을 이어서 제출
@@ -240,6 +241,22 @@ export default function SignUp({ mode = 'signup' }) {
     redirectForRole(navigate, profile?.role)
   }
 
+  // pending 제출 실패(failed) 후 "다시 시도" 버튼 - 재로그인 없이 동일한 함수를 그대로 재호출한다
+  async function handleRetryPendingSubmit() {
+    setIsRetryingPending(true)
+    const result = await submitPendingRequestIfAny()
+    setIsRetryingPending(false)
+
+    if (result.status === 'success') {
+      navigate(`/request/success/${result.requestId}`, { replace: true })
+      return
+    }
+    if (result.status !== 'none') {
+      setPendingStatus(result.status)
+    }
+    // result.status === 'none'(재진입 차단으로 무시된 경우)이면 화면 상태를 그대로 둔다
+  }
+
   async function handleFinish() {
     setError(null)
     setLoading(true)
@@ -358,6 +375,40 @@ export default function SignUp({ mode = 'signup' }) {
 
             <div className="terms">{t.terms}</div>
             {error && <div className="rt-error-text">{error}</div>}
+
+            {pendingStatus === 'failed' && (
+              <>
+                <div className="rt-error-text">{pendingRequestError}</div>
+                <div className="rt-error-text">{t.pendingRetryHint}</div>
+                <button
+                  type="button"
+                  className="rt-btn-secondary"
+                  disabled={isRetryingPending}
+                  onClick={handleRetryPendingSubmit}
+                >
+                  {isRetryingPending ? t.pendingRetrying : t.pendingRetryBtn}
+                </button>
+              </>
+            )}
+            {pendingStatus === 'session_required' && (
+              <div className="rt-error-text">{t.pendingSessionHint}</div>
+            )}
+            {pendingStatus === 'invalid' && (
+              <>
+                <div className="rt-error-text">{t.pendingInvalidHint}</div>
+                <button type="button" className="rt-btn-secondary" onClick={() => navigate('/request')}>
+                  {t.pendingRewriteBtn}
+                </button>
+              </>
+            )}
+            {pendingStatus === 'expired' && (
+              <>
+                <div className="rt-error-text">{t.pendingExpiredHint}</div>
+                <button type="button" className="rt-btn-secondary" onClick={() => navigate('/request')}>
+                  {t.pendingRewriteBtn}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -438,7 +489,10 @@ export default function SignUp({ mode = 'signup' }) {
           <div className="done-icon-wrap"><img src={logo} alt="roomting" /></div>
           <div className="done-title">{t.doneTitle}<br /><span className="accent">{nickTrimmed}</span></div>
           <div className="done-sub">{t.doneSub}</div>
-          {pendingRequestError && <div className="rt-error-text" style={{ marginBottom: 12 }}>{pendingRequestError}</div>}
+          {pendingStatus === 'failed' && <div className="rt-error-text" style={{ marginBottom: 12 }}>{pendingRequestError}</div>}
+          {pendingStatus === 'session_required' && <div className="rt-error-text" style={{ marginBottom: 12 }}>{t.pendingSessionHint}</div>}
+          {pendingStatus === 'invalid' && <div className="rt-error-text" style={{ marginBottom: 12 }}>{t.pendingInvalidHint}</div>}
+          {pendingStatus === 'expired' && <div className="rt-error-text" style={{ marginBottom: 12 }}>{t.pendingExpiredHint}</div>}
           <button className="rt-btn-primary" onClick={() => navigate('/')}>{t.doneBtn}</button>
         </div>
       )}
