@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Mail } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { signUpWithEmail, signInWithEmail, signInWithOAuth, updateOwnProfile, getSession, getCurrentProfile } from '../../api/auth.api'
-import { createRequest } from '../../api/requests.api'
-import { PENDING_REQUEST_KEY } from '../RequestWizard/RequestWizard'
+import { createRequest, SESSION_REQUIRED_ERROR } from '../../api/requests.api'
+import { PENDING_REQUEST_KEY, PENDING_REQUEST_TTL_MS } from '../RequestWizard/RequestWizard'
 import { redirectForRole } from '../../utils/redirectForRole'
 import { useAuth } from '../../shared/auth/useAuth'
 import { homePathForRole } from '../../shared/auth/homePathForRole'
@@ -13,6 +13,40 @@ import { signupText } from './translations'
 import './SignUp.css'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// PENDING_REQUEST_KEY에 저장된 문자열을 파싱하고 상태를 판정한다(순수 함수 - 컴포넌트 state 없음).
+// - JSON 자체가 깨졌거나 객체가 아님 → invalid
+// - savedAt/payload 래퍼 흔적이 전혀 없음(래퍼 도입 이전 포맷) → 저장 시각을 알 수 없어 신선도를
+//   보장 못 하므로 손상이 아니라 "오래됨(expired)"으로 간주해 다시 작성을 유도한다
+// - 래퍼 흔적은 있는데 savedAt이 숫자가 아니거나 0 이하이거나 미래 시각이거나 payload가 객체가 아님 → invalid
+// - 래퍼 정상 + TTL 이내 → ok, 아니면 → expired
+function classifyStoredPending(raw) {
+  let parsed
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return { status: 'invalid' }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { status: 'invalid' }
+  }
+
+  const hasWrapperShape = 'savedAt' in parsed || 'payload' in parsed
+  if (!hasWrapperShape) {
+    return { status: 'expired' }
+  }
+
+  const { savedAt, payload } = parsed
+  const savedAtValid = typeof savedAt === 'number' && Number.isFinite(savedAt) && savedAt > 0 && savedAt <= Date.now()
+  const payloadValid = !!payload && typeof payload === 'object' && !Array.isArray(payload)
+  if (!savedAtValid || !payloadValid) {
+    return { status: 'invalid' }
+  }
+  if (Date.now() - savedAt > PENDING_REQUEST_TTL_MS) {
+    return { status: 'expired' }
+  }
+  return { status: 'ok', payload }
+}
 
 // mode: 'signup'(기본, /signup/customer) | 'login'(/login/customer - 로그인 전용 화면, 가입 유도 없음)
 export default function SignUp({ mode = 'signup' }) {
@@ -35,24 +69,107 @@ export default function SignUp({ mode = 'signup' }) {
   const [error, setError] = useState(null)
   const [done, setDone] = useState(false) // 가입 완료 (바로 로그인된 상태)
   const [awaitingEmailConfirm, setAwaitingEmailConfirm] = useState(false) // 이메일 인증 대기
-  const [pendingRequestError, setPendingRequestError] = useState(null)
+  const [pendingRequestError, setPendingRequestError] = useState(null) // status==='failed'일 때의 원문 에러 메시지
+  const [pendingStatus, setPendingStatus] = useState(null) // submitPendingRequestIfAny()의 마지막 결과 status(로그인/가입 공용)
+  const isSubmittingPendingRef = useRef(false)
 
   // 로그인 없이 조건 요청서를 작성하다가 로그인/가입하러 온 경우, 완료되자마자 그 내용을 이어서 제출
-  // 반환값: 제출 성공 시 생성된 request id, 대기 중인 요청이 없거나 실패하면 null
-  // (성공 시 호출부가 공통 Success 화면(/request/success/:id)으로 이동시킴)
+  // 반환값: { status, requestId, error }
+  //   none: pending key 없음 (또는 이미 진행 중인 호출이 있어 이번 호출은 조용히 무시함)
+  //   success: 제출 성공, key 삭제 완료
+  //   failed: 파싱은 성공했지만 DB/네트워크/예외로 실패, key 유지
+  //   session_required: SESSION_REQUIRED_ERROR와 정확히 일치, key 유지
+  //   invalid: JSON.parse 실패 또는 wrapper 구조 손상, key 삭제
+  //   expired: savedAt 기준 TTL 초과(또는 래퍼 도입 이전 legacy 포맷), createRequest 호출 없이 key 삭제
   async function submitPendingRequestIfAny() {
     const raw = localStorage.getItem(PENDING_REQUEST_KEY)
-    if (!raw) return null
-    localStorage.removeItem(PENDING_REQUEST_KEY)
-    try {
-      const payload = JSON.parse(raw)
-      const { data, error } = await createRequest(payload)
-      if (error) { setPendingRequestError(error); return null }
-      return data.id
-    } catch {
-      // 저장된 내용을 읽지 못하면 조용히 무시 (가입 자체는 이미 성공한 상태이므로)
-      return null
+    if (!raw) return { status: 'none', requestId: null, error: null }
+
+    if (isSubmittingPendingRef.current) {
+      // 이미 진행 중인 호출이 있음 - 새로 제출을 시도하지 않고 조용히 무시(별도 에러 표시 없음).
+      // 원래 진행 중이던 호출이 끝나면 그 결과가 정상적으로 반영된다.
+      return { status: 'none', requestId: null, error: null }
     }
+
+    const classification = classifyStoredPending(raw)
+
+    if (classification.status === 'invalid') {
+      console.warn('[pending-submit] invalid/corrupted payload, discarding')
+      localStorage.removeItem(PENDING_REQUEST_KEY)
+      return { status: 'invalid', requestId: null, error: null }
+    }
+    if (classification.status === 'expired') {
+      console.warn('[pending-submit] expired, discarding without submit')
+      localStorage.removeItem(PENDING_REQUEST_KEY)
+      return { status: 'expired', requestId: null, error: null }
+    }
+
+    const { payload } = classification
+
+    isSubmittingPendingRef.current = true
+    try {
+      console.log('[pending-submit] starting', {
+        dealType: payload?.dealType,
+        propertyCategory: payload?.propertyCategory,
+        depositMin: payload?.depositMin,
+        depositMax: payload?.depositMax,
+        rentMax: payload?.rentMax,
+        jeonseLoanPlanned: payload?.jeonseLoanPlanned,
+        roomTypeCount: payload?.roomTypes?.length ?? 0,
+        hasMoveInDate: Boolean(payload?.moveInDate),
+      })
+      console.log('[pending-submit] calling createRequest')
+      const { data, error } = await createRequest(payload)
+      console.log('[pending-submit] createRequest returned', {
+        hasData: Boolean(data),
+        hasError: Boolean(error),
+        id: data?.id ?? null,
+      })
+
+      if (error === SESSION_REQUIRED_ERROR) {
+        console.error('[pending-submit] session required:', { error })
+        setPendingRequestError(error)
+        return { status: 'session_required', requestId: null, error }
+      }
+      if (error) {
+        // createRequest()는 이미 toFriendlyError()를 거친 문자열을 반환하므로
+        // (원본 Supabase error.code/details/hint는 requests.api.js 안에서 이미 버려짐)
+        // 여기서는 그 문자열 자체를 출력한다.
+        console.error('[pending-submit] createRequest failed:', { error })
+        setPendingRequestError(error)
+        return { status: 'failed', requestId: null, error }
+      }
+
+      // 성공했을 때만 key를 지운다 - 실패 시에는 위에서 return하므로 이 줄에 도달하지 않는다
+      localStorage.removeItem(PENDING_REQUEST_KEY)
+      console.log('[pending-submit] success', { id: data.id })
+      return { status: 'success', requestId: data.id, error: null }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[pending-submit] unexpected exception:', {
+        message,
+        stack: err instanceof Error ? err.stack : undefined,
+      })
+      setPendingRequestError(message)
+      return { status: 'failed', requestId: null, error: message }
+    } finally {
+      isSubmittingPendingRef.current = false
+    }
+  }
+
+  // 로그인/가입 성공 직후 pending 제출까지 마무리하는 공통 지점(finishAfterAuth) -
+  // handleFinish의 두 경로(finalizeMode/일반 가입)가 동일하게 재사용한다.
+  async function finishAfterAuth() {
+    const result = await submitPendingRequestIfAny()
+    if (result.status === 'success') {
+      // replace: 완료 화면에서 뒤로가기를 눌러도 가입 화면이 다시 나타나지 않도록 함
+      navigate(`/request/success/${result.requestId}`, { replace: true })
+      return
+    }
+    if (result.status !== 'none') {
+      setPendingStatus(result.status)
+    }
+    setDone(true)
   }
 
   useEffect(() => {
@@ -101,16 +218,23 @@ export default function SignUp({ mode = 'signup' }) {
 
   async function handleLogin() {
     setError(null)
+    setPendingStatus(null)
     setLoading(true)
     const { error: loginError } = await signInWithEmail({ email: email.trim(), password })
     if (loginError) { setLoading(false); setError(loginError); return }
 
     const { data: profile } = await getCurrentProfile()
-    const requestId = await submitPendingRequestIfAny()
+    const result = await submitPendingRequestIfAny()
     setLoading(false)
-    if (requestId) {
+
+    if (result.status === 'success') {
       // replace: 완료 화면에서 뒤로가기를 눌러도 로그인 화면이 다시 나타나지 않도록 함
-      navigate(`/request/success/${requestId}`, { replace: true })
+      navigate(`/request/success/${result.requestId}`, { replace: true })
+      return
+    }
+    if (result.status !== 'none') {
+      // failed/session_required/invalid/expired 전부 - 이 화면에 머물러 안내한다(redirectForRole 생략)
+      setPendingStatus(result.status)
       return
     }
     redirectForRole(navigate, profile?.role)
@@ -124,13 +248,7 @@ export default function SignUp({ mode = 'signup' }) {
       const { error } = await updateOwnProfile({ nickname: nickTrimmed, preferredLanguage: lang })
       setLoading(false)
       if (error) { setError(error); return }
-      const requestId = await submitPendingRequestIfAny()
-      if (requestId) {
-        // replace: 완료 화면에서 뒤로가기를 눌러도 가입 화면이 다시 나타나지 않도록 함
-        navigate(`/request/success/${requestId}`, { replace: true })
-        return
-      }
-      setDone(true)
+      await finishAfterAuth()
       return
     }
 
@@ -145,13 +263,7 @@ export default function SignUp({ mode = 'signup' }) {
     if (error) { setError(error); return }
 
     if (data?.session) {
-      const requestId = await submitPendingRequestIfAny()
-      if (requestId) {
-        // replace: 완료 화면에서 뒤로가기를 눌러도 가입 화면이 다시 나타나지 않도록 함
-        navigate(`/request/success/${requestId}`, { replace: true })
-        return
-      }
-      setDone(true)
+      await finishAfterAuth()
     } else {
       // Supabase 프로젝트의 "이메일 확인" 설정이 켜져 있으면 세션 없이 가입만 되고, 이메일 인증 후 로그인 가능
       setAwaitingEmailConfirm(true)

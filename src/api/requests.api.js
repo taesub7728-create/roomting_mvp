@@ -1,6 +1,10 @@
 import { supabase } from './supabaseClient'
 import { toFriendlyError } from './errors'
 
+// createRequest()가 세션 없음을 알릴 때 쓰는 고정 문자열. toFriendlyError()를 거치지 않는
+// 유일한 에러 케이스라, 호출부에서 "세션이 아예 없는 상태"를 구분하는 신호로 재사용한다.
+export const SESSION_REQUIRED_ERROR = '로그인이 필요합니다.'
+
 // 조건 요청서 저장. 지금은 고객 본인이 작성하는 흐름만 지원
 // (에이전트가 다른 고객을 대신 작성하는 기능은 이후 단계에서 customer_id를 선택하는 UI와 함께 추가 예정)
 export async function createRequest({
@@ -22,7 +26,7 @@ export async function createRequest({
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { data: null, error: '로그인이 필요합니다.' }
+  if (!user) return { data: null, error: SESSION_REQUIRED_ERROR }
 
   const { data, error } = await supabase
     .from('requests')

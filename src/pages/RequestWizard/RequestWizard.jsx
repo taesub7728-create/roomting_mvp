@@ -10,6 +10,8 @@ import { validateRequest } from './validateRequest'
 import './RequestWizard.css'
 
 export const PENDING_REQUEST_KEY = 'roomting_pending_request'
+// draft TTL(DRAFT_TTL_MS)과 동일한 24시간 - pending도 "사용자의 미완료 의도" 데이터라 같은 정책을 쓴다.
+export const PENDING_REQUEST_TTL_MS = 24 * 60 * 60 * 1000
 
 // draft(작성 중 임시 저장)는 로그인 후 자동 제출용인 PENDING_REQUEST_KEY와
 // 역할이 다르므로 완전히 별도 key를 쓴다.
@@ -224,7 +226,7 @@ export default function RequestWizard() {
       // (기존 회원은 그대로 로그인, 신규 회원은 화면 내 "회원가입" 링크로 이동)
       // (로그인/가입 완료 직후 SignUp 화면에서 이 내용을 그대로 이어서 제출함)
       // replace: 완료 화면에서 뒤로가기를 눌러도 이 작성 화면이 다시 나타나지 않도록 함
-      localStorage.setItem(PENDING_REQUEST_KEY, JSON.stringify(payload))
+      localStorage.setItem(PENDING_REQUEST_KEY, JSON.stringify({ savedAt: Date.now(), payload }))
       navigate('/login/customer', { replace: true })
       return
     }
