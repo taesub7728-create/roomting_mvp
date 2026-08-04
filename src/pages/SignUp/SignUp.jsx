@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Mail } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { signUpWithEmail, signInWithEmail, signInWithOAuth, updateOwnProfile, getSession, getCurrentProfile } from '../../api/auth.api'
@@ -7,7 +7,6 @@ import { createRequest, SESSION_REQUIRED_ERROR } from '../../api/requests.api'
 import { PENDING_REQUEST_KEY, PENDING_REQUEST_TTL_MS } from '../RequestWizard/RequestWizard'
 import { redirectForRole } from '../../utils/redirectForRole'
 import { useAuth } from '../../shared/auth/useAuth'
-import { homePathForRole } from '../../shared/auth/homePathForRole'
 import logo from '../../assets/roomting-symbol.svg'
 import { signupText } from './translations'
 import './SignUp.css'
@@ -73,6 +72,13 @@ export default function SignUp({ mode = 'signup' }) {
   const [pendingStatus, setPendingStatus] = useState(null) // submitPendingRequestIfAny()의 마지막 결과 status(로그인/가입 공용)
   const [isRetryingPending, setIsRetryingPending] = useState(false)
   const isSubmittingPendingRef = useRef(false)
+
+  // 세션 존재 여부 판단(및 그에 따른 pending 처리)이 끝나기 전에는 로그인/가입 폼을 그리지
+  // 않는다 - 판단 도중 폼이 잠깐 보였다 사라지는 깜빡임을 막기 위함.
+  const [authChecking, setAuthChecking] = useState(true)
+  // checkExistingSession(모든 mode에서 실행)과 mode==='login' 전용 effect가 같은 마운트에서
+  // 동시에 "이미 로그인된 사용자"를 감지했을 때 pending 제출을 두 번 트리거하지 않기 위한 가드.
+  const postAuthResolvedRef = useRef(false)
 
   // 로그인 없이 조건 요청서를 작성하다가 로그인/가입하러 온 경우, 완료되자마자 그 내용을 이어서 제출
   // 반환값: { status, requestId, error }
@@ -176,20 +182,66 @@ export default function SignUp({ mode = 'signup' }) {
   useEffect(() => {
     async function checkExistingSession() {
       const session = await getSession()
-      if (!session) return
+      if (!session) {
+        setAuthChecking(false)
+        return
+      }
 
-      // 이미 닉네임까지 있는 계정이면(기존 회원) 소셜 로그인으로 온 것이므로 바로 로그인 처리
+      // 이미 닉네임까지 있는 계정이면(기존 회원) 소셜 로그인 또는 이미 로그인된 상태로 이
+      // 화면에 재진입한 것 - redirect 전에 pending 제출부터 처리한다(누락 시 조용히 유실됨).
       const { data: profile } = await getCurrentProfile()
       if (profile?.nickname) {
+        if (postAuthResolvedRef.current) return
+        postAuthResolvedRef.current = true
+
+        const result = await submitPendingRequestIfAny()
+        if (result.status === 'success') {
+          navigate(`/request/success/${result.requestId}`, { replace: true })
+          return
+        }
+        if (result.status !== 'none') {
+          setPendingStatus(result.status)
+          setAuthChecking(false)
+          return
+        }
         redirectForRole(navigate, profile.role)
         return
       }
       // 닉네임이 없으면 소셜 가입 직후 처음 들어온 것 → 닉네임만 채우면 가입 완료
       setFinalizeMode(true)
       setStep(1)
+      setAuthChecking(false)
     }
     checkExistingSession()
   }, [navigate])
+
+  // mode==='login' 전용: 이미 로그인 + profile까지 확정된 사용자를 redirect하기 전에 pending
+  // 제출을 먼저 처리한다(기존에는 동기 <Navigate>가 이 확인 없이 즉시 이동시켰음).
+  useEffect(() => {
+    if (mode !== 'login') return
+    if (authLoading || profileLoading) return
+    if (!user || !profile) return
+    if (postAuthResolvedRef.current) return
+
+    let cancelled = false
+    async function resolveLoginModeSession() {
+      postAuthResolvedRef.current = true
+      const result = await submitPendingRequestIfAny()
+      if (cancelled) return
+      if (result.status === 'success') {
+        navigate(`/request/success/${result.requestId}`, { replace: true })
+        return
+      }
+      if (result.status !== 'none') {
+        setPendingStatus(result.status)
+        setAuthChecking(false)
+        return
+      }
+      redirectForRole(navigate, profile.role)
+    }
+    resolveLoginModeSession()
+    return () => { cancelled = true }
+  }, [mode, user, profile, authLoading, profileLoading, navigate])
 
   const nickTrimmed = nickname.trim()
   const nickValid = nickTrimmed.length >= 2 && nickTrimmed.length <= 16
@@ -287,13 +339,10 @@ export default function SignUp({ mode = 'signup' }) {
     }
   }
 
-  // 로그인 전용 화면(mode==='login')에서는 이미 로그인 + profile까지 확정된 사용자에게
-  // 로그인 폼이 잠깐이라도 보이지 않도록 렌더 단계에서 먼저 처리한다.
-  // (mode==='signup'일 때는 위 checkExistingSession의 OAuth 콜백 처리 로직이 별도로 담당하므로 여기서는 손대지 않음)
-  if (mode === 'login') {
-    if (authLoading || profileLoading) return null
-    if (user && profile) return <Navigate to={homePathForRole(profile.role)} replace />
-  }
+  // 세션/펜딩 판단이 끝나기 전에는 로그인/가입 폼을 그리지 않는다(mode 공통).
+  // 실제 리다이렉트 여부 판단은 위 checkExistingSession effect와 mode==='login' 전용
+  // effect가 담당하고, 여기서는 그 판단이 끝날 때까지 화면만 비워둔다.
+  if (authChecking) return null
 
   return (
     <div className="frame signup-frame">
