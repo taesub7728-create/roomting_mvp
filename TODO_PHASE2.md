@@ -281,6 +281,36 @@ categorySteps 구조는 이미 이번 작업에서 마련됨, 실제 office/reta
 보증금으로 재사용하고, deposit_min(신규)은 선택 입력. DB CHECK(양수 검증 포함)로
 범위 역전·음수 값을 서버 레벨에서 차단.
 
+## pending-submit 데이터 손실 버그 수정 (2026-08-04, 코드 레벨 검증 완료 · 브라우저 실사용 테스트 대기)
+
+로그인 게이트 실사용 검증 중 발견: 로그인 후 `PENDING_REQUEST_KEY` 자동 제출이
+`createRequest()` 성공 여부와 무관하게 `localStorage.removeItem()`이 먼저 실행되는
+구조였다. 실패 시(네트워크/RLS/CHECK 등) 사용자가 입력한 요청 조건이 영구히
+사라지는 데이터 손실 버그였고, 로그인 경로에서는 실패해도 에러가 화면에 전혀
+표시되지 않아 증상이 "로그인 후 아무 일도 안 일어남"으로만 보였다.
+
+커밋 `a248603`(fix: preserve and validate pending requests before submission),
+`fee78da`(feat: add recovery UI for failed pending requests).
+
+**완료됨(코드 레벨 검증):**
+- diff 전체 리뷰 완료
+- `SESSION_REQUIRED_ERROR` 4개 위치(판정/session_required 미삭제/성공 시에만 삭제/
+  invalid·expired 삭제) 계획과 실제 구현 일치 확인
+- 재진입 방지(`isSubmittingPendingRef`)가 `finally`에서 항상 해제됨을 코드로 확인
+- build/lint 두 커밋 각각 통과
+
+**아직 안 된 것(브라우저 실사용 테스트):**
+- CHECK 위반 강제 실패 → key 유지 → Retry 버튼 표시
+- Retry 재시도 → 성공 화면 이동
+- Retry 연타 시 중복 요청 방지(Network 탭 실제 확인)
+- TTL 만료(savedAt 조작) → expired 안내
+- legacy payload(래퍼 없음) → expired 처리
+- invalid(깨진 JSON) → invalid 처리
+- 회원가입 경로(handleFinish) 회귀 확인
+- 4개 언어(ko/ja/zh/en) 문구 확인
+
+다음 세션(집 PC 등)에서 이어서 진행.
+
 ## 지역 입력 구조화 (설계 조사 완료, 구현 결정 대기)
 
 region_text 자유 입력만으로는 "망원역", "회사 근처", 지도 핀 등 서로 다른 위치
