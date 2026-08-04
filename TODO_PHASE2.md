@@ -281,35 +281,89 @@ categorySteps 구조는 이미 이번 작업에서 마련됨, 실제 office/reta
 보증금으로 재사용하고, deposit_min(신규)은 선택 입력. DB CHECK(양수 검증 포함)로
 범위 역전·음수 값을 서버 레벨에서 차단.
 
-## pending-submit 데이터 손실 버그 수정 (2026-08-04, 코드 레벨 검증 완료 · 브라우저 실사용 테스트 대기)
+## pending-submit / 로그인 게이트 리팩터링 (2026-08-04, Phase 1-2 완료 · Phase 3 인계)
 
-로그인 게이트 실사용 검증 중 발견: 로그인 후 `PENDING_REQUEST_KEY` 자동 제출이
-`createRequest()` 성공 여부와 무관하게 `localStorage.removeItem()`이 먼저 실행되는
-구조였다. 실패 시(네트워크/RLS/CHECK 등) 사용자가 입력한 요청 조건이 영구히
-사라지는 데이터 손실 버그였고, 로그인 경로에서는 실패해도 에러가 화면에 전혀
-표시되지 않아 증상이 "로그인 후 아무 일도 안 일어남"으로만 보였다.
+**배경**: 최초 데이터 손실 버그(로그인 후 `PENDING_REQUEST_KEY`가 `createRequest()`
+성공 여부와 무관하게 먼저 삭제되던 문제, 커밋 `a248603`/`fee78da`)를 고친 뒤 이어진
+분석에서 별도 문제 4개를 확인했고(설계안 승인 완료), Phase 1~4로 나눠 구현 중이다.
+확정된 문제: (1) OAuth/기존 세션 로그인 경로에서 pending 제출이 누락됨 (2) 실패 시
+값을 고칠 방법이 없음 (3) CHECK 위반 등 DB 원문이 화면에 그대로 노출됨 (4) 중복 제출
+방지가 컴포넌트 로컬 ref뿐이라 탭 간·새로고침에 취약함.
 
-커밋 `a248603`(fix: preserve and validate pending requests before submission),
-`fee78da`(feat: add recovery UI for failed pending requests).
+**Phase 1 완료 (커밋 `c83ef22`)** — 문제 (1):
+- `checkExistingSession()`의 nickname 보유자 즉시 redirect와 `mode==='login'`의 동기
+  `<Navigate>` 가드 둘 다, `redirectForRole()` 실행 전에 기존 `submitPendingRequestIfAny()`를
+  먼저 호출하도록 통합(새 공통 함수는 만들지 않음)
+- `authChecking` state로 세션/pending 판단이 끝나기 전 폼이 깜빡 노출되지 않게 함
+- `postAuthResolvedRef`로 두 effect가 같은 마운트에서 동시에 pending을 두 번 트리거하지
+  않게 가드
 
-**완료됨(코드 레벨 검증):**
-- diff 전체 리뷰 완료
-- `SESSION_REQUIRED_ERROR` 4개 위치(판정/session_required 미삭제/성공 시에만 삭제/
-  invalid·expired 삭제) 계획과 실제 구현 일치 확인
-- 재진입 방지(`isSubmittingPendingRef`)가 `finally`에서 항상 해제됨을 코드로 확인
-- build/lint 두 커밋 각각 통과
+**Phase 2 완료 (커밋 `31ce238`)** — 문제 (3), 문제 (1)의 UI 부작용:
+- `src/api/classifySubmitFailure.js` 신설: retryable/editable/unknown 분류 순수 함수.
+  Supabase 실측 기반(`code==='23514'`, constraint 이름은 `error.message` 문자열 파싱으로만
+  확인 가능, `details`/`hint`는 `null`, `name`은 `undefined` - instanceof 판별 불가).
+  editable은 `requests_deposit_range_consistency`/`requests_jeonse_loan_consistency`
+  화이트리스트만 허용, 그 외(미등록 constraint·매치 실패·RLS 오류 등)는 전부 unknown
+- 화면에서 DB 원문 완전 제거, 상태별 고정 문구+CTA만 노출(translations.js 4개 언어 15키
+  추가). retryable/unknown=재시도 버튼, editable=요청서 수정 버튼(이번 Phase는 disabled)
+- `showAuthEntry = !pendingStatus || pendingStatus === 'session_required'` 조건으로
+  이미 인증된 사용자에게 로그인/가입 진입 UI가 pending 실패 안내와 동시에 뜨던 문제 해결
+- `.rt-notice-text`(회색) 신설해 `session_required` 안내를 `.rt-error-text`(빨강)와 시각
+  분리, `showAuthEntry===false`인 모든 상태에 공통 "홈으로" 이탈 버튼 추가(PENDING_REQUEST_KEY
+  미삭제, `redirectForRole` 재사용)
 
-**아직 안 된 것(브라우저 실사용 테스트):**
-- CHECK 위반 강제 실패 → key 유지 → Retry 버튼 표시
-- Retry 재시도 → 성공 화면 이동
+**Phase 3 할 일 (다음 세션)** — 문제 (2):
+- `restoreRequestForm(payload)` 구현 - `buildRequestPayload()`의 역변환.
+  `regionText↔station`, `rentMax↔rent`, `dealType`에 따라 `depositMax`가
+  `deposit`(rent) 또는 `jeonseDepositMax`(jeonse) 중 어디로 갈지 분기,
+  `registrationRequired↔jeonip`, `jeonseLoanDetail`의 `null→''` 정규화 등 전체 필드 검토
+  완료 - 설계는 확정, 구현만 남음
+- `REQUEST_DRAFT_KEY`에 실제 저장 형식(`{version, savedAt, draft, currentStep}`)에 맞춰
+  저장 - **저장 성공을 확인한 뒤에만** `PENDING_REQUEST_KEY` 삭제(저장 실패 시 pending
+  key 유지)
+- `editable` "요청서 수정" 버튼의 `disabled` 해제 + 위 흐름과 연결
+- 복귀 단계 규칙: `requests_deposit_range_consistency`/`requests_jeonse_loan_consistency`
+  → `TransactionStep`, `unknown` → 첫 단계(location). **review 단계로 직행 금지**
+  (`validateRequest()`가 moveInDate만 검사하므로 review 직행은 검증 공백을 재현함)
+- draft 충돌 정책: 기존 draft 없음 → pending 복원본 저장 / 기존 draft가 더 오래됨 → 복원본으로
+  교체 / 기존 draft가 더 최신 → 기존 `draftPrompt` UI 재사용 가능한지 먼저 확인하고 보고,
+  과도한 변경이 필요하면 별도 임시 키+최소 선택 화면으로 대체. **어떤 경우에도 조용한
+  덮어쓰기/삭제 금지**
+- (Phase 3와 함께 정리) `done` 오버레이의 `pendingRequestError`는 setter 없는 getter만
+  남아있는 죽은 코드(`pendingStatus`가 더 이상 `'failed'`가 될 수 없어 해당 분기 도달 불가) -
+  Phase 3에서 관련 상태를 다시 만질 때 같이 정리할지 검토
+
+**판단 보류(사용자 결정 필요, 구현 안 함)**:
+- `validateRequest()`에 jeonse 보증금 범위·대출 필드 조합 최종 검증을 추가할지. `steps.js`의
+  `validate()`와 중복 하드코딩 없이 공통화 가능한지는 검토했으나 실제 구현 여부는 미결정
+- 단위 테스트 프레임워크(vitest 등) 도입 여부 - 현재 프로젝트에 전혀 없음(playwright만
+  devDependency). `classifySubmitFailure()`는 순수 함수라 붙이기 쉬운 구조로 이미 작성됨
+- rent 원값 복원 불가: jeonse로 제출된 payload엔 rent(월세) 값이 없어(제출 시점에 이미
+  null로 정규화됨) `restoreRequestForm()`으로 복원해도 DEFAULT(70)로만 표시됨. 사용자에게
+  어떻게 안내할지 결정 필요(제안만 하고 구현하지 않음)
+
+**브라우저 실사용 테스트 전체 미실시** (Phase 1·2 전부 코드 추적으로만 확인, 실행 확인 아님):
+- 이미 로그인 상태로 `/signup/customer`, `/login/customer` 직접 진입 시 실제 리다이렉트/
+  pending 처리 동작(OAuth 포함 - 소셜 로그인 키 미설정이라 OAuth 경로 자체는 재현 불가)
+- retryable/editable/unknown/invalid/expired/session_required 각 상태 실제 화면 렌더,
+  4개 언어 실제 렌더
 - Retry 연타 시 중복 요청 방지(Network 탭 실제 확인)
-- TTL 만료(savedAt 조작) → expired 안내
-- legacy payload(래퍼 없음) → expired 처리
-- invalid(깨진 JSON) → invalid 처리
-- 회원가입 경로(handleFinish) 회귀 확인
-- 4개 언어(ko/ja/zh/en) 문구 확인
+- "홈으로" 버튼 클릭 후 실제 이동 목적지
+- 이메일 로그인/신규가입/finalizeMode 경로 회귀 확인
 
-다음 세션(집 PC 등)에서 이어서 진행.
+**이월(TODO): 서버 측 idempotency**
+- `requests.client_submission_id` UUID 컬럼 + UNIQUE 제약으로 서버 idempotency 도입 검토
+  (migration 필요 - CLAUDE.md 2번 규칙상 별도 분석·승인 대상, Phase 3와 별개로 처리)
+- 현재 `isSubmittingPendingRef`/`postAuthResolvedRef`는 컴포넌트 인스턴스 내에서만 중복
+  차단 가능
+- 미방지 시나리오: 다중 탭 동시 제출 / 페이지 리마운트·새로고침 / INSERT 성공 후 응답 유실
+  뒤 재시도
+- 기존 행은 nullable UUID로 migration 가능(Postgres는 다중 NULL을 unique 위반으로 보지
+  않음 - 별도 백필 불필요)
+- 감수하는 위험: 중복 `requests` 행 1건, 금전·개인정보 영향 없음, 고객 본인이 `closeRequest()`로
+  또는 관리자가 `listAllRequests()`로 수동 정리 가능
+
+다음 세션에서 이 섹션부터 읽고 Phase 3부터 이어서 진행.
 
 ## 지역 입력 구조화 (설계 조사 완료, 구현 결정 대기)
 
