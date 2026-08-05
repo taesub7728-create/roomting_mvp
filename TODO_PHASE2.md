@@ -351,6 +351,19 @@ categorySteps 구조는 이미 이번 작업에서 마련됨, 실제 office/reta
 - "홈으로" 버튼 클릭 후 실제 이동 목적지
 - 이메일 로그인/신규가입/finalizeMode 경로 회귀 확인
 
+**테스트 계정 정리 (2026-08-05 기록, 조치 대기)**
+- Phase 1~3 브라우저 실사용 테스트용으로 Supabase 대시보드에서 직접 만든 customer
+  테스트 계정 1개(2026-08-04 생성)가 살아 있다. 이 저장소는 public이므로 계정
+  식별 정보와 자격증명 특성은 여기 적지 않는다 — Supabase 대시보드에서 확인한다.
+- **Phase 3 브라우저 테스트를 마치는 즉시 해당 계정을 삭제하거나 비밀번호를 변경한다.**
+- 자격증명을 적어둔 로컬 메모 파일은 2026-08-05에 삭제했다. 그 파일은 스스로
+  "`*.local` 패턴으로 gitignore 처리됨"이라고 적고 있었지만 실제로는 무시되지 않는
+  상태였다(`*.local`은 `.local`로 끝나는 파일만 매치). 커밋된 이력이 없음을
+  `git log --all`로 확인했고, 재발 방지를 위해 `.gitignore`에 `*.local.*` 패턴을
+  추가했다.
+- 앞으로 자격증명을 파일로 남길 때는 주석을 믿지 말고 `git check-ignore -v <파일>`로
+  실제 무시 여부를 확인한다. 저장소가 public이라는 점도 함께 고려한다.
+
 **이월(TODO): 서버 측 idempotency**
 - `requests.client_submission_id` UUID 컬럼 + UNIQUE 제약으로 서버 idempotency 도입 검토
   (migration 필요 - CLAUDE.md 2번 규칙상 별도 분석·승인 대상, Phase 3와 별개로 처리)

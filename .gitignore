@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+# *.local은 ".local"로 끝나는 파일만 매치한다. test-accounts.local.md처럼
+# 확장자가 뒤에 더 붙는 로컬 전용 파일(자격증명 메모 등)은 아래 패턴이 막는다.
+*.local.*
 
 # 환경변수 (Supabase API 키 등) - 절대 GitHub에 올리면 안 됨
 .env
