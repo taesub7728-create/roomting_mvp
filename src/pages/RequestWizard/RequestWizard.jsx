@@ -8,89 +8,22 @@ import { getApplicableSteps } from './steps'
 import { buildRequestPayload } from './buildRequestPayload'
 import { validateRequest } from './validateRequest'
 import { checkJeonseLoanPlan } from './validateTransaction'
+import { DEFAULT_FORM } from './formDefaults'
+import {
+  loadValidDraft,
+  saveDraft,
+  clearDraft,
+  loadRestoredDraft,
+  clearRestored,
+  promoteRestoredToDraft,
+} from './requestDraftStorage'
 import './RequestWizard.css'
 
 export const PENDING_REQUEST_KEY = 'roomting_pending_request'
 // draft TTL(DRAFT_TTL_MS)과 동일한 24시간 - pending도 "사용자의 미완료 의도" 데이터라 같은 정책을 쓴다.
 export const PENDING_REQUEST_TTL_MS = 24 * 60 * 60 * 1000
 
-// draft(작성 중 임시 저장)는 로그인 후 자동 제출용인 PENDING_REQUEST_KEY와
-// 역할이 다르므로 완전히 별도 key를 쓴다.
-export const REQUEST_DRAFT_KEY = 'roomting_request_draft'
-const DRAFT_VERSION = 2
-const DRAFT_TTL_MS = 24 * 60 * 60 * 1000
 const DRAFT_SAVE_DEBOUNCE_MS = 600
-
-const DEFAULT_FORM = {
-  station: '',
-  dealType: 'rent',
-  rent: 70,
-  deposit: 1000,
-  jeonseDepositMin: null,
-  jeonseDepositMax: null,
-  jeonseLoanPlanned: null,
-  jeonseLoanDetail: '',
-  roomTypes: [],
-  jeonip: false,
-  moveInDate: '',
-  contractMonths: 6,
-  amenities: [],
-  extraNote: '',
-}
-
-// v1(단일 스크롤 폼) draft를 v2(단계형) 형태로 필드별 매핑한다. 필드 의미는 그대로라
-// 값 손실 없이 이전 가능하고, 신규 필드(전세 관련 등)는 안전한 기본값으로 채운다.
-// currentStep은 v1에 개념 자체가 없었으므로 0(1단계)으로 리셋한다 - 입력값은 보존하되
-// 진행 위치만 처음부터 다시 훑게 한다(과도한 추론으로 위치를 되짚지 않는다).
-function migrateV1ToV2(v1Draft) {
-  return {
-    form: {
-      ...DEFAULT_FORM,
-      station: v1Draft.station ?? '',
-      rent: v1Draft.rent ?? 70,
-      deposit: v1Draft.deposit ?? 1000,
-      roomTypes: v1Draft.roomTypes ?? [],
-      jeonip: v1Draft.jeonip ?? false,
-      moveInDate: v1Draft.moveInDate ?? '',
-      contractMonths: v1Draft.contractMonths ?? 6,
-      amenities: v1Draft.amenities ?? [],
-      extraNote: v1Draft.extraNote ?? '',
-    },
-    currentStep: 0,
-  }
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max)
-}
-
-function loadValidDraft(maxStepIndex) {
-  const raw = localStorage.getItem(REQUEST_DRAFT_KEY)
-  if (!raw) return null
-  let parsed
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    localStorage.removeItem(REQUEST_DRAFT_KEY)
-    return null
-  }
-  if (!parsed || typeof parsed.savedAt !== 'number' || !parsed.draft) {
-    localStorage.removeItem(REQUEST_DRAFT_KEY)
-    return null
-  }
-  if (Date.now() - parsed.savedAt > DRAFT_TTL_MS) {
-    localStorage.removeItem(REQUEST_DRAFT_KEY)
-    return null
-  }
-  if (parsed.version === DRAFT_VERSION) {
-    return { form: parsed.draft, currentStep: clamp(parsed.currentStep ?? 0, 0, maxStepIndex) }
-  }
-  if (parsed.version === 1) {
-    return migrateV1ToV2(parsed.draft)
-  }
-  localStorage.removeItem(REQUEST_DRAFT_KEY)
-  return null
-}
 
 // draft를 저장할 만한 입력이 있는지 판단하는 단일 기준점.
 // draft를 저장하는 모든 경로는 이 함수를 거쳐야 한다 - 저장 조건을 다른 곳에 중복 구현하지 않는다.
@@ -120,33 +53,86 @@ export default function RequestWizard() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
+  // { kind: 'resume', draft } - 기존 draft 이어쓰기 여부 확인(기존 동작)
+  // { kind: 'conflict', draft, restored } - 복원본과 기존 draft가 둘 다 있고 기존 쪽이 더 최신
   const [draftPrompt, setDraftPrompt] = useState(null)
   const [autosaveEnabled, setAutosaveEnabled] = useState(false)
+  // 전세로 제출됐던 요청서를 복원해서 월세 값이 기본값으로 채워진 상태. 사용자가 거래유형을
+  // 바꾸는 순간에만 금액 재확인 안내를 띄우기 위한 플래그다.
+  const [rentFallbackActive, setRentFallbackActive] = useState(false)
+  const [showRentRecheckNotice, setShowRentRecheckNotice] = useState(false)
   const lastSavedDraftRef = useRef(null)
 
-  useEffect(() => {
-    const draft = loadValidDraft(applicableSteps.length - 1)
-    if (draft) {
-      setDraftPrompt(draft)
-    } else {
-      setAutosaveEnabled(true)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  function handleResumeDraft() {
-    const { form: draftForm, currentStep } = draftPrompt
-    setForm(draftForm)
-    setCurrentStepIndex(currentStep)
-    lastSavedDraftRef.current = JSON.stringify({ form: draftForm, currentStep })
+  // 화면 상태를 특정 draft로 채운다. autosave가 곧바로 같은 내용을 다시 쓰지 않도록
+  // lastSavedDraftRef까지 맞춰준다.
+  function applyEntry(entry) {
+    setForm(entry.form)
+    setCurrentStepIndex(entry.currentStep)
+    lastSavedDraftRef.current = JSON.stringify({ form: entry.form, currentStep: entry.currentStep })
     setDraftPrompt(null)
     setAutosaveEnabled(true)
   }
 
+  // 복원본을 채택한다. 저장(promote) 실패해도 화면에는 복원본을 띄운다 - 임시 키가 남아 있어
+  // 다음 진입 때 다시 시도할 수 있고, 사용자가 지금 작업을 못 하게 막을 이유는 없다.
+  function adoptRestored(restored) {
+    promoteRestoredToDraft(restored)
+    setRentFallbackActive(restored.rentFallbackApplied)
+    applyEntry(restored)
+  }
+
+  useEffect(() => {
+    const maxStepIndex = applicableSteps.length - 1
+    const restored = loadRestoredDraft(maxStepIndex)
+    const draft = loadValidDraft(maxStepIndex)
+
+    // 복원본이 없으면 기존 동작 그대로.
+    if (!restored) {
+      if (draft) setDraftPrompt({ kind: 'resume', draft })
+      else setAutosaveEnabled(true)
+      return
+    }
+
+    // 덮어쓸 기존 draft가 아예 없으면 물어볼 것이 없다.
+    if (!draft) {
+      adoptRestored(restored)
+      return
+    }
+
+    // 어느 쪽이 사용자의 최신 의도인지 판단한다.
+    // 비교 대상은 "제출 버튼을 누른 시각"(sourceSavedAt)과 "마지막으로 타이핑한 시각"(draft.savedAt)이다.
+    // 복원본이 만들어진 시각(restored.savedAt)으로 비교하면 방금 만든 복원본이 언제나 최신이라
+    // 기존 draft를 항상 덮어쓰게 된다.
+    // sourceSavedAt이 없는 복원본(구버전 등)은 판단 근거가 없으므로 덮어쓰지 않고 물어본다.
+    const draftIsNewer = restored.sourceSavedAt == null || draft.savedAt > restored.sourceSavedAt
+    if (draftIsNewer) {
+      setDraftPrompt({ kind: 'conflict', draft, restored })
+      return
+    }
+
+    adoptRestored(restored)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function handleResumeDraft() {
+    applyEntry(draftPrompt.draft)
+  }
+
   function handleDiscardDraft() {
-    localStorage.removeItem(REQUEST_DRAFT_KEY)
+    clearDraft()
     setDraftPrompt(null)
     setAutosaveEnabled(true)
+  }
+
+  // 충돌 프롬프트의 두 버튼은 모두 "선택"이다. 어느 쪽도 사용자가 고르기 전에 지우지 않는다.
+  function handleConflictUseRestored() {
+    adoptRestored(draftPrompt.restored)
+  }
+
+  function handleConflictKeepDraft() {
+    // 사용자가 명시적으로 기존 작성분을 택했으므로 복원본은 여기서 정리한다.
+    clearRestored()
+    applyEntry(draftPrompt.draft)
   }
 
   // whitelist: 조건 필드(form)와 currentStep만 저장 대상. error/loading 등 UI 상태나
@@ -160,16 +146,11 @@ export default function RequestWizard() {
 
     const timer = setTimeout(() => {
       if (!hasMeaningfulDraft(form)) {
-        localStorage.removeItem(REQUEST_DRAFT_KEY)
+        clearDraft()
         lastSavedDraftRef.current = serialized
         return
       }
-      localStorage.setItem(REQUEST_DRAFT_KEY, JSON.stringify({
-        version: DRAFT_VERSION,
-        savedAt: Date.now(),
-        draft: form,
-        currentStep: currentStepIndex,
-      }))
+      saveDraft(form, currentStepIndex)
       lastSavedDraftRef.current = serialized
     }, DRAFT_SAVE_DEBOUNCE_MS)
 
@@ -177,6 +158,13 @@ export default function RequestWizard() {
   }, [autosaveEnabled, form, currentStepIndex])
 
   function update(patch) {
+    // 전세로 제출됐던 요청서를 복원한 경우 월세 값은 원본이 없어 기본값이 들어가 있다.
+    // 사용자가 거래유형을 실제로 바꾸는 순간(= 그 기본값이 화면에 나타나는 순간)에만
+    // 금액을 다시 확인하라고 알린다. 값을 대신 고쳐주지는 않는다.
+    if (rentFallbackActive && 'dealType' in patch && patch.dealType !== form.dealType) {
+      setShowRentRecheckNotice(true)
+      setRentFallbackActive(false)
+    }
     setForm((prev) => ({ ...prev, ...patch }))
   }
 
@@ -235,7 +223,7 @@ export default function RequestWizard() {
     const { data: created, error: submitError } = await createRequest(payload)
     setLoading(false)
     if (submitError) { setError(submitError); return }
-    localStorage.removeItem(REQUEST_DRAFT_KEY)
+    clearDraft()
     navigate(`/request/success/${created.id}`, { replace: true })
   }
 
@@ -243,13 +231,33 @@ export default function RequestWizard() {
 
   return (
     <div className="frame">
-      {draftPrompt && (
+      {draftPrompt?.kind === 'resume' && (
         <div className="draft-resume-overlay">
           <div className="draft-resume-card">
             <div className="draft-resume-title">{t.draftPromptTitle}</div>
             <div className="draft-resume-actions">
               <button className="rt-btn-secondary" onClick={handleDiscardDraft}>{t.draftPromptDiscard}</button>
               <button className="rt-btn-primary" onClick={handleResumeDraft}>{t.draftPromptResume}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 제출하려던 요청서와 작성 중이던 내용이 둘 다 있는 경우. 두 버튼 모두 "선택"이며
+          어느 쪽도 사용자가 고르기 전에는 지우지 않는다. 하나를 고르면 다른 쪽은 사라지므로
+          그 사실을 안내 문구로 분명히 밝힌다. */}
+      {draftPrompt?.kind === 'conflict' && (
+        <div className="draft-resume-overlay">
+          <div className="draft-resume-card">
+            <div className="draft-resume-title">{t.draftConflictTitle}</div>
+            <div className="draft-conflict-desc">{t.draftConflictDesc}</div>
+            <div className="draft-resume-actions">
+              <button className="rt-btn-secondary" onClick={handleConflictUseRestored}>
+                {t.draftConflictUseRestored}
+              </button>
+              <button className="rt-btn-primary" onClick={handleConflictKeepDraft}>
+                {t.draftConflictKeepDraft}
+              </button>
             </div>
           </div>
         </div>
@@ -274,6 +282,7 @@ export default function RequestWizard() {
 
         <StepComponent t={t} lang={lockedLang} form={form} update={update} onEditStep={handleEditStep} />
 
+        {showRentRecheckNotice && <div className="rt-notice-text">{t.rentRecheckNotice}</div>}
         {error && <div className="rt-error-text">{error}</div>}
       </div>
 

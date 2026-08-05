@@ -6,6 +6,9 @@ import { signUpWithEmail, signInWithEmail, signInWithOAuth, updateOwnProfile, ge
 import { createRequest, SESSION_REQUIRED_ERROR } from '../../api/requests.api'
 import { classifySubmitFailure } from '../../api/classifySubmitFailure'
 import { PENDING_REQUEST_KEY, PENDING_REQUEST_TTL_MS } from '../RequestWizard/RequestWizard'
+import { restoreRequestForm } from '../RequestWizard/restoreRequestForm'
+import { saveRestoredDraft } from '../RequestWizard/requestDraftStorage'
+import { getStepIndex } from '../RequestWizard/steps'
 import { redirectForRole } from '../../utils/redirectForRole'
 import { useAuth } from '../../shared/auth/useAuth'
 import logo from '../../assets/roomting-symbol.svg'
@@ -45,7 +48,9 @@ function classifyStoredPending(raw) {
   if (Date.now() - savedAt > PENDING_REQUEST_TTL_MS) {
     return { status: 'expired' }
   }
-  return { status: 'ok', payload }
+  // savedAt("제출 버튼을 누른 시각")도 함께 돌려준다 - 요청서 수정 흐름에서 마법사의 기존
+  // draft와 어느 쪽이 사용자의 최신 의도인지 비교하는 기준이 된다.
+  return { status: 'ok', payload, savedAt }
 }
 
 // mode: 'signup'(기본, /signup/customer) | 'login'(/login/customer - 로그인 전용 화면, 가입 유도 없음)
@@ -69,10 +74,6 @@ export default function SignUp({ mode = 'signup' }) {
   const [error, setError] = useState(null)
   const [done, setDone] = useState(false) // 가입 완료 (바로 로그인된 상태)
   const [awaitingEmailConfirm, setAwaitingEmailConfirm] = useState(false) // 이메일 인증 대기
-  // submitPendingRequestIfAny()가 더 이상 'failed'/원문 에러 메시지를 반환하지 않아(분류된
-  // retryable/editable/unknown status만 반환) 이 값은 항상 null로 남는다 - done 오버레이의
-  // 해당 분기가 요청대로 그대로 남아있어 setter 없이 getter만 유지한다(범위 외 수정 금지).
-  const [pendingRequestError] = useState(null)
   const [pendingStatus, setPendingStatus] = useState(null) // submitPendingRequestIfAny()의 마지막 결과 status(로그인/가입 공용)
   const [isRetryingPending, setIsRetryingPending] = useState(false)
   const isSubmittingPendingRef = useRef(false)
@@ -171,6 +172,51 @@ export default function SignUp({ mode = 'signup' }) {
 
   // 로그인/가입 성공 직후 pending 제출까지 마무리하는 공통 지점(finishAfterAuth) -
   // handleFinish의 두 경로(finalizeMode/일반 가입)가 동일하게 재사용한다.
+  // editable 실패 - "요청서 수정" 진입점.
+  //
+  // 저장 순서가 이 함수의 핵심이다: 복원본 저장이 성공한 것을 확인한 뒤에만
+  // PENDING_REQUEST_KEY를 지운다. 반대로 하면 저장이 실패했을 때 사용자가 입력한 내용이
+  // 양쪽 모두에서 사라진다.
+  //
+  // 기존 draft와 어느 쪽을 살릴지는 여기서 판단하지 않는다 - 마법사가 양쪽을 모두 읽고
+  // 결정한다(draft 저장 포맷을 아는 곳을 한 군데로 유지하기 위함).
+  function handleEditPendingRequest() {
+    const raw = localStorage.getItem(PENDING_REQUEST_KEY)
+    if (!raw) {
+      // 다른 탭에서 이미 처리했거나 만료된 경우 - 빈손으로 마법사에 보내지 않고 상태만 갱신한다.
+      setPendingStatus('invalid')
+      return
+    }
+
+    const classification = classifyStoredPending(raw)
+    if (classification.status !== 'ok') {
+      setPendingStatus(classification.status)
+      localStorage.removeItem(PENDING_REQUEST_KEY)
+      return
+    }
+
+    const { form, rentFallbackApplied } = restoreRequestForm(classification.payload)
+
+    // 복귀 단계: editable로 분류되는 constraint는 둘 다 거래조건 단계 항목이다.
+    // review로 직행시키지 않는다 - 단계 validate()를 건너뛰어 검증 공백이 재현된다.
+    const saved = saveRestoredDraft({
+      form,
+      currentStep: getStepIndex('residential', 'transaction'),
+      sourceSavedAt: classification.savedAt,
+      rentFallbackApplied,
+    })
+
+    if (!saved) {
+      // 저장에 실패했으면 pending을 그대로 둔다 - 아무것도 잃지 않은 상태로 남는다.
+      console.error('[pending-edit] failed to persist restored draft, keeping pending key')
+      setPendingStatus('unknown')
+      return
+    }
+
+    localStorage.removeItem(PENDING_REQUEST_KEY)
+    navigate('/request')
+  }
+
   async function finishAfterAuth() {
     const result = await submitPendingRequestIfAny()
     if (result.status === 'success') {
@@ -459,11 +505,9 @@ export default function SignUp({ mode = 'signup' }) {
               <>
                 <div className="slide-title">{t.pendingEditableTitle}</div>
                 <div className="rt-error-text">{t.pendingEditableHint}</div>
-                {/* Phase 3에서 restoreRequestForm()으로 연결 예정 - 그 전까지는 비활성 */}
-                <button type="button" className="rt-btn-secondary" disabled>
+                <button type="button" className="rt-btn-secondary" onClick={handleEditPendingRequest}>
                   {t.pendingEditBtn}
                 </button>
-                <div className="rt-notice-text">{t.pendingEditComingSoon}</div>
               </>
             )}
             {pendingStatus === 'unknown' && (
@@ -598,7 +642,6 @@ export default function SignUp({ mode = 'signup' }) {
           <div className="done-icon-wrap"><img src={logo} alt="roomting" /></div>
           <div className="done-title">{t.doneTitle}<br /><span className="accent">{nickTrimmed}</span></div>
           <div className="done-sub">{t.doneSub}</div>
-          {pendingStatus === 'failed' && <div className="rt-error-text" style={{ marginBottom: 12 }}>{pendingRequestError}</div>}
           {pendingStatus === 'session_required' && <div className="rt-error-text" style={{ marginBottom: 12 }}>{t.pendingSessionHint}</div>}
           {pendingStatus === 'invalid' && <div className="rt-error-text" style={{ marginBottom: 12 }}>{t.pendingInvalidHint}</div>}
           {pendingStatus === 'expired' && <div className="rt-error-text" style={{ marginBottom: 12 }}>{t.pendingExpiredHint}</div>}

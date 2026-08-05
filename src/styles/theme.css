@@ -157,6 +157,17 @@ body {
   line-height: 1.5;
 }
 
+/* 오류가 아닌 안내문. .rt-error-text(var(--danger))와 시각적으로 구분해 두 상태를
+   혼동하지 않게 한다. SignUp의 pending 상태 안내와 RequestWizard의 금액 재확인 안내가
+   함께 쓴다 - 소비자가 둘이 되면서 다른 rt-* 공용 클래스와 같은 자리로 옮겼다. */
+.rt-notice-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
 .input-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; display: block; }
 
 /* 언어 선택 카드 (첫 실행 언어선택 화면, 회원가입 화면에서 공통 사용) */

@@ -148,5 +148,12 @@
   border-radius: 16px; padding: 24px 20px; box-shadow: 0 8px 28px rgba(0,0,0,0.2);
 }
 .draft-resume-title { font-size: 14.5px; font-weight: 700; color: var(--ink); text-align: center; margin-bottom: 18px; line-height: 1.5; }
+/* 충돌 프롬프트 전용 설명. "하나를 고르면 다른 하나는 사라진다"를 알리는 문장이라
+   제목보다 낮은 위계의 --muted를 쓰되 읽히지 않을 만큼 흐리게 두지는 않는다.
+   제목의 margin-bottom(18px)을 이 설명이 이어받도록 위쪽을 당겨 붙인다. */
+.draft-conflict-desc {
+  font-size: 12.5px; font-weight: 500; color: var(--muted);
+  text-align: center; line-height: 1.6; margin: -8px 0 18px;
+}
 .draft-resume-actions { display: flex; gap: 10px; }
 .draft-resume-actions button { flex: 1; }

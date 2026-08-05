@@ -87,3 +87,14 @@ export function getApplicableSteps(category) {
   const candidates = [...headSteps, ...(categorySteps[category] ?? []), ...tailSteps]
   return candidates.filter((step) => step.isApplicable({ category }))
 }
+
+// step id -> 배열 인덱스. draft에는 진행 위치가 인덱스로 저장되는데, 그 인덱스는
+// getApplicableSteps()의 배열 순서에 의존한다. 바깥에서 숫자를 직접 적으면 office/retail을
+// 열어 단계 수가 달라지는 순간 조용히 다른 단계를 가리키게 되므로, 변환은 여기서만 한다.
+//
+// 모르는 id는 0(첫 단계)으로 떨어뜨린다. 복원 흐름에서 이 값이 쓰이는데, 잘못된 위치로
+// 보내느니 처음부터 훑게 하는 편이 안전하다.
+export function getStepIndex(category, stepId) {
+  const index = getApplicableSteps(category).findIndex((step) => step.id === stepId)
+  return index === -1 ? 0 : index
+}
