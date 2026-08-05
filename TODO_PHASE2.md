@@ -312,44 +312,119 @@ categorySteps 구조는 이미 이번 작업에서 마련됨, 실제 office/reta
   분리, `showAuthEntry===false`인 모든 상태에 공통 "홈으로" 이탈 버튼 추가(PENDING_REQUEST_KEY
   미삭제, `redirectForRole` 재사용)
 
-**Phase 3 할 일 (다음 세션)** — 문제 (2):
-- `restoreRequestForm(payload)` 구현 - `buildRequestPayload()`의 역변환.
-  `regionText↔station`, `rentMax↔rent`, `dealType`에 따라 `depositMax`가
-  `deposit`(rent) 또는 `jeonseDepositMax`(jeonse) 중 어디로 갈지 분기,
-  `registrationRequired↔jeonip`, `jeonseLoanDetail`의 `null→''` 정규화 등 전체 필드 검토
-  완료 - 설계는 확정, 구현만 남음
-- `REQUEST_DRAFT_KEY`에 실제 저장 형식(`{version, savedAt, draft, currentStep}`)에 맞춰
-  저장 - **저장 성공을 확인한 뒤에만** `PENDING_REQUEST_KEY` 삭제(저장 실패 시 pending
-  key 유지)
-- `editable` "요청서 수정" 버튼의 `disabled` 해제 + 위 흐름과 연결
-- 복귀 단계 규칙: `requests_deposit_range_consistency`/`requests_jeonse_loan_consistency`
-  → `TransactionStep`, `unknown` → 첫 단계(location). **review 단계로 직행 금지**
-  (`validateRequest()`가 moveInDate만 검사하므로 review 직행은 검증 공백을 재현함)
-- draft 충돌 정책: 기존 draft 없음 → pending 복원본 저장 / 기존 draft가 더 오래됨 → 복원본으로
-  교체 / 기존 draft가 더 최신 → 기존 `draftPrompt` UI 재사용 가능한지 먼저 확인하고 보고,
-  과도한 변경이 필요하면 별도 임시 키+최소 선택 화면으로 대체. **어떤 경우에도 조용한
-  덮어쓰기/삭제 금지**
-- (Phase 3와 함께 정리) `done` 오버레이의 `pendingRequestError`는 setter 없는 getter만
-  남아있는 죽은 코드(`pendingStatus`가 더 이상 `'failed'`가 될 수 없어 해당 분기 도달 불가) -
-  Phase 3에서 관련 상태를 다시 만질 때 같이 정리할지 검토
+**Phase 3 완료 (2026-08-05)** — 문제 (2) 해결. 커밋 3개:
 
-**판단 보류(사용자 결정 필요, 구현 안 함)**:
-- `validateRequest()`에 jeonse 보증금 범위·대출 필드 조합 최종 검증을 추가할지. `steps.js`의
-  `validate()`와 중복 하드코딩 없이 공통화 가능한지는 검토했으나 실제 구현 여부는 미결정
-- 단위 테스트 프레임워크(vitest 등) 도입 여부 - 현재 프로젝트에 전혀 없음(playwright만
-  devDependency). `classifySubmitFailure()`는 순수 함수라 붙이기 쉬운 구조로 이미 작성됨
-- rent 원값 복원 불가: jeonse로 제출된 payload엔 rent(월세) 값이 없어(제출 시점에 이미
-  null로 정규화됨) `restoreRequestForm()`으로 복원해도 DEFAULT(70)로만 표시됨. 사용자에게
-  어떻게 안내할지 결정 필요(제안만 하고 구현하지 않음)
+| 커밋 | 범위 |
+| --- | --- |
+| `8957a61` | `.gitignore`에 `*.local.*` 추가 + 테스트 계정 정리 항목 기록 |
+| `c62ad83` | `validateTransaction.js` 추출, 호출부 4곳 교체, `validateRequest()`에 전세 검증 추가 |
+| `de121ed` | `restoreRequestForm()`, 임시 키 + draft 충돌 처리, editable 버튼 연결, 죽은 코드 정리, rent 안내 문구 |
 
-**브라우저 실사용 테스트 전체 미실시** (Phase 1·2 전부 코드 추적으로만 확인, 실행 확인 아님):
+구현된 내용:
+- `restoreRequestForm(payload)` - `buildRequestPayload()`의 역변환. **잘못된 값을 고쳐서
+  복원하지 않는다** - 0이나 범위 역전처럼 CHECK를 위반한 값도 그대로 되살린다. 이 흐름
+  자체가 "제출이 거부됐으니 사용자가 고쳐야 하는" 상황이라, 조용히 정상값으로 바꾸면
+  사용자는 무엇이 잘못됐는지 영영 모른다. 타입이 깨진 값만 기본값으로 대체한다.
+- 전세 규칙 단일 정의: `validateTransaction.js`의 `checkJeonseAmounts()` /
+  `checkJeonseLoanPlan()`. 금액과 대출 여부를 두 함수로 나눈 것은 "대출 여부는 transaction
+  단계에서 막지 않고 review에서만 막는다"는 정책을 지키기 위해서다 - 합치면 step validate가
+  대출 미입력까지 막아버린다.
+- 복귀 단계는 `transaction`. review 직행 금지 규칙 유지. id→index 변환은
+  `steps.js`의 `getStepIndex()`에서만 한다.
+- editable "요청서 수정" 버튼 연결 완료.
+
+### ⚠️ 충돌 판정 기준: `sourceSavedAt`을 쓴다 (`savedAt`으로 되돌리지 말 것)
+
+원래 승인안은 "복원본과 기존 draft의 `savedAt`을 비교해 기존 draft가 더 최신이면 충돌
+프롬프트"였다. **이 안은 작동하지 않는다.** 복원본은 사용자가 "요청서 수정"을 누른 그
+순간 만들어지므로 저장 시각이 항상 기존 draft보다 최신이다. 따라서 "기존 draft가 더
+최신" 분기에 영원히 도달하지 못하고, 매번 "복원본으로 교체"로 흘러 **기존 작성분을
+조용히 덮어쓴다** - 정책이 명시적으로 금지한 바로 그 사고다.
+
+그래서 복원본에 `sourceSavedAt`(= pending 래퍼의 `savedAt`, **사용자가 제출 버튼을 누른
+시각**)을 따로 실어 이것과 draft의 `savedAt`을 비교한다. 판단 기준은 "제출한 뒤에
+마법사에서 더 작업했는가"다.
+
+`requestDraftStorage.js`의 `saveRestoredDraft()`에 `sourceSavedAt`을 넘기는 부분과
+`RequestWizard`의 `draftIsNewer` 판정을 고칠 때는 이 문단을 먼저 읽을 것. 편의상
+`Date.now()`나 `restored.savedAt`으로 바꾸는 순간 조용한 덮어쓰기가 재발한다.
+`sourceSavedAt`이 없는 복원본은 판단 근거가 없으므로 덮어쓰지 않고 충돌 프롬프트를 띄운다.
+
+### 유실 방어: localStorage 쓰기는 되읽어 확인한다
+
+`localStorage.setItem`은 예외를 던지지 않고도 값이 남지 않는 경우가 있다(용량 초과,
+일부 브라우저의 프라이빗 모드). 그래서 `writeVerified()`가 쓴 뒤 `getItem`으로 되읽어
+비교하고, 이 확인이 통과했을 때만 원본(`PENDING_REQUEST_KEY` 또는 임시 키)을 지운다.
+`promoteRestoredToDraft()`도 draft 쓰기 성공 후에만 임시 키를 정리한다 - 순서가 뒤바뀌면
+쓰기 실패 시 양쪽 모두 사라진다.
+
+### 충돌 프롬프트: 두 버튼 모두 "선택"
+
+기존 `draftPrompt` 오버레이를 `kind: 'resume' | 'conflict'`로 분기해 재사용했다.
+conflict에서는 `handleDiscardDraft`(삭제 동작)를 쓰지 않는다 - 두 버튼 모두 선택이고,
+한쪽을 고르면 다른 쪽이 사라진다는 사실을 설명 문구(`draftConflictDesc`)로 명시한다.
+
+### 판단 보류였던 3건 처리 결과 (2026-08-05 결정)
+- `validateRequest()`에 전세 검증 추가 → **추가함**. 규칙은 `validateTransaction.js`에서
+  공통화해 `steps.js`와 중복 하드코딩하지 않는다.
+- 단위 테스트 프레임워크(vitest 등) 도입 → **보류**. 이번 범위에서 제외한다. 검증은
+  일회성 node 스크립트로 대신했고 저장소에 남기지 않았다. `classifySubmitFailure()`와
+  `checkJeonseAmounts()`/`restoreRequestForm()` 모두 순수 함수라 나중에 붙이기 쉽다.
+- rent 원값 복원 불가 → **안내 문구로 처리**. 별도 복원 로직은 만들지 않았다. 복원본에
+  `rentFallbackApplied` 플래그를 실어, 사용자가 거래유형을 실제로 바꾸는 순간에만
+  `rentRecheckNotice`를 노출한다(4개 언어).
+
+### 추출 과정에서 함께 닫은 기존 결함 3건 (`c62ad83`)
+1. `TransactionStep`의 `rangeInvalid`가 `dealType`을 보지 않아 월세일 때도 true가 될 수
+   있었다(전세 입력칸이 렌더되지 않아 화면에 나온 적은 없는 죽은 계산).
+2. 전세에서 최대=0, 최소>0일 때 "최소 금액은 최대 금액보다 클 수 없어요"가 떠서 진짜
+   원인(최대가 0)을 잘못 지목했다.
+3. `DEPOSIT_MAX_NOT_POSITIVE`/`DEPOSIT_MIN_NOT_POSITIVE`에 인라인 문구가 없어 사용자가
+   이유를 모른 채 "다음"에서 막혔다. 5개 이슈 코드 전부에 문구를 매핑했다
+   (`DEPOSIT_MAX_MISSING`만 빈 폼이므로 인라인 무표시, 제출 게이트에서는 문구 반환).
+
+### 승인 범위 밖이었지만 함께 변경한 것 3건
+- **`formDefaults.js` 신설** - `DEFAULT_FORM`을 `RequestWizard.jsx`에서 분리. 분리하지
+  않으면 `RequestWizard → restoreRequestForm → RequestWizard` 순환 import가 된다.
+  값은 그대로이고 위치만 옮겼다.
+- **`requestDraftStorage.js` 신설** - draft 저장/로드 로직을 `RequestWizard.jsx`에서
+  분리. 복구 흐름에서 SignUp도 draft를 써야 하는데, 저장 포맷
+  (`{version, savedAt, draft, currentStep}`)을 SignUp이 직접 알게 되면 같은 포맷 지식이
+  두 파일에 생긴다. 포맷을 아는 곳을 하나로 묶고 바깥에는 의미 단위 함수만 노출한다.
+- **`.rt-notice-text`를 `SignUp.css` → `theme.css`로 이동** - 다른 `rt-*` 공용 클래스는
+  전부 `theme.css`에 있는데 이것만 Phase 2에서 `SignUp.css`에 들어가 있었다. 이번에
+  RequestWizard가 두 번째 소비자가 되면서 제자리로 옮겼다. 스타일 값은 동일.
+
+**브라우저 실사용 테스트 전체 미실시 (Phase 1·2·3 전부)**
+
+Phase 1~3 모두 코드 추적과 node 검증 스크립트로만 확인했고 실제 브라우저에서 렌더/동작을
+본 적이 없다. 아래는 실사용 검증이 필요한 항목 전체다.
+
+세션·로그인 경로:
 - 이미 로그인 상태로 `/signup/customer`, `/login/customer` 직접 진입 시 실제 리다이렉트/
   pending 처리 동작(OAuth 포함 - 소셜 로그인 키 미설정이라 OAuth 경로 자체는 재현 불가)
+- 이메일 로그인/신규가입/finalizeMode 경로 회귀 확인
+- `authChecking` 도입 후 로그인 폼 깜빡임이 실제로 사라졌는지
+
+오류·복구 경로:
 - retryable/editable/unknown/invalid/expired/session_required 각 상태 실제 화면 렌더,
   4개 언어 실제 렌더
 - Retry 연타 시 중복 요청 방지(Network 탭 실제 확인)
 - "홈으로" 버튼 클릭 후 실제 이동 목적지
-- 이메일 로그인/신규가입/finalizeMode 경로 회귀 확인
+- **충돌 프롬프트(`draftConflict*`) 실제 렌더 - 한 번도 화면에 나온 적이 없다.**
+  설명 문구(`draftConflictDesc`)가 추가되면서 카드 높이가 달라졌고, 4개 언어 줄바꿈도
+  미확인이다. 특히 en/zh 문장이 길어 340px 카드에서 몇 줄이 되는지 봐야 한다.
+- editable → "요청서 수정" → 마법사 transaction 단계 복귀까지 실제 이동
+- 복원된 값이 화면에 그대로 보이는지(0이나 범위 역전 값이 살아 있는지)
+- `rentRecheckNotice`가 거래유형 전환 시에만 뜨는지
+
+전세 검증 문구:
+- 신규 3키(`jeonseDepositMaxRequiredError`/`MaxNotPositive`/`MinNotPositive`) 4개 언어 렌더
+- 빈 폼에서 에러가 뜨지 않는지(`DEPOSIT_MAX_MISSING` 무표시 유지)
+
+기존 이월 항목:
+- Chat.jsx / ProfileMissingError.jsx 4개 언어 렌더(위 "다국어 검증 미완료" 섹션)
+- open 요청서 직행 실계정 검증(위 "Splash/Onboarding" 섹션)
 
 **테스트 계정 정리 (2026-08-05 기록, 조치 대기)**
 - Phase 1~3 브라우저 실사용 테스트용으로 Supabase 대시보드에서 직접 만든 customer
@@ -376,7 +451,8 @@ categorySteps 구조는 이미 이번 작업에서 마련됨, 실제 office/reta
 - 감수하는 위험: 중복 `requests` 행 1건, 금전·개인정보 영향 없음, 고객 본인이 `closeRequest()`로
   또는 관리자가 `listAllRequests()`로 수동 정리 가능
 
-다음 세션에서 이 섹션부터 읽고 Phase 3부터 이어서 진행.
+Phase 1~3 구현은 끝났다. 남은 일은 위 "브라우저 실사용 테스트 전체 미실시" 항목의
+실제 검증과, 그 결과에 따른 수정이다. 테스트 계정 정리(위 섹션)도 검증 완료 즉시 처리한다.
 
 ## 지역 입력 구조화 (설계 조사 완료, 구현 결정 대기)
 
