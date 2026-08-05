@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Mail } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
@@ -76,36 +76,30 @@ export default function SignUp({ mode = 'signup' }) {
   const [awaitingEmailConfirm, setAwaitingEmailConfirm] = useState(false) // 이메일 인증 대기
   const [pendingStatus, setPendingStatus] = useState(null) // submitPendingRequestIfAny()의 마지막 결과 status(로그인/가입 공용)
   const [isRetryingPending, setIsRetryingPending] = useState(false)
-  const isSubmittingPendingRef = useRef(false)
+
+  // 진행 중인 pending 제출 Promise. 여러 호출부가 이 하나를 공유해서 createRequest가 정확히
+  // 1회만 나가고, 늦게 도착한 호출부도 같은 최종 status를 받는다.
+  const pendingFlightRef = useRef(null)
+  // pending 결과에 따른 UI·이동 결정이 이미 일어났는지. 여러 호출부가 같은 결과를 받아
+  // 각자 navigate하는 것을 막는다. useRef이므로 언마운트 후 재마운트하면 false로 되돌아간다
+  // (같은 세션에서 /login/customer에 다시 들어오면 결과 해석이 다시 가능해야 한다).
+  const pendingResolvedRef = useRef(false)
+  // 언마운트 뒤에 도착한 콜백이 화면을 이동시키지 않도록 하는 가드.
+  const mountedRef = useRef(true)
 
   // 세션 존재 여부 판단(및 그에 따른 pending 처리)이 끝나기 전에는 로그인/가입 폼을 그리지
   // 않는다 - 판단 도중 폼이 잠깐 보였다 사라지는 깜빡임을 막기 위함.
   const [authChecking, setAuthChecking] = useState(true)
-  // checkExistingSession(모든 mode에서 실행)과 mode==='login' 전용 effect가 같은 마운트에서
-  // 동시에 "이미 로그인된 사용자"를 감지했을 때 pending 제출을 두 번 트리거하지 않기 위한 가드.
-  const postAuthResolvedRef = useRef(false)
 
-  // 로그인 없이 조건 요청서를 작성하다가 로그인/가입하러 온 경우, 완료되자마자 그 내용을 이어서 제출
-  // 반환값: { status, requestId }
-  //   none: pending key 없음 (또는 이미 진행 중인 호출이 있어 이번 호출은 조용히 무시함)
-  //   success: 제출 성공, key 삭제 완료
-  //   retryable/editable/unknown: classifySubmitFailure() 분류 결과, key 유지(성공 후에만 삭제)
-  //   session_required: SESSION_REQUIRED_ERROR와 정확히 일치, key 유지
-  //   invalid: JSON.parse 실패 또는 wrapper 구조 손상, key 삭제
-  //   expired: savedAt 기준 TTL 초과(또는 래퍼 도입 이전 legacy 포맷), createRequest 호출 없이 key 삭제
-  //
-  // 사용자 화면에는 DB 원본 메시지를 노출하지 않는다(분류된 status만 반환) - 원본은 아래
-  // console.error에만 남긴다. payload 전체나 extraNote 등 자유 입력 필드는 로그에 포함하지 않는다.
-  async function submitPendingRequestIfAny() {
-    const raw = localStorage.getItem(PENDING_REQUEST_KEY)
-    if (!raw) return { status: 'none', requestId: null }
+  useEffect(() => {
+    // 개발 환경 StrictMode는 effect를 정리한 뒤 다시 실행한다. 본문에서 true로 되돌리지 않으면
+    // 첫 정리 이후 계속 false로 남아 실제 마운트 상태인데도 콜백이 전부 무시된다.
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
-    if (isSubmittingPendingRef.current) {
-      // 이미 진행 중인 호출이 있음 - 새로 제출을 시도하지 않고 조용히 무시(별도 에러 표시 없음).
-      // 원래 진행 중이던 호출이 끝나면 그 결과가 정상적으로 반영된다.
-      return { status: 'none', requestId: null }
-    }
-
+  // 실제 제출 본문. 재진입 판단은 하지 않는다 - 그건 submitPendingRequestIfAny()가 담당한다.
+  async function runPendingSubmit(raw) {
     const classification = classifyStoredPending(raw)
 
     if (classification.status === 'invalid') {
@@ -121,7 +115,6 @@ export default function SignUp({ mode = 'signup' }) {
 
     const { payload } = classification
 
-    isSubmittingPendingRef.current = true
     try {
       console.log('[pending-submit] starting', {
         dealType: payload?.dealType,
@@ -165,10 +158,80 @@ export default function SignUp({ mode = 'signup' }) {
         message: err instanceof Error ? err.message : String(err),
       })
       return { status: classifySubmitFailure(err), requestId: null }
-    } finally {
-      isSubmittingPendingRef.current = false
     }
   }
+
+  // 로그인 없이 조건 요청서를 작성하다가 로그인/가입하러 온 경우, 완료되자마자 그 내용을 이어서 제출.
+  //
+  // 반환값: { status, requestId }
+  //   none: PENDING_REQUEST_KEY가 실제로 없을 때만. 이 값을 받은 호출부만 평소 흐름(redirectForRole)으로 간다
+  //   success: 제출 성공, key 삭제 완료
+  //   retryable/editable/unknown: classifySubmitFailure() 분류 결과, key 유지(성공 후에만 삭제)
+  //   session_required: SESSION_REQUIRED_ERROR와 정확히 일치, key 유지
+  //   invalid: JSON.parse 실패 또는 wrapper 구조 손상, key 삭제
+  //   expired: savedAt 기준 TTL 초과(또는 래퍼 도입 이전 legacy 포맷), createRequest 호출 없이 key 삭제
+  //
+  // single-flight: 이미 진행 중인 제출이 있으면 새로 만들지 않고 그 Promise를 그대로 돌려준다.
+  // 이렇게 하면 늦게 도착한 호출부도 "진행 중"이라는 반쪽 정보가 아니라 같은 최종 status를 받는다.
+  //
+  // 이전 구현은 진행 중일 때 'none'을 돌려줬는데, 'none'은 "pending 없음"과 뜻이 겹쳐서
+  // 받는 쪽이 redirectForRole()을 실행해버렸다(실제로 로그인 직후 editable 안내가 홈으로
+  // 덮이는 버그가 났다). 재진입 여부를 호출부가 알 필요 없게 만드는 것이 이 구조의 핵심이다.
+  //
+  // 사용자 화면에는 DB 원본 메시지를 노출하지 않는다(분류된 status만 반환) - 원본은
+  // console.error에만 남긴다. payload 전체나 extraNote 등 자유 입력 필드는 로그에 포함하지 않는다.
+  function submitPendingRequestIfAny() {
+    // 진행 중 확인이 키 확인보다 먼저다. 순서를 바꾸면, 진행 중인 제출이 성공하며 키를 지운
+    // 직후에 도착한 호출부가 'none'을 받아 성공 화면 위로 redirect해버린다.
+    if (pendingFlightRef.current) return pendingFlightRef.current
+
+    const raw = localStorage.getItem(PENDING_REQUEST_KEY)
+    if (!raw) return Promise.resolve({ status: 'none', requestId: null })
+
+    // .finally()가 새 Promise를 만들기 때문에, 저장해둔 것과 같은 참조일 때만 해제한다
+    // (다음 제출이 이미 시작됐는데 이전 제출의 정리가 그것을 지워버리는 것을 막는다).
+    let flight
+    flight = runPendingSubmit(raw).finally(() => {
+      if (pendingFlightRef.current === flight) pendingFlightRef.current = null
+    })
+    pendingFlightRef.current = flight
+    return flight
+  }
+
+  // pending 제출 결과에 따른 UI·이동을 결정하는 유일한 지점.
+  //
+  // single-flight로 여러 호출부가 같은 결과를 공유받으므로, 각자 navigate하면 다시 경쟁이 된다.
+  // 최종 결정은 여기서 한 번만 일어나게 막는다.
+  //
+  // 반환값: 이 함수가 결과를 처리했으면(= 화면 상태나 이동을 결정했으면) true.
+  // 호출부가 자기 후속 동작(setDone 등)을 할지 판단하는 데 쓴다.
+  //
+  // force: 사용자가 직접 누른 "다시 시도"에만 쓴다. 자동 경로가 이미 한 번 결정했다는 이유로
+  // 사용자의 명시적 재시도 결과까지 무시하면 안 되기 때문이다.
+  // useCallback: 아래 두 effect의 의존성에 들어가므로 렌더마다 새로 만들어지면 effect가
+  // 매 렌더 재실행된다. 참조하는 값이 navigate와 ref들(안정적)뿐이라 [navigate]로 충분하다.
+  const handlePendingResult = useCallback((result, { onNoPending, force = false } = {}) => {
+    if (!mountedRef.current) return true // 언마운트된 뒤의 stale 콜백은 아무것도 하지 않는다
+    if (!force && pendingResolvedRef.current) return true
+
+    pendingResolvedRef.current = true
+
+    if (result.status === 'none') {
+      // PENDING_REQUEST_KEY가 실제로 없는 경우에만 여기 온다 - 각 호출부의 평소 흐름으로 넘긴다.
+      onNoPending?.()
+      return false
+    }
+
+    if (result.status === 'success') {
+      // replace: 완료 화면에서 뒤로가기를 눌러도 로그인/가입 화면이 다시 나타나지 않도록 함
+      navigate(`/request/success/${result.requestId}`, { replace: true })
+      return true
+    }
+
+    setPendingStatus(result.status)
+    setAuthChecking(false)
+    return true
+  }, [navigate])
 
   // 로그인/가입 성공 직후 pending 제출까지 마무리하는 공통 지점(finishAfterAuth) -
   // handleFinish의 두 경로(finalizeMode/일반 가입)가 동일하게 재사용한다.
@@ -219,14 +282,10 @@ export default function SignUp({ mode = 'signup' }) {
 
   async function finishAfterAuth() {
     const result = await submitPendingRequestIfAny()
-    if (result.status === 'success') {
-      // replace: 완료 화면에서 뒤로가기를 눌러도 가입 화면이 다시 나타나지 않도록 함
-      navigate(`/request/success/${result.requestId}`, { replace: true })
-      return
-    }
-    if (result.status !== 'none') {
-      setPendingStatus(result.status)
-    }
+    // 가입 완료 흐름에서는 pending이 없어도 완료 오버레이를 띄워야 하므로 onNoPending은 비운다.
+    const handled = handlePendingResult(result)
+    // success면 이미 상세 화면으로 이동했다 - 그 위에 완료 오버레이를 겹치지 않는다.
+    if (handled && result.status === 'success') return
     setDone(true)
   }
 
@@ -242,20 +301,12 @@ export default function SignUp({ mode = 'signup' }) {
       // 화면에 재진입한 것 - redirect 전에 pending 제출부터 처리한다(누락 시 조용히 유실됨).
       const { data: profile } = await getCurrentProfile()
       if (profile?.nickname) {
-        if (postAuthResolvedRef.current) return
-        postAuthResolvedRef.current = true
-
+        // 중복 createRequest는 single-flight가, 중복 이동은 handlePendingResult가 막는다 -
+        // 진입 자체를 막는 별도 가드는 두지 않는다.
         const result = await submitPendingRequestIfAny()
-        if (result.status === 'success') {
-          navigate(`/request/success/${result.requestId}`, { replace: true })
-          return
-        }
-        if (result.status !== 'none') {
-          setPendingStatus(result.status)
-          setAuthChecking(false)
-          return
-        }
-        redirectForRole(navigate, profile.role)
+        handlePendingResult(result, {
+          onNoPending: () => redirectForRole(navigate, profile.role),
+        })
         return
       }
       // 닉네임이 없으면 소셜 가입 직후 처음 들어온 것 → 닉네임만 채우면 가입 완료
@@ -264,7 +315,7 @@ export default function SignUp({ mode = 'signup' }) {
       setAuthChecking(false)
     }
     checkExistingSession()
-  }, [navigate])
+  }, [navigate, handlePendingResult])
 
   // mode==='login' 전용: 이미 로그인 + profile까지 확정된 사용자를 redirect하기 전에 pending
   // 제출을 먼저 처리한다(기존에는 동기 <Navigate>가 이 확인 없이 즉시 이동시켰음).
@@ -272,27 +323,19 @@ export default function SignUp({ mode = 'signup' }) {
     if (mode !== 'login') return
     if (authLoading || profileLoading) return
     if (!user || !profile) return
-    if (postAuthResolvedRef.current) return
 
     let cancelled = false
     async function resolveLoginModeSession() {
-      postAuthResolvedRef.current = true
+      // handleLogin()이 이미 제출을 시작했다면 여기서 새로 만들지 않고 그 결과를 그대로 받는다.
       const result = await submitPendingRequestIfAny()
       if (cancelled) return
-      if (result.status === 'success') {
-        navigate(`/request/success/${result.requestId}`, { replace: true })
-        return
-      }
-      if (result.status !== 'none') {
-        setPendingStatus(result.status)
-        setAuthChecking(false)
-        return
-      }
-      redirectForRole(navigate, profile.role)
+      handlePendingResult(result, {
+        onNoPending: () => redirectForRole(navigate, profile.role),
+      })
     }
     resolveLoginModeSession()
     return () => { cancelled = true }
-  }, [mode, user, profile, authLoading, profileLoading, navigate])
+  }, [mode, user, profile, authLoading, profileLoading, navigate, handlePendingResult])
 
   const nickTrimmed = nickname.trim()
   const nickValid = nickTrimmed.length >= 2 && nickTrimmed.length <= 16
@@ -328,36 +371,25 @@ export default function SignUp({ mode = 'signup' }) {
     if (loginError) { setLoading(false); setError(loginError); return }
 
     const { data: profile } = await getCurrentProfile()
+    // 로그인 성공으로 user/profile이 갱신되면 mode==='login' effect도 함께 깨어난다.
+    // 둘 중 누가 먼저 오든 같은 flight를 공유하고, 결과 해석은 handlePendingResult가 한 번만 한다.
     const result = await submitPendingRequestIfAny()
     setLoading(false)
-
-    if (result.status === 'success') {
-      // replace: 완료 화면에서 뒤로가기를 눌러도 로그인 화면이 다시 나타나지 않도록 함
-      navigate(`/request/success/${result.requestId}`, { replace: true })
-      return
-    }
-    if (result.status !== 'none') {
-      // failed/session_required/invalid/expired 전부 - 이 화면에 머물러 안내한다(redirectForRole 생략)
-      setPendingStatus(result.status)
-      return
-    }
-    redirectForRole(navigate, profile?.role)
+    handlePendingResult(result, {
+      onNoPending: () => redirectForRole(navigate, profile?.role),
+    })
   }
 
-  // pending 제출 실패(failed) 후 "다시 시도" 버튼 - 재로그인 없이 동일한 함수를 그대로 재호출한다
+  // pending 제출 실패 후 "다시 시도" 버튼 - 재로그인 없이 동일한 함수를 그대로 재호출한다.
   async function handleRetryPendingSubmit() {
     setIsRetryingPending(true)
     const result = await submitPendingRequestIfAny()
     setIsRetryingPending(false)
 
-    if (result.status === 'success') {
-      navigate(`/request/success/${result.requestId}`, { replace: true })
-      return
-    }
-    if (result.status !== 'none') {
-      setPendingStatus(result.status)
-    }
-    // result.status === 'none'(재진입 차단으로 무시된 경우)이면 화면 상태를 그대로 둔다
+    // force: 자동 경로가 이미 결과를 한 번 해석했더라도, 사용자가 직접 누른 재시도의 결과는
+    // 반드시 화면에 반영해야 한다. onNoPending은 두지 않는다 - 이 화면에 머무는 것이 맞고,
+    // 재시도 결과로 사용자를 홈으로 보내지 않는다.
+    handlePendingResult(result, { force: true })
   }
 
   async function handleFinish() {
@@ -627,7 +659,11 @@ export default function SignUp({ mode = 'signup' }) {
             {t.start}
           </button>
         )}
-        {mode === 'login' && step === 0 && (
+        {/* 가입 유도·로그인 유형 재선택도 "인증 진입 UI"의 일부다. 위 폼·소셜 버튼과 같은
+            showAuthEntry 조건으로 함께 숨긴다 - 이미 로그인을 마친 사용자에게 pending 실패를
+            안내하면서 회원가입을 권하는 모순된 화면이 나오던 것을 막는다.
+            session_required는 showAuthEntry가 true로 유지되므로 이 링크들도 계속 보인다. */}
+        {showAuthEntry && mode === 'login' && step === 0 && (
           <>
             <div className="signup-no-account">
               {t.noAccount} <Link to="/signup" className="signup-inline-link">{t.signupLink}</Link>

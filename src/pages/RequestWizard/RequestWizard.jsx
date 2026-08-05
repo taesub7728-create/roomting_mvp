@@ -251,11 +251,13 @@ export default function RequestWizard() {
           <div className="draft-resume-card">
             <div className="draft-resume-title">{t.draftConflictTitle}</div>
             <div className="draft-conflict-desc">{t.draftConflictDesc}</div>
+            {/* 두 선택지는 대등하다 - 어느 쪽이 사용자의 의도인지 시스템은 알 수 없다.
+                한쪽만 primary(코랄)로 두면 추천처럼 읽혀 선택을 유도하므로 위계를 같게 맞춘다. */}
             <div className="draft-resume-actions">
               <button className="rt-btn-secondary" onClick={handleConflictUseRestored}>
                 {t.draftConflictUseRestored}
               </button>
-              <button className="rt-btn-primary" onClick={handleConflictKeepDraft}>
+              <button className="rt-btn-secondary" onClick={handleConflictKeepDraft}>
                 {t.draftConflictKeepDraft}
               </button>
             </div>
