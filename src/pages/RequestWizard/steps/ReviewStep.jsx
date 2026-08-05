@@ -1,5 +1,6 @@
 import { formatKrwAmount } from '../../../shared/format/krwAmount'
 import { formatMoveInDate } from '../../../shared/format/moveInDate'
+import { checkJeonseLoanPlan } from '../validateTransaction'
 
 function SummaryRow({ label, value, warning, editLabel, onEdit }) {
   return (
@@ -30,7 +31,7 @@ export default function ReviewStep({ t, lang, form, onEditStep }) {
       : t.jeonseDepositMaxOnlyText(formatKrwAmount(form.jeonseDepositMax, lang))
     : `${t.depositLabel} ${form.deposit.toLocaleString()}${t.depositUnit} ${t.maxSuffix} / ${t.rentLabel} ${form.rent}${t.rentUnit} ${t.maxSuffix}`
 
-  const loanMissing = isJeonse && form.jeonseLoanPlanned == null
+  const loanMissing = checkJeonseLoanPlan(form) !== null
   const loanValue = loanMissing
     ? t.reviewJeonseLoanMissing
     : form.jeonseLoanPlanned

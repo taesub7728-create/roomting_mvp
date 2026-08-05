@@ -5,6 +5,7 @@ import MoveInStep from './steps/MoveInStep'
 import ExtraStep from './steps/ExtraStep'
 import ReviewStep from './steps/ReviewStep'
 import { isValidLocalISODate, isPastLocalDate } from '../../shared/format/moveInDate'
+import { checkJeonseAmounts } from './validateTransaction'
 
 // 모든 카테고리 공유 - 앞쪽(지역/거래조건)
 const headSteps = [
@@ -22,15 +23,9 @@ const headSteps = [
     headlineKey: 'transactionHeadline',
     subKey: 'transactionSub',
     isApplicable: () => true,
-    // 전세일 때만 검증: 최대 보증금 필수(양수) + 최소가 있으면 양수이고 최대 이하.
-    // 전세자금대출 이용 여부는 여기서 막지 않고 review 단계에서 인라인으로 안내한다.
-    validate: (form) => {
-      if (form.dealType !== 'jeonse') return true
-      const { jeonseDepositMax: max, jeonseDepositMin: min } = form
-      if (max == null || max <= 0) return false
-      if (min != null && (min <= 0 || min > max)) return false
-      return true
-    },
+    // 금액 규칙만 본다. 전세자금대출 이용 여부(checkJeonseLoanPlan)는 여기서 막지 않고
+    // review 단계에서 인라인으로 안내한다 - validateTransaction.js의 함수 분할 주석 참고.
+    validate: (form) => checkJeonseAmounts(form) === null,
   },
 ]
 

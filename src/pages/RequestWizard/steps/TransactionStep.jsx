@@ -1,11 +1,21 @@
 import { parseAmountInput, formatKrwAmount } from '../../../shared/format/krwAmount'
+import { checkJeonseAmounts, TRANSACTION_ISSUE } from '../validateTransaction'
+import { TRANSACTION_ISSUE_MESSAGE_KEY } from '../translations'
 
 export default function TransactionStep({ t, lang, form, update }) {
   const isJeonse = form.dealType === 'jeonse'
-  const rangeInvalid =
-    form.jeonseDepositMin != null &&
-    form.jeonseDepositMax != null &&
-    form.jeonseDepositMin > form.jeonseDepositMax
+
+  // 금액 위반은 그 자리에서 이유를 알려준다. 단 DEPOSIT_MAX_MISSING(아직 아무것도 입력하지
+  // 않은 상태)만 예외로 무표시 - 전세 탭을 연 직후 빈 폼에 빨간 에러가 뜨는 것을 막는다.
+  // 필수라는 사실은 라벨의 * 표시와 비활성 "다음" 버튼이 이미 전달한다.
+  //
+  // 전세자금대출 미선택(checkJeonseLoanPlan)은 여기서 표시하지 않는다 - 이 단계에서는
+  // 막지 않고 review 단계에서만 안내한다는 기존 정책을 그대로 유지한다.
+  const amountIssue = checkJeonseAmounts(form)
+  const amountIssueText =
+    amountIssue && amountIssue !== TRANSACTION_ISSUE.DEPOSIT_MAX_MISSING
+      ? t[TRANSACTION_ISSUE_MESSAGE_KEY[amountIssue]]
+      : null
 
   return (
     <>
@@ -95,7 +105,7 @@ export default function TransactionStep({ t, lang, form, update }) {
             )}
           </div>
 
-          {rangeInvalid && <div className="rt-error-text">{t.jeonseDepositRangeError}</div>}
+          {amountIssueText && <div className="rt-error-text">{amountIssueText}</div>}
         </div>
       )}
 

@@ -7,6 +7,7 @@ import { requestText } from './translations'
 import { getApplicableSteps } from './steps'
 import { buildRequestPayload } from './buildRequestPayload'
 import { validateRequest } from './validateRequest'
+import { checkJeonseLoanPlan } from './validateTransaction'
 import './RequestWizard.css'
 
 export const PENDING_REQUEST_KEY = 'roomting_pending_request'
@@ -182,7 +183,7 @@ export default function RequestWizard() {
   const currentDef = applicableSteps[currentStepIndex]
   const isReviewStep = currentStepIndex === reviewIndex
   const canAdvance = currentDef.validate(form)
-  const submitBlocked = form.dealType === 'jeonse' && form.jeonseLoanPlanned == null
+  const submitBlocked = checkJeonseLoanPlan(form) !== null
   const progressPct = Math.round(((currentStepIndex + 1) / applicableSteps.length) * 100)
 
   function handleBack() {

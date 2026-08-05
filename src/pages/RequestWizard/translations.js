@@ -1,3 +1,19 @@
+import { TRANSACTION_ISSUE } from './validateTransaction'
+
+// 거래조건 이슈 코드 → 번역 키. 소비자가 둘(TransactionStep 인라인 표시, validateRequest
+// 제출 게이트)이라 매핑을 양쪽에 복사하지 않도록 여기 한 곳에만 둔다. 어떤 코드에 어떤
+// 문구를 붙일지는 표시 계층의 관심사라 순수 함수 쪽(validateTransaction.js)에 두지 않는다.
+//
+// RANGE_INVERTED와 LOAN_PLAN_REQUIRED는 이미 있던 키를 그대로 재사용한다 - 같은 상황을
+// 가리키는 문구가 두 벌 생기면 번역이 어긋난다.
+export const TRANSACTION_ISSUE_MESSAGE_KEY = {
+  [TRANSACTION_ISSUE.DEPOSIT_MAX_MISSING]: 'jeonseDepositMaxRequiredError',
+  [TRANSACTION_ISSUE.DEPOSIT_MAX_NOT_POSITIVE]: 'jeonseDepositMaxNotPositiveError',
+  [TRANSACTION_ISSUE.DEPOSIT_MIN_NOT_POSITIVE]: 'jeonseDepositMinNotPositiveError',
+  [TRANSACTION_ISSUE.DEPOSIT_RANGE_INVERTED]: 'jeonseDepositRangeError',
+  [TRANSACTION_ISSUE.LOAN_PLAN_REQUIRED]: 'reviewJeonseLoanMissingNotice',
+}
+
 // 요청서 마법사(단계형) 4개국어 텍스트.
 // station/roomTypes/amenities 값(code)은 기존 v1 폼과 동일 - DB room_type enum과 매칭되므로 변경하지 않는다.
 export const requestText = {
@@ -31,6 +47,9 @@ export const requestText = {
     jeonseDepositMaxLabel: '최대 보증금 (필수)',
     jeonseDepositInputUnit: '만원',
     jeonseDepositRangeError: '최소 금액은 최대 금액보다 클 수 없어요',
+    jeonseDepositMaxRequiredError: '최대 보증금을 입력해주세요',
+    jeonseDepositMaxNotPositiveError: '최대 보증금은 0보다 커야 해요',
+    jeonseDepositMinNotPositiveError: '최소 보증금은 0보다 커야 해요',
     jeonseDepositRangeText: (min, max) => `${min} ~ ${max}`,
     jeonseDepositMaxOnlyText: (max) => `${max} 이하`,
     jeonseLoanTitle: '전세자금대출',
@@ -122,6 +141,9 @@ export const requestText = {
     jeonseDepositMaxLabel: '最大保証金（必須）',
     jeonseDepositInputUnit: '万ウォン',
     jeonseDepositRangeError: '最小金額は最大金額より大きくできません',
+    jeonseDepositMaxRequiredError: '最大保証金を入力してください',
+    jeonseDepositMaxNotPositiveError: '最大保証金は0より大きい金額を入力してください',
+    jeonseDepositMinNotPositiveError: '最小保証金は0より大きい金額を入力してください',
     jeonseDepositRangeText: (min, max) => `${min} ～ ${max}`,
     jeonseDepositMaxOnlyText: (max) => `${max}以下`,
     jeonseLoanTitle: 'チョンセ資金ローン',
@@ -213,6 +235,9 @@ export const requestText = {
     jeonseDepositMaxLabel: '最高保证金（必填）',
     jeonseDepositInputUnit: '万韩元',
     jeonseDepositRangeError: '最低金额不能大于最高金额',
+    jeonseDepositMaxRequiredError: '请输入最高保证金',
+    jeonseDepositMaxNotPositiveError: '最高保证金须大于0',
+    jeonseDepositMinNotPositiveError: '最低保证金须大于0',
     jeonseDepositRangeText: (min, max) => `${min} ~ ${max}`,
     jeonseDepositMaxOnlyText: (max) => `${max}以下`,
     jeonseLoanTitle: '全租贷款',
@@ -304,6 +329,9 @@ export const requestText = {
     jeonseDepositMaxLabel: 'Maximum deposit (required)',
     jeonseDepositInputUnit: 'man KRW',
     jeonseDepositRangeError: 'Minimum cannot be greater than maximum',
+    jeonseDepositMaxRequiredError: 'Please enter a maximum deposit',
+    jeonseDepositMaxNotPositiveError: 'Maximum deposit must be greater than 0',
+    jeonseDepositMinNotPositiveError: 'Minimum deposit must be greater than 0',
     jeonseDepositRangeText: (min, max) => `${min} – ${max}`,
     jeonseDepositMaxOnlyText: (max) => `Up to ${max}`,
     jeonseLoanTitle: 'Jeonse Loan',
