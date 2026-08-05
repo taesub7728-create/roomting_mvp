@@ -383,6 +383,49 @@ conflict에서는 `handleDiscardDraft`(삭제 동작)를 쓰지 않는다 - 두 
    이유를 모른 채 "다음"에서 막혔다. 5개 이슈 코드 전부에 문구를 매핑했다
    (`DEPOSIT_MAX_MISSING`만 빈 폼이므로 인라인 무표시, 제출 게이트에서는 문구 반환).
 
+### pending 제출 race condition 수정 (`544dd4d`, 2026-08-05)
+
+브라우저 실사용 검증에서 발견했다. 신규 이메일 로그인 시 pending 제출이 실패해도
+그 안내가 뜨지 않고 홈으로 리다이렉트되어, **Phase 2·3에서 만든 오류 복구 UI 전체가
+가장 흔한 경로에서 도달 불가능**했다.
+
+근본 원인은 `submitPendingRequestIfAny()`가 재진입 시 `'none'`을 돌려준 것이다.
+`'none'`은 "PENDING_REQUEST_KEY 없음"과 뜻이 겹쳐서, 받는 쪽이 "할 일 없음"으로 읽고
+`redirectForRole()`을 실행했다.
+
+**절대 되돌리면 안 되는 것 3가지** (되돌리면 같은 버그가 재발한다):
+
+1. **진행 중(flight) 확인이 키 확인보다 먼저다.** 순서를 뒤집으면, 진행 중인 제출이
+   성공하며 키를 지운 직후 도착한 호출부가 `'none'`을 받아 성공 화면 위로 redirect한다.
+2. **`force`는 사용자가 직접 누른 재시도에만 쓴다.** 자동 경로에도 열어주면 결과 해석이
+   여러 번 일어나 다시 경쟁이 된다. 반대로 재시도에서 빼면 사용자의 명시적 재시도
+   결과가 무시된다.
+3. **`mountedRef`는 effect 본문에서 `true`로 되돌린다.** `useRef(true)` 초기값만 두면
+   StrictMode가 effect를 정리한 뒤 계속 `false`로 남아, 실제 마운트 상태인데도 모든
+   콜백이 무시된다.
+
+`redirectForRole`은 이제 `handlePendingResult()`의 `onNoPending` 콜백 안에만 존재한다.
+새 호출부를 추가할 때 이 함수를 거치지 않고 직접 navigate하면 경쟁이 되살아난다.
+
+### ⚠️ 미해결: `/request` 마운트 effect가 멱등하지 않다 (2026-08-05, 이번엔 수정 안 함)
+
+`RequestWizard`의 마운트 effect는 복원본을 읽어 draft로 옮기고 임시 키를 지우는 등
+localStorage를 **변경**한다. 따라서 같은 마운트에서 effect가 두 번 실행되면 두 번째
+실행은 첫 번째가 바꿔놓은 저장 상태를 보게 되어 다른 판단을 내린다.
+
+실제 관측: 개발 환경 StrictMode의 effect 재실행 시, 복원본을 자동 채택한 직후
+"작성 중인 요청서가 있습니다"(resume) 프롬프트가 뜬다. 첫 실행이 복원본을 draft로
+옮기고 임시 키를 지웠기 때문에, 두 번째 실행에는 "복원본 없음 + draft 있음"으로 보인다.
+
+**프로덕션 빌드에서는 재현되지 않는다**(dev/prod 직접 대조 확인). 다만 재현되지
+않는다는 이유로 안전하다고 확정하지 않는다 - effect가 저장 상태를 변경하는 구조
+자체가 React의 effect 계약(재실행에 견뎌야 함)에 어긋나며, 향후 라우팅 변경이나
+Fast Refresh로 리마운트가 생기면 드러날 수 있다.
+
+추후 멱등화가 필요하다. 방향은 "판단(읽기)과 반영(쓰기)을 분리해 쓰기를 한 번만
+일어나게 하거나, 이미 처리했음을 나타내는 표식을 저장 상태에 남기는 것" 정도로
+검토한다. 이번 작업 범위에서는 수정하지 않았다.
+
 ### 승인 범위 밖이었지만 함께 변경한 것 3건
 - **`formDefaults.js` 신설** - `DEFAULT_FORM`을 `RequestWizard.jsx`에서 분리. 분리하지
   않으면 `RequestWizard → restoreRequestForm → RequestWizard` 순환 import가 된다.
@@ -395,42 +438,49 @@ conflict에서는 `handleDiscardDraft`(삭제 동작)를 쓰지 않는다 - 두 
   전부 `theme.css`에 있는데 이것만 Phase 2에서 `SignUp.css`에 들어가 있었다. 이번에
   RequestWizard가 두 번째 소비자가 되면서 제자리로 옮겼다. 스타일 값은 동일.
 
-**브라우저 실사용 테스트 전체 미실시 (Phase 1·2·3 전부)**
+**브라우저 실사용 검증 완료 (2026-08-05, 프로덕션 빌드 + 실계정)**
 
-Phase 1~3 모두 코드 추적과 node 검증 스크립트로만 확인했고 실제 브라우저에서 렌더/동작을
-본 적이 없다. 아래는 실사용 검증이 필요한 항목 전체다.
+Phase 1~3의 주요 경로를 실제 브라우저에서 검증했다. 검증 스크립트는 일회성이라
+저장소에 남기지 않았다. 확인된 항목:
 
-세션·로그인 경로:
-- 이미 로그인 상태로 `/signup/customer`, `/login/customer` 직접 진입 시 실제 리다이렉트/
-  pending 처리 동작(OAuth 포함 - 소셜 로그인 키 미설정이라 OAuth 경로 자체는 재현 불가)
-- 이메일 로그인/신규가입/finalizeMode 경로 회귀 확인
-- `authChecking` 도입 후 로그인 폼 깜빡임이 실제로 사라졌는지
+- 충돌 프롬프트 4개 언어 렌더(카드 높이 193~256px, 375px 뷰포트에서 넘침 없음),
+  두 버튼 선택 동작과 임시 키 정리
+- 전세 인라인 검증 문구 4개 언어, 빈 폼 무표시 유지
+- 복원 흐름: 잘못된 값 보존 → 인라인 에러 → 수정 후 진행 가능
+- `rentRecheckNotice`가 거래유형 전환 시에만 노출
+- pending 상태별 화면: editable / success / retryable / session_required
+- 경쟁 상황(로그인 effect + 버튼 동시)에서 `createRequest` 1회, navigate 1회
+- 재시도 연타 시 중복 제출 없음(요청 중 버튼 비활성)
+- DB 원문이 화면에 노출되지 않음
+- "홈으로" 이동 목적지와 pending 키 보존
+- 기존 resume 프롬프트 회귀
 
-오류·복구 경로:
-- retryable/editable/unknown/invalid/expired/session_required 각 상태 실제 화면 렌더,
-  4개 언어 실제 렌더
-- Retry 연타 시 중복 요청 방지(Network 탭 실제 확인)
-- "홈으로" 버튼 클릭 후 실제 이동 목적지
-- **충돌 프롬프트(`draftConflict*`) 실제 렌더 - 한 번도 화면에 나온 적이 없다.**
-  설명 문구(`draftConflictDesc`)가 추가되면서 카드 높이가 달라졌고, 4개 언어 줄바꿈도
-  미확인이다. 특히 en/zh 문장이 길어 340px 카드에서 몇 줄이 되는지 봐야 한다.
-- editable → "요청서 수정" → 마법사 transaction 단계 복귀까지 실제 이동
-- 복원된 값이 화면에 그대로 보이는지(0이나 범위 역전 값이 살아 있는지)
-- `rentRecheckNotice`가 거래유형 전환 시에만 뜨는지
+**아직 미검증인 경로**
 
-전세 검증 문구:
-- 신규 3키(`jeonseDepositMaxRequiredError`/`MaxNotPositive`/`MinNotPositive`) 4개 언어 렌더
-- 빈 폼에서 에러가 뜨지 않는지(`DEPOSIT_MAX_MISSING` 무표시 유지)
+- **`finishAfterAuth`(신규 가입 / finalizeMode)**: 검증하려면 계정을 새로 만들어야 해서
+  CLAUDE.md 11번(테스트 계정 생성은 승인 필요)에 걸린다. 코드 추적으로만 확인했다.
+  확인해야 할 것은 "success일 때 `setDone(true)`로 완료 오버레이가 상세 화면 위에
+  겹치지 않는가"다(`handlePendingResult()` 반환값으로 판별하도록 구현돼 있음).
+- **OAuth 경로**: 소셜 로그인 키가 설정돼 있지 않아 경로 자체를 재현할 수 없다.
+- 위 두 가지는 **소셜 로그인 키 연동 작업 때 함께 묶어서** 검증하는 것이 효율적이다.
+  그 전까지는 미검증으로 남긴다.
+- `invalid` / `expired` 상태 화면은 실제 렌더 미확인(로직은 node 스크립트로 검증).
+- 4개 언어 렌더는 마법사 쪽만 확인했고 SignUp의 pending 상태 문구는 ko만 확인했다.
 
-기존 이월 항목:
+**기존 이월 항목 (여전히 미검증)**
 - Chat.jsx / ProfileMissingError.jsx 4개 언어 렌더(위 "다국어 검증 미완료" 섹션)
 - open 요청서 직행 실계정 검증(위 "Splash/Onboarding" 섹션)
 
-**테스트 계정 정리 (2026-08-05 기록, 조치 대기)**
+**테스트 계정 정리 — Phase 4 착수 전 필수 (2026-08-05 갱신)**
 - Phase 1~3 브라우저 실사용 테스트용으로 Supabase 대시보드에서 직접 만든 customer
   테스트 계정 1개(2026-08-04 생성)가 살아 있다. 이 저장소는 public이므로 계정
   식별 정보와 자격증명 특성은 여기 적지 않는다 — Supabase 대시보드에서 확인한다.
-- **Phase 3 브라우저 테스트를 마치는 즉시 해당 계정을 삭제하거나 비밀번호를 변경한다.**
+- **이 계정의 비밀번호는 매우 약하다(대시보드에서 직접 확인할 것).** 실제 서비스
+  데이터에 접근 가능한 계정이므로 방치하면 그대로 위험이다.
+- **Phase 4 착수 전에 반드시 삭제하거나 비밀번호를 변경한다.** Phase 3 검증은 끝났지만
+  `finishAfterAuth`(신규 가입/finalizeMode) 경로가 미검증으로 남아 재사용 가능성이 있어
+  지금 당장 삭제하지 않고 유지 중이다. 그 검증이 끝나거나 Phase 4가 시작되면 즉시 정리한다.
+- 검증 과정에서 생성한 `requests` 행 1건(`region_text='phase3-verify'`)도 함께 정리 대상이다.
 - 자격증명을 적어둔 로컬 메모 파일은 2026-08-05에 삭제했다. 그 파일은 스스로
   "`*.local` 패턴으로 gitignore 처리됨"이라고 적고 있었지만 실제로는 무시되지 않는
   상태였다(`*.local`은 `.local`로 끝나는 파일만 매치). 커밋된 이력이 없음을
