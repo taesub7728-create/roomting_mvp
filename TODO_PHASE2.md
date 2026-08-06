@@ -591,3 +591,525 @@ station_id + 좌표만으로는 "망원역 선택"이 무엇을 의미하는지 
 
 이번 조사 보고가 승인되면, 위 미확정 항목들에 대한 결정과 함께 "설계 완료, 구현
 대기"로 상태를 갱신한다. 실제 구현은 중개사 응답 화면 설계 이후 착수한다.
+
+---
+
+# 지역 입력 구조화 + 중개사 라우팅 (2026-08-06, 설계 확정 · migration 파일 작성 완료 · 미적용)
+
+migration 022~032 파일을 작성했고 **아직 하나도 적용하지 않았다**. 아래는 이 설계 과정에서
+"이번 범위에서 하지 않기로 한 것"의 전체 목록이다.
+
+**이 목록을 지금 남기는 이유**: 시간이 지나면 각 항목이 "빠뜨린 것"인지 "판단해서 보류한 것"인지
+구분할 수 없게 된다. 구현이 끝나면 각 항목을 실제 결과로 다시 갱신한다.
+
+각 항목 형식: 현재 상태 / 제외 이유 / 감수하는 위험 / 재검토 조건 / 관련 위치
+
+---
+
+## 1. 5개 제한 동시성 — RLS WITH CHECK의 한계
+
+- **현재 상태**: 설계 확정, 구현·운영 검증 전
+- **제외 이유**: 슬롯 컬럼 + 부분 unique index로 완전 차단할 수 있으나, 슬롯 배정 로직이
+  필요하고 공개 매물(`request_id is null`)과 어색하게 얽힌다. RLS `WITH CHECK` +
+  SECURITY DEFINER 헬퍼는 migration_018의 `is_pending_realtor_applicant()`와 같은
+  기존 패턴이라 새로 배울 것이 없다.
+- **감수하는 위험**: 같은 중개사가 두 탭에서 동시에 INSERT하면 각각 count=4를 읽어 6개가
+  될 수 있다. 피해는 매물 1개 초과에 그치고 admin이 정리 가능하다.
+  Phase 3에서 `client_submission_id`를 보류하며 감수한 것과 같은 성격이다.
+- **재검토 조건**: 실제로 5개 초과 행이 관측되면. 또는 제한 개수를 과금과 연동할 때.
+- **관련 위치**: `migration_031_multi_property_response.sql` 2번,
+  `migration_029_realtor_request_rpc.sql`의 `realtor_response_count()`
+
+## 2. 영업지역 가입 폼 UI
+
+- **현재 상태**: 컬럼(`realtor_applications.desired_district_codes`)만 준비. UI 미구현
+- **제외 이유**: 가입 폼이 이미 필수 항목 11개라 12번째를 추가하면 이탈이 늘어난다.
+  초기 중개사 수가 적어 admin이 승인 화면에서 등록증 소재지를 보고 직접 지정하는 편이 싸다.
+- **감수하는 위험**: 중개사 수가 늘면 admin 부담이 선형 증가한다.
+- **재검토 조건**: 승인 대기가 쌓이기 시작하면. 컬럼이 이미 있으므로 UI만 붙이면 된다.
+- **관련 위치**: `migration_028_realtor_service_areas.sql` 2번, `RealtorSignUp.jsx`
+
+## 3. check_landline_duplicate 열거 오라클
+
+- **현재 상태**: 미해결. 이번 범위에서 손대지 않음
+- **제외 이유**: 가입 전(세션 없음) 호출이라는 실제 요구가 있어 지금 닫을 수 없다.
+  지역 라우팅과도 무관하다.
+- **감수하는 위험**: 인증 없이 임의의 유선전화번호를 넣어 "이 업체가 룸팅에 가입했는지"를
+  true/false로 확인할 수 있다. 공개된 중개사무소 전화번호 목록만 있으면 전수 조사가 가능하다.
+  개인정보가 아니라 사업자 가입 여부가 새는 것이라 피해 규모는 제한적이다.
+- **재검토 조건**: 경쟁사 조사 정황이 보이거나 중개사 수가 마케팅상 민감해질 때.
+  대응 방향 (a) 계정 생성 직후 검사로 이동해 인증 뒤로 넘기기 (b) Edge Function으로 rate limit
+- **관련 위치**: `migration_014_realtor_application_fields.sql`, `realtorApplication.api.js:6`
+
+## 4. migration 031은 실질적으로 되돌릴 수 없다
+
+- **현재 상태**: 설계 확정, 미적용
+- **제외 이유**: `properties_request_realtor_unique`(migration_007)를 drop해야 다중 매물이
+  가능한데, 되돌리려면 초과 행을 먼저 지워야 하고 `chat_rooms`가 cascade로 함께 사라진다.
+- **감수하는 위험**: 롤백 시 대화 기록 소실. Supabase Free 플랜에는 자동 백업이 없다
+  (일일 백업은 Pro 이상, PITR은 유료 애드온).
+- **재검토 조건**: 적용 전 `properties` / `property_images` / `chat_rooms` / `chat_messages`
+  4개 테이블 백업이 반드시 선행되어야 한다. 백업 없이 적용하지 않는다.
+- **관련 위치**: `migration_031_multi_property_response.sql` 헤더
+
+## 5. extra_note 개인정보 — 경감 조치이지 해결이 아니다
+
+- **현재 상태**: 설계 확정(300자 제한 + 연락처 패턴 경고 + 안내 문구), 미구현
+- **제외 이유**: "목록에서는 일부만, 상세에서 전체" 방식은 채택하지 않았다. 중개사가 매물을
+  고르려면 목록에서 이미 내용을 봐야 하기 때문이다.
+- **감수하는 위험**: **자유 입력인 이상 개인정보가 중개사에게 전달될 가능성은 남는다.**
+  세 조치는 노출 "가능성"을 줄일 뿐이다. **"보호 완료"로 취급하지 말 것.**
+- **재검토 조건**: 실제 유출이 관측되면 (a) 응답 전 마스킹 (b) 구조화 입력 전환을 검토.
+- **관련 위치**: `migration_032_request_constraints.sql` 2번, `RequestWizard/ExtraStep.jsx`
+
+## 6. 구버전 클라이언트 호환 전략 (Capacitor 대비)
+
+- **현재 상태**: 미설계
+- **제외 이유**: 지금은 웹 전용이라 새로고침으로 해결된다. 023 적용은 사용량 최저 시간대에
+  하고, Chat에 무반응 방어를 넣는 것으로 대응한다.
+- **감수하는 위험**: 023 적용 직후 구버전 번들 탭에서 Chat 메시지 전송이 **에러 없이 무시**된다.
+  PostgREST의 embedded join은 RLS로 걸리면 에러가 아니라 null을 반환하기 때문이다.
+  ResponseStatus는 이름이 "공인중개사"로 대체되는 정도로 우아하게 열화된다.
+  **Capacitor 앱이 나오면 구버전 앱이 몇 주 남을 수 있어 DB 정책을 즉시 잠글 수 없다.**
+- **재검토 조건**: 앱 출시를 결정하는 시점. 강제 업데이트 게이트(최소 지원 버전) 또는
+  API 버저닝(구버전용 RPC 한시 유지)이 정책 변경보다 먼저 필요하다.
+  웹에서도 `/version.json` 폴링 + 새 배포 배너를 검토할 수 있다.
+- **관련 위치**: `migration_023_profiles_lockdown.sql` "적용 전 확인" 섹션
+
+## 7. 중개사 공개 프로필 (사진 / 자기소개 / 소통 가능 외국어)
+
+- **현재 상태**: 구조만 판단 완료. 아무 컬럼도 추가하지 않음
+- **제외 이유**: 지금 필요하지 않고, 개념(어느 언어를 어떻게 검증할지)이 미확정이다.
+- **판단 결과**: `profiles`가 아니라 **별도 테이블 `realtor_public_profiles`**가 맞다.
+  결정적 근거는 RLS다 - 이 필드들은 고객에게 공개돼야 하는데 `profiles`에 넣으면
+  023에서 own+admin으로 잠근 정책을 다시 열어야 하고 그러면 `phone`이 같이 열린다.
+  별도 테이블이면 그 테이블만 공개 읽기로 열고 `profiles`는 닫힌 채로 둘 수 있다.
+  `realtor_applications`(사업자등록번호·서류 경로가 있는 심사용 민감 테이블)와는 성격이
+  달라 CLAUDE.md 3번의 "유사 테이블 남발"에 해당하지 않는다.
+- **감수하는 위험**: 없음(아무것도 만들지 않았으므로)
+- **재검토 조건**: 중개사 차별화 요구가 생기거나 외국어 매칭을 실제로 붙일 때
+- **관련 위치**: 아래 8·9번과 함께 검토
+
+## 8. 소통 가능 외국어 매칭은 "필터"가 아니라 "가점"
+
+- **현재 상태**: 설계 방향만 확정. 미구현
+- **제외 이유**: 7·9번이 선행되어야 한다.
+- **판단 결과**: 사용자 전원이 외국인은 아니고 한국어 요청서도 들어오므로 필터로 만들면
+  한국어 요청서가 특정 중개사에게 보이지 않는 부작용이 생긴다.
+  `list_open_requests_for_realtor()`의 **`order by`만 바뀌고 반환 컬럼은 그대로**라
+  `create or replace`로 무중단 교체가 된다. 비용이 낮다.
+    order by (case when r.written_language in ('ja','zh','en')
+                    and r.written_language = any(rp.spoken_languages) then 0 else 1 end),
+             r.created_at desc
+- **감수하는 위험**: 없음
+- **재검토 조건**: 외국어 요청서 비중이 유의미해질 때
+- **관련 위치**: `migration_029_realtor_request_rpc.sql` 1번 함수
+
+## 9. requests.written_language (작성 시점 언어 스냅샷)
+
+- **현재 상태**: 미추가. 비용만 확인
+- **제외 이유**: 8번이 확정되기 전에는 쓸 곳이 없다. 미래 컬럼을 미리 넣지 않는다는
+  기존 원칙(location_type CHECK)과 일관되게 지금은 만들지 않는다.
+- **확인한 사실**: `requests`에 언어 컬럼이 **없다.** 유추 가능한 것은
+  `profiles.preferred_language`뿐인데 이건 작성 시점이 아니라 현재 설정이고
+  `updatePreferredLanguage()`로 언제든 바뀐다. 요청서를 일본어로 쓴 뒤 한국어로 바꾸면
+  유추가 틀린다.
+- **비용**: 컬럼 1개 + `createRequest()`에 lang 전달 + `buildRequestPayload()` 한 줄.
+  `region_text`가 이미 작성 시점 언어의 표시 문자열이라 같은 지점에서 함께 저장하면 된다.
+  기존 행 백필은 `preferred_language` 근사 또는 null. **낮다.**
+- **재검토 조건**: 8번을 실제로 구현할 때
+- **관련 위치**: `requests.api.js:31`, `buildRequestPayload.js`
+
+## 10. 022 반환 컬럼 확장에는 함수 교체(v2)가 필요하다
+
+- **현재 상태**: 제약 사항으로 인지. 지금 조치 없음
+- **확인한 사실**: `returns table(...)`에 컬럼을 추가하는 것은 `create or replace`로
+  **불가능하다**(반환 타입 변경 불허). `drop function` 후 재생성해야 하고 그 찰나에
+  프론트 호출이 실패한다.
+- **감수하는 위험**: 없음. 다만 7번(중개사 프로필)을 붙일 때 "컬럼 하나 추가"가 아니라
+  "함수 교체"라는 점을 모르면 무중단 배포 계획이 어긋난다.
+- **재검토 조건**: 7번 구현 시. `list_request_responses_for_customer_v2`를 새로 만들고
+  프론트 전환 후 구함수를 삭제한다(022/023과 같은 무중단 패턴).
+  지금 jsonb 확장 슬롯을 미리 넣는 방식은 "미래 컬럼 미리 넣기"와 같은 안티패턴이라 쓰지 않는다.
+- **관련 위치**: `migration_022_profiles_relation_rpc.sql` 1번 함수
+
+## 11. 중개사무소 다중 담당자 (office_id) — DB 변경 보류
+
+- **현재 상태**: 비용 검토만 완료. **아무 컬럼도 추가하지 않음**
+- **확인한 사실**:
+  1. 현재 `profiles.id` 기반 realtor 모델은 사무소와 개인이 뭉개져 있다.
+     `nickname`=업체명인데 `realtor_applications.contact_name`/`contact_phone`은 담당자 개인이다.
+     계정 1개 = 사무소 1개 = 담당자 1명.
+  2. `realtor_service_areas`는 **사무소 귀속이 맞다**. 등록증 소재지 기반이라 실장별로
+     다른 영업지역은 부자연스럽다. 도입 시 `realtor_id` -> `office_id`로 옮겨야 한다.
+  3. `properties.realtor_id`는 현재 사무소/담당자 구분이 없다. 다중 담당자가 되면
+     **둘 다 필요**하다 - 책임 주체(사무소)와 작성자(담당자). `chat_rooms.realtor_id`는 담당자여야 한다.
+  4. 과금을 사무소 단위로 바꿀 때 백필은 **기존 realtor profiles 1행당 offices 1행(1:1)**이라
+     결정론적이고 손실이 없다. 비용이 낮다.
+- **제외 이유(5번 질문에 대한 답)**: 백필이 1:1이라 나중에 해도 비용이 거의 같다.
+  개념(과금 단위 / 담당자 초대 흐름 / 사무소 소유자 / 퇴사 처리)이 미확정이라
+  `office_id`를 **어느 테이블에 다는지조차** 정할 수 없다. 미사용 nullable 컬럼은
+  "있는데 안 쓰는" 상태로 남아 다음 사람이 의미를 오해한다.
+- **감수하는 위험**: 없음
+- **재검토 조건**: 사무소에 실장이 여러 명인 중개사가 실제로 들어올 때. 또는 과금 설계 시작 시.
+- **관련 위치**: `migration_028_realtor_service_areas.sql`, `schema.sql` profiles/properties
+
+## 12. 매매(deal_type = 'sale') 확장
+
+- **현재 상태**: 미착수
+- **제외 이유**: enum 값 추가 자체는 간단하지만 금액 단위·대출 항목·검토 항목이 임대차와
+  전부 달라 화면과 검증이 따라와야 한다. 초기 타깃인 외국인 사용자는 매매를 거의 하지 않는다.
+- **감수하는 위험**: 없음
+- **재검토 조건**: **내국인 시장 진입 시점.** 역 마스터(024~026)와 라우팅 구조(028~030)는
+  그대로 재사용되므로 이번 작업이 매매 확장을 막지 않는다.
+  주의: `ALTER TYPE ADD VALUE`는 같은 트랜잭션에서 새 값을 쓸 수 없어 migration을 두 번 나눠야 한다.
+- **관련 위치**: `migration_021_deal_type_jeonse_fields.sql`, `RequestWizard/steps/TransactionStep.jsx`
+
+## 13. 에이전트(care_agent) 권한 범위 미확정 — 제품 결정 필요
+
+- **현재 상태**: 구조와 문서가 어긋나 있음. 이번 범위에서 바꾸지 않음
+- **확인한 사실**:
+  - `createRequest()`는 항상 `created_by = customer_id = user.id`로 채운다. 에이전트가 남을
+    대신 작성하는 UI는 없다(`requests.api.js:8-9` 주석에 "이후 단계" 명시).
+    **따라서 오늘 기준으로 `created_by` 조건은 추가 권한을 한 건도 주지 않는다.**
+  - 그런데 기존 정책 4곳이 이미 `r.created_by = auth.uid()`로 응답 열람까지 허용한다
+    (`policies.sql:61, 79, 97`, `migration_009:47`, `migration_010:37`).
+  - `README.md:19`는 에이전트를 "고객을 대신해 조건 요청서 **작성** 가능"으로만 설명한다.
+  - `care_agent` role은 전용 화면이 없다. `homePathForRole()`과 `RealtorRoute` 모두
+    default로 `/coming-soon`에 보낸다.
+- **감수하는 위험**: 대리 작성 기능을 실제로 만드는 순간, 에이전트가 고객의 응답 매물과
+  예산 조건까지 계속 열람하게 된다. 지금은 코드 경로가 없어 발현되지 않는다.
+- **재검토 조건 (결정 시점 명시)**: **에이전트 대리 작성 UI 작업을 시작하기 전, 설계 단계에서
+  결정한다.** 구현을 시작한 뒤로 미루면 `customer_id`를 선택하는 UI를 만든 순간부터
+  권한이 발현되므로, "만들면서 정하자"가 성립하지 않는다.
+  구체적으로는 `createRequest()`에 `customerId` 파라미터를 추가하는 커밋 이전이 마지막 시점이다.
+    - "작성만 대행"으로 정하면 -> `policies.sql:61, 79, 97`, `migration_009:47`,
+      `migration_010:37`, 022 RPC 총 6곳에서 `created_by` 조건을 함께 좁힌다.
+    - "응답 관리까지"로 정하면 -> `README.md:19`를 고쳐 문서와 구조를 일치시킨다.
+  어느 쪽이든 이번 작업에서 만든 022 RPC 주석도 함께 갱신한다.
+- **관련 위치**: `migration_022_profiles_relation_rpc.sql` 1번 함수 주석, `policies.sql`
+
+## 14. 신촌 백필은 추정값이다
+
+- **현재 상태**: 백필 미실행. 값은 추정으로 확정
+- **확인한 사실**: 신촌역은 2호선(서울교통공사)과 경의중앙선(코레일) 두 개가 별개로 존재한다.
+  약 400m 거리이고 공식 환승 관계가 아니라 시드 병합 규칙에서 자동 병합되지 않는다.
+- **감수하는 위험**: **사용자가 어느 신촌역을 의도했는지 확정할 수 없다.**
+  운영상 기본값으로 2호선 신촌역을 쓴다(통칭 "신촌"이 가리키는 대상, 이용객 규모).
+  두 역 모두 서대문구라 `district_code`가 같아 **라우팅 결과는 동일하다.**
+  이 값을 근거로 다른 판단(예: 역별 수요 통계)을 하지 말 것.
+- **재검토 조건**: 해당 요청서가 실제로 응답을 받고 고객과 대화가 이뤄질 때 확인 가능.
+- **관련 위치**: `migration_027_requests_location.sql` "백필 계획" 섹션,
+  `scripts/seed-stations/merge_report.csv`
+
+## 15. 트리거 함수 EXECUTE 회수는 실측이 필요하다
+
+- **현재 상태**: migration에 포함. **검증 전**
+- **확인 필요 사항**: PostgreSQL은 트리거 실행 시 함수 EXECUTE 권한을 재검사하지 않고
+  `CREATE TRIGGER` 시점에 검사한다고 알려져 있으나, 이 프로젝트에서 실측한 적이 없다.
+- **감수하는 위험**: 틀리면 `handle_new_user` revoke는 **회원가입을 통째로 죽이고**,
+  `prevent_realtor_nickname_change` revoke는 **profiles UPDATE 전체를 막아** 언어 변경과
+  승인까지 죽는다.
+- **재검토 조건**: 023 적용 후 T31~T34, 030 적용 후 T16을 반드시 실제로 돌린다.
+  실패하면 해당 revoke 줄만 되돌린다. **검증 없이 확정하지 않는다.**
+- **관련 위치**: `migration_023_profiles_lockdown.sql` 2번,
+  `migration_030_secure_requests_access.sql` 4-2
+
+## 16. profiles nickname 트리거의 알려진 한계 2가지
+
+- **현재 상태**: 설계 확정, 한계 인지
+- **한계 (a)**: 승인 **전**에 바꿔둔 nickname은 그대로 고정된다.
+  admin이 승인 화면에서 업체명·등록증을 보고 있어 그 시점에 걸러지고, 이상하면 나중에 고칠 수 있다.
+- **한계 (b)**: 제3자가 남의 nickname을 바꾸는 경우는 이 트리거가 막지 않는다.
+  `profiles_update_own`(auth.uid()=id 또는 admin)이 이미 막고 있어 실질 취약점은 없지만,
+  **방어가 두 겹에서 한 겹으로 줄어든다.**
+- **재검토 조건**: 사무소명 사칭이 실제로 관측되면 승인 시점의 검증된 `company_name`을
+  별도 공개 필드에 고정하는 방식(B안)을 재검토한다.
+- **관련 위치**: `migration_023_profiles_lockdown.sql` 2번
+---
+
+# ⚠ Known Bug — 중개사 가입이 이메일 확인 설정에서 막힌다
+
+**분류: Known Bug / 외부 중개사 모집 전 필수 수정. Later 아님.**
+
+- **재현**
+  1. `/signup/realtor`에서 지원서 제출
+  2. 프로젝트의 "Confirm email"이 켜져 있으면 `signUpWithEmail()`이 세션 없이 반환되어
+     `awaitingEmailConfirm` 화면으로 종료된다. **이 시점에 지원서는 저장되지 않는다.**
+  3. 화면 문구는 "파트너 로그인으로 다시 로그인하면 서류 제출을 이어갈 수 있어요"라고 안내한다
+  4. 인증 메일 링크 클릭 후 `/login/realtor`로 로그인 → `/realtor`로 이동
+  5. `RealtorRoute`가 `role='customer'` + 지원서 없음으로 판정 → `/`로 리다이렉트
+  6. `/signup/realtor`로 되돌아가 다시 제출하면 `signUpWithEmail()`이
+     "이미 등록된 이메일"로 실패 → **막다른 길**
+
+- **영향**: 테스트 편의 문제가 아니다. **Confirm email이 켜진 운영 환경에서 실제 중개사 가입이
+  차단된다.** 화면이 존재하지 않는 경로를 안내하고 있어 사용자는 자기가 뭘 잘못했는지 알 수 없다.
+
+- **임시 대응**: 테스트 계정 생성 시간에만 Confirm email을 비활성화하고 **직후 원복**
+  (아래 체크리스트 참고). 운영 대응책이 아니다.
+
+- **근본 해결 후보**
+  - 인증 후 지원서 작성 재개 경로 구현 (로그인 상태 + 지원서 없음 → 지원서 폼으로 유도)
+  - pending onboarding 상태를 localStorage 등에 저장했다가 로그인 후 이어받기
+  - 기존 계정이면 `signUpWithEmail()` 재호출 없이 세션 확인 후 지원서 단계로 바로 이동
+    (`RealtorSignUp.handleSubmit()`이 항상 가입부터 시도하는 구조를 분기)
+
+- **우선순위**: **11월 중개사 방문 영업 시작 전 필수.**
+  현장에서 그 자리에 가입시키려다 막히면 즉시 신뢰를 잃는다.
+
+- **관련 위치**: `RealtorSignUp.jsx:66-71`(awaitingEmailConfirm 분기), `:102-153`(login 모드),
+  `shared/routes/RealtorRoute.jsx:43-47`(customer 분기)
+
+- **처리 시점**: 022~032 작업이 끝난 뒤 별도 항목으로 다룬다. 지금 고치지 않는다.
+
+---
+
+# 진행 상태 (2026-08-06 기준)
+
+## 완료
+- **migration 022 적용 완료** — `list_request_responses_for_customer()`,
+  `get_chat_participants()` 두 RPC 생성. 정책 변경 없음.
+  - ACL 확인 통과: `postgres=X | authenticated=X | service_role=X`
+  - **PUBLIC(`=X/postgres`)과 anon 없음** → revoke 정상 적용
+  - `service_role=X`는 Supabase default privileges가 자동 부여한 것이며
+    서버 전용 키라 RLS를 어차피 우회한다. 정상으로 판단.
+  - `security_definer=true`, `config={"search_path=pg_catalog, public"}` 확인
+- **migration 023~032 파일 작성 완료. 전부 미적용.**
+- 타입 사전 확인 완료: `profiles.preferred_language`=text,
+  `properties.room_type`=USER-DEFINED/room_type, `deposit`/`monthly_rent`/`sort_order`=integer,
+  `created_at`=timestamptz → 022 선언과 일치, 수정 없이 적용함
+- admin 계정 확인: `nickname='dada'`, `id=00d6aa35-d64b-43fd-a659-a2f4af23fabc`
+
+## 다음 단계 (이 순서대로)
+1. **Step 0②** — Confirm email 설정 확인 (아래 체크리스트)
+2. **테스트 계정 3개 생성** (아래 Step 1~6)
+3. **Step 7 스모크 테스트** (수정본, 아래)
+4. **프론트 A 배포** — profiles RPC 전환 + chat 폴백 수정 + Chat 무반응 방어
+5. **브라우저 검증** (T27 포함 — SQL Editor로는 확인 불가)
+6. **023 적용**
+
+---
+
+# Confirm email 임시 비활성화 체크리스트
+
+Dashboard > Authentication > Providers > Email > "Confirm email"
+
+- [ ] **변경 전 현재 설정값을 기록한다** (켜짐/꺼짐). 원복 기준이 된다
+- [ ] test2·test3 가입 **직후 즉시 원복**한다. 다른 작업을 먼저 하지 않는다
+- [ ] 원복 완료를 화면에서 다시 확인한다
+- [ ] 비활성화 시간을 최소화한다 (가입 2건만 처리하고 바로 되돌린다)
+
+원래 설정이 "꺼짐"이었다면 이 체크리스트는 불필요하고, 위 Known Bug도 현재는 발현되지 않는다.
+
+---
+
+# 테스트 계정 생성 절차 (대화가 끊겨도 이 문서만 보고 진행)
+
+계정 3개가 필요하다. 역할이 다르므로 하나로 합칠 수 없다.
+
+| 계정 | 이메일 | 역할 | 023 적용 시점의 상태 |
+| --- | --- | --- | --- |
+| test1 | `taesub7728+test1@gmail.com` | customer | 요청서 1건 보유 |
+| test2 | `taesub7728+test2@gmail.com` | 승인된 realtor | 매물 1건 + 채팅방 보유 |
+| test3 | `taesub7728+test3@gmail.com` | **심사 대기** | 승인 안 된 상태로 대기 (T34 전용) |
+
+**test3가 따로 필요한 이유**: test2는 관계 데이터 생성을 위해 023 적용 전에 이미 승인되므로,
+같은 계정으로 "customer→realtor 승인 트랜잭션"(T34)을 다시 검증할 수 없다.
+test2를 customer로 되돌렸다 재승인하는 방식은 쓰지 않는다 —
+`prevent_self_role_change`(migration_016)를 건드리게 되고 실제 운영 상태와도 다르다.
+
+## Step 1. test1 — 대시보드에서 생성
+Dashboard > Authentication > Users > Add user
+- Email: `taesub7728+test1@gmail.com`
+- Password: 직접 생성 (32자 권장). **대화·로그·코드 어디에도 기록하지 않는다**
+- **Auto Confirm User: 체크**
+- User Metadata: `{"nickname":"테스트고객","preferred_language":"ko"}`
+
+확인:
+```sql
+select p.id, p.nickname, p.role, p.preferred_language
+from profiles p join auth.users u on u.id = p.id
+where u.email = 'taesub7728+test1@gmail.com';
+-- 기대: nickname='테스트고객', role='customer', preferred_language='ko'
+-- role은 migration_016이 클라이언트 입력을 무시하고 강제하므로 메타데이터로 바꿀 수 없다
+```
+
+## Step 2. test1으로 요청서 1건 작성
+앱 로그인 → 요청서 작성 → **지역에 `area-routing-verify` 입력** (식별용). 나머지는 월세 흐름 아무 값.
+```sql
+select r.id, r.region_text, r.status from requests r
+join auth.users u on u.id = r.customer_id
+where r.region_text = 'area-routing-verify' and u.email = 'taesub7728+test1@gmail.com';
+-- 기대: 정확히 1행, status='open'
+```
+
+## Step 3. test2 — 앱 가입 폼으로 (대시보드 금지)
+`realtor_applications` 행이 있어야 승인 흐름을 검증할 수 있고, 그 행은 가입 폼에서만 생긴다.
+
+`/signup/realtor` 진입 후 입력:
+- 이메일 `taesub7728+test2@gmail.com` / 비밀번호 직접 생성
+- 업체명 `테스트공인중개사2` ← **profiles.nickname이 되고 고객 화면에 표시된다**
+- 사업자등록번호 `000-00-00001` (형식 검증 없음)
+- **유선전화번호 `02-0000-0001`** ← test3와 반드시 다르게
+- 중개등록번호 `TEST-0002` / 주소·담당자명·연락처 아무 값
+- 서류 2개: 아무 이미지 파일 (내용 검증 없음)
+
+## Step 4. test2 승인 (admin 'dada')
+`/admin/login` → AdminDashboard 지원서 탭 → 승인
+```sql
+select p.nickname, p.role from profiles p join auth.users u on u.id = p.id
+where u.email = 'taesub7728+test2@gmail.com';   -- 기대: role='realtor'
+```
+
+## Step 5. test2로 응답 + 채팅 (관계 데이터 생성 / 023 전 기준선)
+1. test2 로그인 → "받을 수 있는 요청" → `area-routing-verify` 요청서에 매물 1건 응답
+2. test1 로그인 → ResponseStatus에서 부동산 이름이 `테스트공인중개사2`로 보이는지 확인
+3. "채팅하기" → 메시지 1건 전송
+4. test2 로그인 → 같은 방에서 답장 1건
+
+2·4번 결과가 **023 적용 후에도 동일해야** 통과다.
+
+## Step 6. test3 — 가입만, 승인하지 않음
+Step 3과 동일하되:
+- 이메일 `taesub7728+test3@gmail.com` / 업체명 `테스트공인중개사3`
+- **유선전화번호 `02-0000-0003`** ← test2와 같은 번호를 쓰면
+  `check_landline_duplicate()`(migration_014)가 "이미 등록된 업체예요"로 가입 자체를 막는다
+- 중개등록번호 `TEST-0003`
+
+**★ 승인하지 않는다.** 023 적용 후 T34에서 이 계정을 승인하는 것이 검증 대상이다.
+```sql
+select p.role, (ra.id is not null) as has_application
+from profiles p join auth.users u on u.id = p.id
+left join realtor_applications ra on ra.profile_id = p.id
+where u.email = 'taesub7728+test3@gmail.com';
+-- 기대: role='customer', has_application=true  (심사 대기 상태)
+```
+
+---
+
+# Step 7. 022 RPC 스모크 테스트 (프론트 배포 전)
+
+## ⚠ 이 테스트가 검증하는 것과 하지 않는 것
+
+| 대상 | 검증 수단 | 상태 |
+| --- | --- | --- |
+| **함수 본문 필터** (auth.uid() 기반 행 제한) | 아래 SQL Editor 스모크 테스트 | 이 단계에서 확인 |
+| **ACL 상태** (PUBLIC/anon EXECUTE 부재) | `pg_proc.proacl` 조회 | **완료** (022 적용 시 확인) |
+| **실제 anon/authenticated 동작** | **Supabase 클라이언트 세션** | **별도 확인 필요** |
+
+**SQL Editor는 postgres 권한으로 실행된다.** `request.jwt.claims`를 설정하는 것은 `auth.uid()`가
+읽는 값을 흉내 내는 것일 뿐, 호출자의 실제 role은 여전히 postgres다.
+따라서 **anon/authenticated의 EXECUTE 권한이 실제로 작동하는지는 이 방법으로 확인할 수 없다.**
+
+→ **T27(anon 호출 시 권한 거부)은 SQL Editor로 확인 불가.**
+   프론트 A 배포 후 브라우저(비로그인 상태)에서 확인하는 항목으로 옮긴다.
+
+## 대상 행 식별 (각각 정확히 1행이어야 한다)
+
+`limit 1`을 쓰지 않는다. 기존 데이터가 섞이면 엉뚱한 행을 골라 테스트가 무의미해진다.
+
+```sql
+select 'request' as kind, count(*) as cnt
+from requests r join auth.users u on u.id = r.customer_id
+where r.region_text = 'area-routing-verify'
+  and u.email = 'taesub7728+test1@gmail.com'
+union all
+select 'chat_room', count(*)
+from chat_rooms cr
+join properties p  on p.id = cr.property_id
+join requests   r  on r.id = p.request_id
+join auth.users uc on uc.id = cr.customer_id
+join auth.users ur on ur.id = cr.realtor_id
+where r.region_text = 'area-routing-verify'
+  and uc.email = 'taesub7728+test1@gmail.com'
+  and ur.email = 'taesub7728+test2@gmail.com';
+-- 기대: 두 행 모두 cnt = 1. 아니면 아래 테스트를 하지 말고 데이터를 먼저 정리한다
+```
+
+## [S1] 정상 — test1이 자기 요청서의 응답 조회
+```sql
+begin;
+select set_config('request.jwt.claims',
+  json_build_object('sub', (select u.id::text from auth.users u
+                            where u.email = 'taesub7728+test1@gmail.com'))::text, true);
+select * from public.list_request_responses_for_customer(
+  (select r.id from requests r join auth.users u on u.id = r.customer_id
+   where r.region_text = 'area-routing-verify'
+     and u.email = 'taesub7728+test1@gmail.com'));
+rollback;
+-- 기대: 1행. realtor_display_name = '테스트공인중개사2'
+--       컬럼 정확히 11개, phone 없음, customer_id/created_by 없음
+```
+
+## [S2] 차단 — test2(중개사)가 남의 요청서 응답 조회 시도
+```sql
+begin;
+select set_config('request.jwt.claims',
+  json_build_object('sub', (select u.id::text from auth.users u
+                            where u.email = 'taesub7728+test2@gmail.com'))::text, true);
+select * from public.list_request_responses_for_customer(
+  (select r.id from requests r join auth.users u on u.id = r.customer_id
+   where r.region_text = 'area-routing-verify'
+     and u.email = 'taesub7728+test1@gmail.com'));
+rollback;
+-- 기대: 0행  (T28)
+```
+
+## [S3] 정상 — 채팅 참여자 조회
+```sql
+begin;
+select set_config('request.jwt.claims',
+  json_build_object('sub', (select u.id::text from auth.users u
+                            where u.email = 'taesub7728+test1@gmail.com'))::text, true);
+select * from public.get_chat_participants(
+  (select cr.id from chat_rooms cr
+   join properties p  on p.id = cr.property_id
+   join requests   r  on r.id = p.request_id
+   join auth.users uc on uc.id = cr.customer_id
+   join auth.users ur on ur.id = cr.realtor_id
+   where r.region_text = 'area-routing-verify'
+     and uc.email = 'taesub7728+test1@gmail.com'
+     and ur.email = 'taesub7728+test2@gmail.com'));
+rollback;
+-- 기대: 정확히 2행, 컬럼 3개(participant_id / nickname / preferred_language)
+```
+
+## [S4] 차단 — 무관한 사용자(test3)가 그 방 조회
+```sql
+begin;
+select set_config('request.jwt.claims',
+  json_build_object('sub', (select u.id::text from auth.users u
+                            where u.email = 'taesub7728+test3@gmail.com'))::text, true);
+select * from public.get_chat_participants(
+  (select cr.id from chat_rooms cr
+   join properties p  on p.id = cr.property_id
+   join requests   r  on r.id = p.request_id
+   join auth.users uc on uc.id = cr.customer_id
+   join auth.users ur on ur.id = cr.realtor_id
+   where r.region_text = 'area-routing-verify'
+     and uc.email = 'taesub7728+test1@gmail.com'
+     and ur.email = 'taesub7728+test2@gmail.com'));
+rollback;
+-- 기대: 0행  (T21)
+```
+
+`set_config(..., true)`는 트랜잭션 로컬이고 전부 `rollback`으로 닫으므로 데이터가 바뀌지 않는다.
+
+---
+
+# T23 검증 기준 (번역 동작만으로 통과시키지 않는다)
+
+번역이 되더라도 다른 fallback이 개입했을 수 있다. **먼저 데이터를 확인하고, 그다음 UI를 본다.**
+
+**1단계 — `get_chat_participants` 반환값 확인** (S3 또는 브라우저 콘솔)
+- [ ] 정확히 **2행** 반환
+- [ ] test1의 `preferred_language` = `ko`
+- [ ] test2의 `preferred_language` = 실제 설정값 (가입 시 `ko`로 생성됨)
+- [ ] **`Object.keys(row)`에 `phone` 키 자체가 없음** — `row.phone === null`로 판단하지 말 것
+
+**2단계 — Chat UI 별도 검증**
+- [ ] 헤더에 상대 닉네임이 표시된다 (기본 제목이 아니라)
+- [ ] 메시지 전송이 동작한다
+- [ ] 번역이 동작한다 (양쪽 언어가 다를 때)
+
+1단계가 통과하지 않으면 2단계 결과는 의미가 없다.
