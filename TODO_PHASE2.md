@@ -832,6 +832,10 @@ migration 022~032 파일을 작성했고 **아직 하나도 적용하지 않았�
 
 **분류: Known Bug / 외부 중개사 모집 전 필수 수정. Later 아님.**
 
+**2026-08-07 확인: 현재 Confirm email은 꺼짐(disabled) 상태라 미발현.**
+**토글을 켜기 전 반드시 이 버그부터 수정한다.** (위치: Authentication → Sign In / Providers →
+Supabase Auth 탭 → User Signups 섹션)
+
 - **재현**
   1. `/signup/realtor`에서 지원서 제출
   2. 프로젝트의 "Confirm email"이 켜져 있으면 `signUpWithEmail()`이 세션 없이 반환되어
@@ -864,7 +868,7 @@ migration 022~032 파일을 작성했고 **아직 하나도 적용하지 않았�
 
 ---
 
-# 진행 상태 (2026-08-06 기준)
+# 진행 상태 (2026-08-07 기준)
 
 ## 완료
 - **migration 022 적용 완료** — `list_request_responses_for_customer()`,
@@ -879,14 +883,17 @@ migration 022~032 파일을 작성했고 **아직 하나도 적용하지 않았�
   `properties.room_type`=USER-DEFINED/room_type, `deposit`/`monthly_rent`/`sort_order`=integer,
   `created_at`=timestamptz → 022 선언과 일치, 수정 없이 적용함
 - admin 계정 확인: `nickname='dada'`, `id=00d6aa35-d64b-43fd-a659-a2f4af23fabc`
+- **Step 0② 완료** — Confirm email 설정 확인. **꺼짐(disabled) 상태.**
+  위치: Authentication → Sign In / Providers → Supabase Auth 탭 → User Signups 섹션
+  → 체크리스트 불필요, test2·test3 가입 시 별도 조치 없이 바로 진행 가능
+  → `awaitingEmailConfirm` Known Bug는 현재 미발현 (토글 켜기 전 반드시 수정, 위 Known Bug 항목 참고)
 
-## 다음 단계 (이 순서대로)
-1. **Step 0②** — Confirm email 설정 확인 (아래 체크리스트)
-2. **테스트 계정 3개 생성** (아래 Step 1~6)
-3. **Step 7 스모크 테스트** (수정본, 아래)
-4. **프론트 A 배포** — profiles RPC 전환 + chat 폴백 수정 + Chat 무반응 방어
-5. **브라우저 검증** (T27 포함 — SQL Editor로는 확인 불가)
-6. **023 적용**
+## 다음 단계 (이 순서대로) — 다음 세션은 여기서 시작
+1. **테스트 계정 3개 생성** (아래 Step 1~6) ← **다음 세션 시작점: Step 1 (test1 계정 생성)**
+2. **Step 7 스모크 테스트** (수정본, 아래)
+3. **프론트 A 배포** — profiles RPC 전환 + chat 폴백 수정 + Chat 무반응 방어
+4. **브라우저 검증** (T27 포함 — SQL Editor로는 확인 불가)
+5. **023 적용**
 
 ---
 
