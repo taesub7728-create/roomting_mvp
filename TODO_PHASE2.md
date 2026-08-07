@@ -876,42 +876,89 @@ Supabase Auth 탭 → User Signups 섹션)
 
 ---
 
-# 진행 상태 (2026-08-07 기준)
+# 진행 상태 (2026-08-07 마감 기준)
 
-## 완료
-- **migration 022 적용 완료** — `list_request_responses_for_customer()`,
-  `get_chat_participants()` 두 RPC 생성. 정책 변경 없음.
-  - ACL 확인 통과: `postgres=X | authenticated=X | service_role=X`
-  - **PUBLIC(`=X/postgres`)과 anon 없음** → revoke 정상 적용
-  - `service_role=X`는 Supabase default privileges가 자동 부여한 것이며
-    서버 전용 키라 RLS를 어차피 우회한다. 정상으로 판단.
-  - `security_definer=true`, `config={"search_path=pg_catalog, public"}` 확인
-- **migration 023~032 파일 작성 완료. 전부 미적용.**
-- 타입 사전 확인 완료: `profiles.preferred_language`=text,
-  `properties.room_type`=USER-DEFINED/room_type, `deposit`/`monthly_rent`/`sort_order`=integer,
-  `created_at`=timestamptz → 022 선언과 일치, 수정 없이 적용함
-- admin 계정 확인: `nickname='dada'`, `id=00d6aa35-d64b-43fd-a659-a2f4af23fabc`
-- **Step 0② 완료** — Confirm email 설정 확인. **꺼짐(disabled) 상태.**
-  위치: Authentication → Sign In / Providers → Supabase Auth 탭 → User Signups 섹션
-  → `awaitingEmailConfirm` Known Bug는 현재 미발현 (토글 켜기 전 반드시 수정, 위 Known Bug 항목 참고)
-- **테스트 계정 신규 생성 취소 (2026-08-07 결정)** — 필요한 역할 4종이 기존 계정에 이미
-  전부 있어서 `+test1~3` 계정을 만들지 않기로 했다. 아래 「검증용 계정·데이터」 참고.
-- **관계 데이터 생성 완료 (2026-08-07)** — 요청서 `cc193972-...`(신촌) ← `aaa@naver.com`의
-  응답 매물 `dz`(`c8ab5299-...`) ← 채팅방 `a325fc9a-...` + 양방향 메시지. 023 전 기준선 확보.
-  ResponseStatus 중개사 이름 `베스트공인중개사사무소` 표시 확인.
-  ※ 이 요청서의 `response_deadline`은 테스트용으로 7일 연장한 상태다(원복은 승인 후).
-- **Step 7 스모크 테스트 통과 (2026-08-07)** — S1~S4 전부 기대대로. 상세는 아래 Step 7 섹션.
+> **다음 세션은 이 섹션부터 읽는다.** 아래 "지금 어디까지 왔나"와 "다음에 할 일"만
+> 보면 이어서 작업할 수 있다. 세부 근거는 각 항목이 가리키는 아래 섹션에 있다.
 
-## 다음 단계 (이 순서대로) — 다음 세션은 여기서 시작
-1. ~~관계 데이터 생성~~ **완료 (2026-08-07)**
-2. ~~Step 7 스모크 테스트~~ **완료 (2026-08-07, S1~S4 전부 통과)**
-3. ~~프론트 A 코드 수정·배포~~ **완료 (2026-08-07)**
-4. ~~브라우저 검증 (T27 포함)~~ **완료 (2026-08-07)**
-5. ~~023 적용~~ **완료 (2026-08-07)** — 아래 「023 적용 완료」 참고
-6. **남은 것**: T31~T33(트리거) / T26 실제 승인·T34(보류, 사용자 판단 필요) /
-   `user@naver.com`의 `preferred_language` ko 원복 확인
-7. 그다음: 024~027 시드 적재 → 028 → 영업지역 지정 → 029 → 프론트 B → 030
-   (순서는 아래 「지역 라우팅 검증 시나리오」와 029 헤더의 HARD PREREQUISITE 참고)
+## 지금 어디까지 왔나
+
+| 대상 | 상태 |
+| --- | --- |
+| **migration 022** (관계 기반 프로필 RPC 2개) | **적용 완료** |
+| **migration 023** (profiles 원본 SELECT 잠금 + nickname 트리거) | **적용 완료 · 검증 전부 통과** |
+| **migration 024~032** | **파일 작성 완료. 전부 미적용** |
+| **프론트 A** (022 RPC 전환) | **커밋 `9ada5b8` 배포 완료 · 브라우저 검증 통과** |
+| **프론트 B** (`resolve_chat_customer_id` 전환) | **미착수.** 030의 HARD PREREQUISITE |
+| 지역 라우팅 | **전혀 미검증.** 028 미적용이라 담당 지역 개념 자체가 아직 없다 |
+
+**현재 프로덕션 상태 요약**: 고객은 자기 요청서의 응답과 채팅 상대 정보를 022 RPC로만
+받는다. 중개사는 고객 `profiles` 원본 행을 관계가 있어도 읽을 수 없다(실측 확인).
+중개사 요청서 목록은 **아직 전국 전체**이며 이는 정상이다(라우팅은 029/030 이후).
+
+### 2026-08-07에 끝낸 것
+
+- **022 적용** — ACL 확인 통과(`postgres=X | authenticated=X | service_role=X`,
+  PUBLIC·anon 없음), `security_definer=true`, `search_path` 고정 확인
+- **테스트 계정 신규 생성 취소** — 기존 계정 4개로 충분해서 `+test1~3`을 만들지 않았다.
+  → 「검증용 계정·데이터」
+- **관계 데이터 생성** — 요청서 `cc193972-...`(신촌) ← 응답 매물 `dz`(`c8ab5299-...`)
+  ← 채팅방 `a325fc9a-...` + 양방향 메시지
+- **Step 7 스모크(S1~S4) 통과** → 「실행 결과」
+- **프론트 A 코드 수정·배포·브라우저 검증(T27 포함) 통과** → 「프론트 A」
+- **023 적용 + 전체 검증 통과** — T17~T19 / T22~T25 / T31~T33 / 트리거 revoke 실측
+  → 「023 적용 완료」
+
+### 남아 있는 미결 3건
+
+1. **T26 실제 승인 / T34 승인 트랜잭션** — `test3@naver.com`이 유일한 심사 대기 계정이라
+   승인하면 소진된다. **실행 직전 사용자 판단 필수** → 「test3은 1회용이다」
+2. **요청서 `cc193972-...`의 `response_deadline` 7일 연장** — 테스트용 임시 변경이
+   그대로 남아 있다. 원복 여부는 사용자가 정한다 → 「임시 변경」
+3. **발견 사항 3건** (응답 매물 상세 보기 없음 / 24시간 문구 하드코딩 / MyPage i18n 누락)
+   — 전부 기록만 했고 고치지 않았다 → 「발견 사항」
+
+## 다음에 할 일 (이 순서를 지킨다)
+
+지역 입력 구조화 + 중개사 라우팅. **각 단계의 판정 기준은 「지역 라우팅 검증 시나리오」에
+미리 확정해 뒀다** — 결과를 보고 기준을 맞추지 않기 위해서다.
+
+1. **카카오 REST API 키 준비**
+   - 지도용 JS 키(`VITE_KAKAO_MAP_API_KEY`, 이미 `.env`에 있음)와 **REST 키는 다르다.**
+     새로 발급받아야 한다
+   - 용도로 예상되는 것: `station_districts.is_primary` 판정이 **"역 대표 좌표가 속한 구"**
+     기준이라(`026` 설계 의도) 좌표 → 시군구 역지오코딩이 필요하다. 실제로 어디에 쓸지는
+     시드 스크립트 설계 때 확정한다
+2. **시드 스크립트 작성** (`scripts/seed-stations/`, 아직 없는 디렉터리)
+   - 소스 우선순위는 `025` 설계 의도에 이미 정해져 있다: 좌표는 `display_order`가 가장 낮은
+     노선 값(평균 금지), `name_ko/en/hanja`는 국가철도공단 표준데이터, `name_ja/zh`는
+     서울교통공사 역명다국어표기, 불일치 표기는 버리지 말고 `station_aliases`에
+     `kind='legacy'`로 등록
+   - **검수 리포트 `merge_report.csv`를 함께 만든다.** `needs_review=true` 건만 사람이 본다
+   - 병합 규칙 주의: 신촌(2호선/경의중앙선)은 **자동 병합하지 않는다**
+3. **024~027 적용** (districts → stations/lines → station 매핑·검색 → requests 위치 컬럼)
+   - `026` 적용 직후 정규화 함수 확인 쿼리를 먼저 돌린다. **정규화가 틀린 채로 시드를
+     만들면 별칭 전체를 다시 만들어야 한다**(`026:195-199`)
+4. **시드 적재** (SQL Editor = postgres 전용. 쓰기 정책이 없다)
+5. **`region_text` 백필** — 기존 요청서에 `station_id`를 채운다.
+   **이걸 빠뜨리면 라우팅이 전부 빈 목록이 된다**(`district_code`가 null로 남아 어떤
+   영업지역과도 매칭되지 않는다). `cc193972-...`는 2호선 신촌역으로 백필 — **추정값**이라는
+   점은 위 14번 항목 참고
+6. **LocationStep UI** (`RequestWizard` 지역 단계 → 역 선택)
+   - 없으면 **신규 요청서가 계속 `station_id=null`로 생성돼 라우팅 밖으로 샌다.**
+     백필로 과거만 메워도 새는 구멍이 남는다
+7. **028 적용** → `realtor_service_areas` 생성
+   - 적용 직후 `select count(*) from realtor_service_areas` = 0 상태에서 **R7(지역 미배정
+     중개사 → 0행)을 먼저 찍어둔다.** 기본 동작의 기준선이 된다
+8. **영업지역 지정** (사용자가 admin으로) — `aaa`=서대문구, `test2`=강남구.
+   코드값은 시드 적재 후 `districts` 테이블과 대조해 실물 확인
+9. **029 적용 + 프론트 B 배포** — 라우팅 RPC 전환 + `resolve_chat_customer_id` 전환.
+   프론트는 `RealtorDashboard` / `RealtorRespond` / `chat.api.js` 3곳
+10. **030 적용** — ⚠ **프론트 B 없이 먼저 적용 금지.** 중개사 신규 채팅 진입이 막힌다
+    → 「HARD PREREQUISITE」 및 `migration_029` 헤더
+
+**031·032는 위가 전부 끝난 뒤에 판단한다.** 031은 실질적으로 되돌릴 수 없고(위 4번 항목)
+적용 전 4개 테이블 백업이 선행 조건이다.
 
 ---
 
@@ -1007,21 +1054,36 @@ profile · 공개 매물 중개사 nickname) 정상 / pending realtor 신청서 
 버전·트리거 구성·함수 소유자가 달라지면 다시 확인해야 한다. 위 15번 항목("트리거 함수
 EXECUTE 회수는 실측이 필요하다")의 미검증 상태는 **이 구성에 한해** 해소된 것으로 기록한다.
 
-## ⏳ 미완료 — `preferred_language` 원복 확인
+## T31~T33 — nickname 트리거. 전부 통과 (2026-08-07)
 
-위 실측 과정에서 **`user@naver.com`(`4b20f04b-...`)의 `preferred_language`가 `ja`로
-바뀌었다.** `ko`로 원복한 뒤 아래 쿼리로 확인해야 하며, **확인 전까지 이 항목은 완료가
-아니다.**
+| | 결과 |
+| --- | --- |
+| **T31** 중개사 본인의 nickname 변경 | **차단.** `ERROR 42501: 승인된 중개사의 사무소명은 관리자만 변경할 수 있습니다.` (CONTEXT: `prevent_realtor_nickname_change() line 6 at RAISE`) |
+| **T32** admin(dada)이 그 중개사의 nickname 변경 | **성공.** `T32-임시명` 확인 후 rollback |
+| **T33** 중개사의 `preferred_language` 변경 | **성공.** `ja` 확인 후 rollback. nickname 트리거가 간섭하지 않는다 |
 
-```sql
-select preferred_language from profiles
-where id = '4b20f04b-dc7c-4c75-b29e-9f97ce660d84';
--- 기대: ko
-```
+T31의 CONTEXT가 트리거 함수를 정확히 가리키므로 **트리거가 실제로 발동했음**이 확정된다
+(예외 없이 통과했다면 트리거가 죽은 것이다). T32는 `auth.uid() = old.id` 조건이 호출자와
+대상이 다를 때 통과한다는 설계대로 동작했고, T33은 첫 조건(`nickname is distinct`)이
+false여서 통과했다. 셋 다 `begin`/`rollback`이라 **실데이터 변경 없음.**
 
-## 미실시
+## ✅ `preferred_language` 원복 확인 완료 (2026-08-07)
 
-T26 실제 승인 / T31~T33(아래 SQL 준비됨) / T34(보류 — test3 소진 판단 필요).
+검증 과정에서 `ja`로 바뀌었던 `user@naver.com`(`4b20f04b-...`)의 `preferred_language`를
+앱에서 한국어로 되돌린 뒤 DB에서 `ko` 확인했다. **남은 임시 변경 없음.**
+
+(요청서 `cc193972-...`의 `response_deadline` 7일 연장은 **아직 그대로다.** 이건 별건이고
+원복 여부는 사용자 판단 대상 — 위 「임시 변경」 항목 참고.)
+
+## 023 검증 종료 — 전부 통과
+
+T17~T19(정책 효과) / T22~T25(정상 기능 회귀) / T31~T33(트리거) / 트리거 revoke 실측 /
+언어 원복. **023 관련 검증은 여기서 끝난다.**
+
+**미실시로 남는 것 (023과 분리)**
+- **T26 실제 승인** — 승인 UI가 열리고 기존 신청서가 조회되는 것까지만 확인했다
+- **T34 customer→realtor 승인 트랜잭션** — `test3@naver.com` 소진 문제로 보류.
+  실행 전 반드시 사용자 판단을 받는다(위 「test3은 1회용이다」 항목)
 
 ## T31~T33 — nickname 트리거 (전부 BEGIN/ROLLBACK, 실데이터 무변경)
 
