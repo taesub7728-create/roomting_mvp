@@ -134,8 +134,12 @@ export default function ResponseStatus() {
             <div className="rs-waiting-text">{t.waitingText}</div>
           </div>
         ) : (
+          // 022 RPC(list_request_responses_for_customer)의 반환 형태를 그대로 쓴다.
+          // key와 /chat 링크는 property_id, 부동산 이름은 realtor_display_name이다.
+          // ★ 나중에 "사무소별 묶어보기"를 도입한다면 그룹핑 키는 realtor_display_name이
+          //   아니라 realtor_id를 쓸 것. 동명 사무소가 있으면 이름으로 묶었을 때 섞인다.
           properties.map((p) => (
-            <div className="rs-card" key={p.id}>
+            <div className="rs-card" key={p.property_id}>
               <div className="rs-img">
                 {p.property_images?.length > 0 ? (
                   <img
@@ -152,7 +156,7 @@ export default function ResponseStatus() {
                 <div className="rs-agency">
                   <div className="rs-agency-avatar"><Building2 size={15} strokeWidth={2} /></div>
                   <div>
-                    <div className="rs-agency-name">{p.realtor?.nickname || '공인중개사'}</div>
+                    <div className="rs-agency-name">{p.realtor_display_name || '공인중개사'}</div>
                     <div className="rs-agency-addr">{p.address}</div>
                   </div>
                 </div>
@@ -163,7 +167,8 @@ export default function ResponseStatus() {
                 {p.description && <div className="rs-message">{p.description}</div>}
                 <div className="rs-actions">
                   <Link className="rs-btn rs-btn-secondary" to="/coming-soon">{t.detailBtn}</Link>
-                  <Link className="rs-btn rs-btn-primary" to={`/chat/${p.id}`}>{t.chatBtn}</Link>
+                  {/* /chat/:propertyId - chat_room_id가 아니라 매물 id를 넘긴다 */}
+                  <Link className="rs-btn rs-btn-primary" to={`/chat/${p.property_id}`}>{t.chatBtn}</Link>
                 </div>
               </div>
             </div>

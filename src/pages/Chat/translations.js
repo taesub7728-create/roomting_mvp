@@ -9,6 +9,8 @@ export const chatText = {
     translateFailed: '번역 실패, 원문만 표시',
     translating: '번역 중...',
     inputPlaceholder: '메시지를 입력하세요',
+    staleConnection: '연결이 오래됐어요. 새로고침해 주세요',
+    participantsFailed: '대화 상대 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요',
     priceLine: (deposit, rent) => `보증금 ${deposit}만원 / 월세 ${rent}만원`,
   },
   ja: {
@@ -21,6 +23,8 @@ export const chatText = {
     translateFailed: '翻訳に失敗しました。原文のみ表示します',
     translating: '翻訳中...',
     inputPlaceholder: 'メッセージを入力してください',
+    staleConnection: '接続が古くなっています。再読み込みしてください',
+    participantsFailed: '相手の情報を読み込めませんでした。しばらくしてからもう一度お試しください',
     priceLine: (deposit, rent) => `保証金 ${deposit}万ウォン / 家賃 ${rent}万ウォン`,
   },
   zh: {
@@ -33,6 +37,8 @@ export const chatText = {
     translateFailed: '翻译失败，仅显示原文',
     translating: '翻译中...',
     inputPlaceholder: '请输入消息',
+    staleConnection: '连接已过期，请刷新页面',
+    participantsFailed: '无法加载对方的信息，请稍后再试',
     priceLine: (deposit, rent) => `保证金 ${deposit}万韩元 / 月租 ${rent}万韩元`,
   },
   en: {
@@ -45,6 +51,8 @@ export const chatText = {
     translateFailed: 'Translation failed, showing original only',
     translating: 'Translating...',
     inputPlaceholder: 'Type a message',
+    staleConnection: 'This connection is out of date. Please refresh.',
+    participantsFailed: "Couldn't load the other participant. Please try again in a moment.",
     priceLine: (deposit, rent) => `Deposit ${deposit} man KRW / Rent ${rent} man KRW`,
   },
 }

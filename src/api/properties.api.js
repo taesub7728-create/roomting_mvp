@@ -171,13 +171,23 @@ export async function updateListingStatus(propertyId, status) {
 }
 
 // 특정 요청서에 달린 매물 응답 목록 (고객/에이전트가 받은 응답 확인할 때 사용)
-// realtor(응답한 공인중개사)의 닉네임, 매물 사진도 함께 가져옴
+// realtor(응답한 공인중개사)의 표시명, 매물 사진도 함께 가져옴
+//
+// 022 RPC로 전환됨. 이전에는 properties를 직접 select하면서 profiles를 embedded join했는데,
+// 023이 profiles SELECT를 본인+admin으로 잠그면 그 조인이 에러 없이 null이 되어 부동산 이름이
+// 조용히 "공인중개사"로 열화된다. 요청서 소유 검증은 이제 함수 본문이 서버에서 한다.
+//
+// 반환 컬럼은 11개로 고정된다(property_id / realtor_id / realtor_display_name / title /
+// address / description / deposit / monthly_rent / room_type / created_at / property_images).
+// 예전 select('*')가 주던 status/request_id/is_public/lat/lng/listing_status/address_public은
+// 화면에서 참조하지 않아 제외됐다 - 새로 필요해지면 함수 반환 타입 변경(= v2 함수 신설)이
+// 필요하다. create or replace로는 컬럼을 추가할 수 없다(TODO_PHASE2.md 10번 항목).
+//
+// 정렬도 created_at desc에서 nickname, created_at desc로 바뀐다. 같은 사무소의 응답이
+// 연속으로 오게 하려는 RPC 쪽 설계 의도다.
 export async function listPropertiesForRequest(requestId) {
   const { data, error } = await supabase
-    .from('properties')
-    .select('*, realtor:profiles(nickname), property_images(image_url, sort_order)')
-    .eq('request_id', requestId)
-    .order('created_at', { ascending: false })
+    .rpc('list_request_responses_for_customer', { p_request_id: requestId })
 
   if (error) return { data: null, error: toFriendlyError(error) }
   return { data, error: null }

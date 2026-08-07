@@ -485,6 +485,11 @@ OAuth·`finishAfterAuth`를 한 번에 검증하고, 끝나면 바로 정리하�
   `git log --all`로 확인했고, 재발 방지를 위해 `.gitignore`에 `*.local.*` 패턴을 추가했다.
 
 **앞으로 테스트 계정을 만들 때의 원칙**
+
+> ⚠ 이 원칙(특히 "검증이 끝나면 바로 정리")은 **새로 만든 계정에만** 적용된다.
+> 022~032 검증은 **기존 계정 4개를 그대로 쓰므로 삭제 대상이 아니다.**
+> 아래 「검증용 계정·데이터」 섹션의 삭제 금지 규칙이 우선한다.
+
 - 미리 만들어 두지 않는다. 필요해지는 시점에 만들고, 그 검증이 끝나면 바로 정리한다.
 - 이메일에 **`+test` 표식**을 붙인다(예: `<주소>+test<번호>@<도메인>`). 나중에 대시보드에서
   검색해 남은 계정을 한 번에 찾아 정리할 수 있게 하기 위함이다.
@@ -849,8 +854,11 @@ Supabase Auth 탭 → User Signups 섹션)
 - **영향**: 테스트 편의 문제가 아니다. **Confirm email이 켜진 운영 환경에서 실제 중개사 가입이
   차단된다.** 화면이 존재하지 않는 경로를 안내하고 있어 사용자는 자기가 뭘 잘못했는지 알 수 없다.
 
-- **임시 대응**: 테스트 계정 생성 시간에만 Confirm email을 비활성화하고 **직후 원복**
-  (아래 체크리스트 참고). 운영 대응책이 아니다.
+- **임시 대응 (지금은 불필요)**: 원래는 중개사 테스트 계정을 새로 만들 때만 Confirm email을
+  비활성화하고 직후 원복하는 방식이었다. 2026-08-07 현재 토글이 이미 꺼져 있고 **기존 계정을
+  재사용하기로 해서 신규 중개사 가입 자체가 없다.** 앞으로 토글을 켠 뒤 중개사 가입을 다시
+  테스트해야 할 때는, 끄고 → 가입 → **즉시 원복** 순서로 하고 원복을 화면에서 다시 확인한다.
+  이건 테스트 편의책이지 운영 대응책이 아니다.
 
 - **근본 해결 후보**
   - 인증 후 지원서 작성 재개 경로 구현 (로그인 상태 + 지원서 없음 → 지원서 폼으로 유도)
@@ -885,112 +893,231 @@ Supabase Auth 탭 → User Signups 섹션)
 - admin 계정 확인: `nickname='dada'`, `id=00d6aa35-d64b-43fd-a659-a2f4af23fabc`
 - **Step 0② 완료** — Confirm email 설정 확인. **꺼짐(disabled) 상태.**
   위치: Authentication → Sign In / Providers → Supabase Auth 탭 → User Signups 섹션
-  → 체크리스트 불필요, test2·test3 가입 시 별도 조치 없이 바로 진행 가능
   → `awaitingEmailConfirm` Known Bug는 현재 미발현 (토글 켜기 전 반드시 수정, 위 Known Bug 항목 참고)
+- **테스트 계정 신규 생성 취소 (2026-08-07 결정)** — 필요한 역할 4종이 기존 계정에 이미
+  전부 있어서 `+test1~3` 계정을 만들지 않기로 했다. 아래 「검증용 계정·데이터」 참고.
+- **관계 데이터 생성 완료 (2026-08-07)** — 요청서 `cc193972-...`(신촌) ← `aaa@naver.com`의
+  응답 매물 `dz`(`c8ab5299-...`) ← 채팅방 `a325fc9a-...` + 양방향 메시지. 023 전 기준선 확보.
+  ResponseStatus 중개사 이름 `베스트공인중개사사무소` 표시 확인.
+  ※ 이 요청서의 `response_deadline`은 테스트용으로 7일 연장한 상태다(원복은 승인 후).
+- **Step 7 스모크 테스트 통과 (2026-08-07)** — S1~S4 전부 기대대로. 상세는 아래 Step 7 섹션.
 
 ## 다음 단계 (이 순서대로) — 다음 세션은 여기서 시작
-1. **테스트 계정 3개 생성** (아래 Step 1~6) ← **다음 세션 시작점: Step 1 (test1 계정 생성)**
-2. **Step 7 스모크 테스트** (수정본, 아래)
-3. **프론트 A 배포** — profiles RPC 전환 + chat 폴백 수정 + Chat 무반응 방어
-4. **브라우저 검증** (T27 포함 — SQL Editor로는 확인 불가)
+1. ~~관계 데이터 생성~~ **완료 (2026-08-07)**
+2. ~~Step 7 스모크 테스트~~ **완료 (2026-08-07, S1~S4 전부 통과)**
+3. ~~프론트 A 코드 수정~~ **완료 (2026-08-07)** — 아래 「프론트 A」 참고. **배포는 사용자가 한다**
+4. **브라우저 검증** ← **다음 시작점** (T27 포함 — SQL Editor로는 확인 불가)
 5. **023 적용**
 
 ---
 
-# Confirm email 임시 비활성화 체크리스트
+# 프론트 A — 022 RPC 전환 (2026-08-07 코드 수정 완료 · 배포/검증 대기)
 
-Dashboard > Authentication > Providers > Email > "Confirm email"
+023이 `profiles` SELECT를 본인+admin으로 잠그기 전에, profiles를 embedded join으로 읽던
+2개 경로를 022 RPC로 옮겼다. **PostgREST의 embedded join은 RLS로 걸리면 에러가 아니라
+null을 반환**하므로, 전환 없이 023을 적용하면 화면이 조용히 열화된다.
 
-- [ ] **변경 전 현재 설정값을 기록한다** (켜짐/꺼짐). 원복 기준이 된다
-- [ ] test2·test3 가입 **직후 즉시 원복**한다. 다른 작업을 먼저 하지 않는다
-- [ ] 원복 완료를 화면에서 다시 확인한다
-- [ ] 비활성화 시간을 최소화한다 (가입 2건만 처리하고 바로 되돌린다)
+| 파일 | 변경 |
+| --- | --- |
+| `src/api/properties.api.js` | `listPropertiesForRequest()` → `list_request_responses_for_customer` RPC |
+| `src/pages/ResponseStatus/ResponseStatus.jsx` | `p.id`→`p.property_id`, `p.realtor?.nickname`→`p.realtor_display_name` |
+| `src/api/chat.api.js` | `ROOM_WITH_PARTICIPANTS` 제거, `getChatParticipants()` 신설, `?? user.id` 폴백 축소 |
+| `src/pages/Chat/Chat.jsx` | 참여자 RPC 사용 + **RPC 실패와 참여자 없음을 구분** |
+| `src/pages/Chat/translations.js` | `staleConnection` / `participantsFailed` 키 4개 언어 추가 |
 
-원래 설정이 "꺼짐"이었다면 이 체크리스트는 불필요하고, 위 Known Bug도 현재는 발현되지 않는다.
+Chat.jsx의 두 실패 경로를 섞지 않는다:
+- **RPC 호출 실패**(네트워크·권한·배포 문제) → 기존 `error` 화면 + `participantsFailed`
+  고정 문구. 원인은 `console.error`로만 남긴다(DB 원문 화면 노출 금지 - Phase 2 원칙).
+- **RPC 성공 + 상대 참여자 없음** → `otherProfile=null` → `staleConnection` 안내 +
+  입력·전송 비활성.
+
+둘을 같은 null로 뭉개면, 023 정책을 잘못 넣어 RPC가 권한 거부를 내는 상황에서도 화면이
+"연결이 오래됐어요"라고 말한다 — 원인을 정반대로 짚게 만드는 안내다. 어느 쪽이든
+**조용한 무반응은 남지 않는다.**
+
+동작 변화(의도된 것):
+- ResponseStatus 응답 정렬이 `created_at desc` → `nickname, created_at desc`
+- 반환 필드가 11개로 축소. 화면이 안 쓰던 `status/request_id/is_public/lat/lng/
+  listing_status/address_public`이 빠졌다. 새로 필요해지면 **함수 반환 타입 변경이라
+  `create or replace`가 안 되고 v2 함수를 새로 만들어야 한다**(위 10번 항목)
+- 그룹핑은 도입하지 않았다. 도입 시 키는 `realtor_display_name`이 아니라 `realtor_id`
+  (동명 사무소 혼입 방지). 코드에 주석으로 남겼다
+
+빌드/린트: `vite build` 성공, `oxlint` 신규 경고 0건(기존 경고 7건은 이번에 만진 파일과 무관).
+
+## 🚫 HARD PREREQUISITE — 프론트 B(`resolve_chat_customer_id()` 전환)는 030의 선행 조건이다
+
+**단순 이월 항목이 아니다. 순서를 지키지 않으면 중개사 채팅 진입이 막힌다.**
+
+```
+029 적용  →  프론트 B 배포(resolve_chat_customer_id 전환)  →  030 적용
+```
+
+**프론트 B 없이 030을 먼저 적용하지 않는다.** 030이 중개사의 requests 전체 SELECT를
+없애는 순간(`030:98-100`), 프론트 A가 넣은 명시적 에러에 중개사의 신규 채팅 진입
+(RealtorRespond 완료 화면 → "고객과 채팅하기")이 걸린다.
+같은 내용을 `migration_029_realtor_request_rpc.sql` 헤더에도 적어뒀다.
+
+`getOrCreatePropertyChatRoom()`의 고객 판정을 서버로 옮기는 작업. **이번에 하지 않았다.**
+
+- 기존 코드는 `property.requests?.customer_id ?? user.id` 한 줄이라 "공개 매물이라 요청서가
+  없다"와 "요청서는 있는데 조인이 비었다"가 같은 폴백으로 흘렀다.
+- **migration_030이 중개사의 requests 전체 SELECT를 없앤다**(`030:98-100`). 그러면 중개사
+  세션에서 조인이 null이 되고, 옛 코드는 **customer_id=중개사 본인인 채팅방을 조용히 만든다.**
+- 이번 프론트 A는 `request_id is null`로 두 경우를 갈라, 요청서가 있는데 고객을 못 찾으면
+  **명시적 에러**를 반환하게 했다. 오늘 기준 동작 변화는 없다(중개사가 아직 requests를 읽을
+  수 있음). 조용한 오작동을 눈에 보이는 실패로 바꾼 것까지가 이번 범위다.
+- **최종 해법은 `resolve_chat_customer_id(p_property_id)`**(`migration_029:347`)다. 029가
+  미적용이라 지금은 호출할 수 없다. 029 적용 시 이 함수로 전환한다.
+- 주의: 029/030 적용 후에는 **중개사가 응답 매물 채팅방을 새로 여는 경로**(RealtorRespond
+  완료 화면의 "고객과 채팅하기")가 위 명시적 에러에 걸린다. 전환을 029 적용과 **같은 배포에
+  묶어야** 한다. 순서가 어긋나면 중개사 쪽 채팅 진입이 막힌다.
 
 ---
 
-# 테스트 계정 생성 절차 (대화가 끊겨도 이 문서만 보고 진행)
+# 검증용 계정·데이터 (2026-08-07 확정 · 관계 데이터 생성 완료)
 
-계정 3개가 필요하다. 역할이 다르므로 하나로 합칠 수 없다.
+## ⛔ 이 섹션에서 가장 먼저 읽을 것 — 계정 삭제 절차는 없다
 
-| 계정 | 이메일 | 역할 | 023 적용 시점의 상태 |
-| --- | --- | --- | --- |
-| test1 | `taesub7728+test1@gmail.com` | customer | 요청서 1건 보유 |
-| test2 | `taesub7728+test2@gmail.com` | 승인된 realtor | 매물 1건 + 채팅방 보유 |
-| test3 | `taesub7728+test3@gmail.com` | **심사 대기** | 승인 안 된 상태로 대기 (T34 전용) |
+**여기 나오는 계정 4개는 전부 원래 있던 계정이다. 테스트가 끝나도 삭제하지 않는다.**
 
-**test3가 따로 필요한 이유**: test2는 관계 데이터 생성을 위해 023 적용 전에 이미 승인되므로,
-같은 계정으로 "customer→realtor 승인 트랜잭션"(T34)을 다시 검증할 수 없다.
-test2를 customer로 되돌렸다 재승인하는 방식은 쓰지 않는다 —
-`prevent_self_role_change`(migration_016)를 건드리게 되고 실제 운영 상태와도 다르다.
+이전 버전 문서에는 "테스트 종료 후 Authentication에서 계정 삭제"가 적혀 있었다.
+그건 새로 만들 `+test1~3` 계정을 전제로 쓴 절차였고, **지금 계정에 그대로 적용하면
+`user@naver.com`의 요청서 7건이 cascade로 함께 사라진다.** 그래서 삭제 절차를 제거했다.
+어떤 이유로도 이 계정들을 지우거나 role을 임의로 바꾸지 않는다.
 
-## Step 1. test1 — 대시보드에서 생성
-Dashboard > Authentication > Users > Add user
-- Email: `taesub7728+test1@gmail.com`
-- Password: 직접 생성 (32자 권장). **대화·로그·코드 어디에도 기록하지 않는다**
-- **Auto Confirm User: 체크**
-- User Metadata: `{"nickname":"테스트고객","preferred_language":"ko"}`
+**데이터 삭제 원칙**: `requests` / `properties` / `chat_rooms` / `chat_messages` /
+`realtor_applications` 행은 **사용자 승인 없이 삭제하지 않는다.** 정리가 필요해 보이면
+대상 행을 먼저 제시하고 승인을 받는다. 이 원칙은 "이번 검증에서 새로 만든 행"에도 적용된다.
 
-확인:
+## 계정 매핑 (신규 생성 없음)
+
+| 문서상 역할 | 실제 계정 | nickname / 표시명 | role | 비고 |
+| --- | --- | --- | --- | --- |
+| 고객(구 test1) | `user@naver.com` | user | customer | 요청서 7건 (원래 데이터) |
+| 승인된 중개사(구 test2) | `aaa@naver.com` | 베스트공인중개사사무소 | realtor | 공개 매물 1건(`request_id is null`, 원래 데이터) |
+| 심사 대기(구 test3) | `test3@naver.com` | 태양공인중개사 | customer | 지원서 1건. **T34 전용** |
+| admin | `testreal@naver.com` | dada | admin | — |
+
+미사용: `ts930728@naver.com`(customer, 요청서 1건), `test2@naver.com`(realtor, 대박공인중개사).
+
+**비밀번호**: 모르면 Dashboard > Authentication > Users > 해당 계정 > Reset password로 재설정한다.
+재설정한 값은 **대화·로그·저장소 어디에도 적지 않는다**(이 저장소는 public).
+
+## ⚠ test3@naver.com은 1회용이다 — T34 실행 전 반드시 확인받을 것
+
+`test3@naver.com`을 T34(customer→realtor 승인 트랜잭션)에서 승인하면 **되돌릴 수 없다.**
+`prevent_self_role_change`(migration_016) 때문에 realtor에서 customer로 복원할 수 없고,
+**현재 심사 대기 상태인 계정은 이것 하나뿐**이다. 승인하는 순간 소진된다.
+
+**T34를 실행하기 직전에 이 사실을 사용자에게 다시 알리고 판단을 받는다.**
+선택지는 (a) 새 심사 대기 계정을 만들어 T34에 쓰고 test3은 보존 (b) test3을 그대로 소진.
+자동으로 (b)를 고르지 않는다. 이 확인 없이 T34를 실행하지 않는다.
+
+[S4]에서 test3을 "무관한 제3자"로 쓰는 것은 **읽기 전용이라 소진되지 않는다.** 무방하다.
+
+## 관계 데이터 — 생성 완료 (023 적용 전 기준선)
+
+2026-08-07 확인. 이전까지는 요청서에 응답한 매물(`properties.request_id is not null`)이
+0건이라 채팅방도 없었다(`aaa@naver.com`의 매물 1건은 `request_id is null`인 지도용 공개 매물).
+
+| 항목 | 값 | 출처 |
+| --- | --- | --- |
+| 요청서 `request_id` | `cc193972-160e-47d1-a51c-23e628cc4ad4` (지역 `신촌`) | **원래 있던 요청서 7건 중 하나** |
+| 응답 매물 `property_id` | `c8ab5299-c236-4c21-b165-50107d283a06` (`title='dz'`, realtor=`aaa@naver.com`) | **이번 검증에서 신규 생성** |
+| 채팅방 `chat_room_id` | `a325fc9a-a97d-4588-8e66-abbdd2d3d3a1` | **이번 검증에서 신규 생성** |
+| 메시지 | 양쪽 1건씩 | **이번 검증에서 신규 생성** |
+
+사용자 UUID (Step 7 식별 쿼리 실측값):
+`user@naver.com` = `4b20f04b-dc7c-4c75-b29e-9f97ce660d84` /
+`aaa@naver.com` = `b28f1e03-db3f-4faa-be52-eba2f7d50294` /
+`test3@naver.com` = `0cc53965-95ea-4ddb-9b54-7fd92fed0dcd`
+
+(위 UUID는 테스트 데이터 식별자다. 자격증명이 아니고 RLS 없이는 쓸 수 없어 기록한다.
+대화가 끊겨도 이 문서만으로 Step 7을 돌릴 수 있어야 하므로 확정값으로 남긴다.)
+
+### ⚠ `/chat/:id`의 `:id`는 `chat_room_id`가 아니라 `property_id`다
+
+**한 번 헷갈렸던 지점이라 명시한다.** 2026-08-07에 `c8ab5299-...`(property_id)를
+chat_room_id로 잘못 전달한 적이 있고, 원인은 브라우저 주소창이었다.
+
+- 라우트: `App.jsx:58` `<Route path="/chat/:propertyId" element={<Chat />} />`
+- `Chat.jsx:20`이 `const { propertyId } = useParams()`로 받고,
+  `getOrCreatePropertyChatRoom(propertyId)`(`chat.api.js:10`)가 **그 매물의 채팅방을
+  찾거나 만들어서** `room.id`를 준다. 즉 `chat_room_id`는 URL에 등장하지 않는다.
+- 매물 1개 + 고객 1명당 채팅방 1개라 둘은 1:1처럼 보이지만 **다른 테이블의 다른 키**다.
+- `get_chat_participants(p_room_id)`는 **`chat_room_id`를 받는다.** 여기에 property_id를
+  넣으면 에러가 아니라 **0행**이 나온다 — 차단 테스트(S4)의 통과와 구분되지 않으므로
+  특히 위험하다. RPC를 손으로 호출할 때는 반드시 `chat_rooms.id`를 확인하고 넣는다.
+
 ```sql
-select p.id, p.nickname, p.role, p.preferred_language
+-- property_id로 chat_room_id 찾기
+select id as chat_room_id, property_id, customer_id, realtor_id
+from chat_rooms where property_id = 'c8ab5299-c236-4c21-b165-50107d283a06';
+```
+
+확인된 기준선:
+- `user@naver.com`의 ResponseStatus에 부동산 이름이 **`베스트공인중개사사무소`** 로 표시됨
+  (지금은 embedded join `realtor:profiles(nickname)` 경로, `properties.api.js:178`).
+  **023이 `profiles`를 own+admin으로 잠그면 이 경로가 null이 된다** — 프론트 A에서 022 RPC로
+  갈아탄 뒤에도 같은 이름이 보여야 통과.
+- 채팅방 생성 + 양방향 메시지 송수신 정상 (T23 기준선)
+
+### ★ 임시 변경: `response_deadline` 7일 연장 — 원복은 승인 후에만
+
+테스트를 위해 요청서 `cc193972-...`의 `response_deadline`을 **7일 뒤로 연장했다.**
+DB 기본값은 `now() + interval '24 hours'`(`schema.sql:79`)이므로 **이 행만 기본값과 다르다.**
+
+- 이 값은 **테스트용 임시 변경**이다. 실제 운영 정책 변경이 아니다.
+- **원래 값으로 임의 복구하지 않는다.** 정리 단계에서 사용자에게 확인받고 처리한다.
+- 원래 값(생성 시점 +24h)은 이미 지난 시각이라, 되돌리면 요청서가 즉시 마감 상태로 보인다.
+  되돌릴지 / 그대로 둘지 / `status`까지 어떻게 할지는 사용자가 정한다.
+- 이 연장 때문에 아래 「발견 사항 ②」(24시간 고정 문구)가 드러났다.
+
+### 관계 데이터 존재 확인 쿼리 (언제든 재확인용)
+
+```sql
+select cu.email as customer, ru.email as realtor, r.region_text, r.status,
+       pr.title, pr.id as property_id,
+       (select count(*) from chat_rooms cr where cr.property_id = pr.id) as rooms
+from properties pr
+join requests r    on r.id  = pr.request_id
+join auth.users cu on cu.id = r.customer_id
+join auth.users ru on ru.id = pr.realtor_id;
+-- 기대: 1행. customer=user@naver.com, realtor=aaa@naver.com, title='dz',
+--       region_text='신촌', rooms=1
+```
+
+### 계정 상태 확인 쿼리 (Step 7 전 사전 점검)
+
+```sql
+select u.email, p.nickname, p.role, p.preferred_language,
+       (select count(*) from requests r  where r.customer_id = p.id) as requests,
+       (select count(*) from properties pr where pr.realtor_id = p.id) as properties,
+       (select count(*) from realtor_applications ra where ra.profile_id = p.id) as applications
 from profiles p join auth.users u on u.id = p.id
-where u.email = 'taesub7728+test1@gmail.com';
--- 기대: nickname='테스트고객', role='customer', preferred_language='ko'
--- role은 migration_016이 클라이언트 입력을 무시하고 강제하므로 메타데이터로 바꿀 수 없다
+where u.email in ('user@naver.com','aaa@naver.com','test3@naver.com','testreal@naver.com')
+order by u.email;
+-- 기대: aaa=realtor, user=customer, test3=customer(applications=1), testreal=admin
+-- test3의 role이 realtor면 T34 대상이 이미 소진된 것이다. 진행을 멈추고 사용자에게 알린다
 ```
 
-## Step 2. test1으로 요청서 1건 작성
-앱 로그인 → 요청서 작성 → **지역에 `area-routing-verify` 입력** (식별용). 나머지는 월세 흐름 아무 값.
-```sql
-select r.id, r.region_text, r.status from requests r
-join auth.users u on u.id = r.customer_id
-where r.region_text = 'area-routing-verify' and u.email = 'taesub7728+test1@gmail.com';
--- 기대: 정확히 1행, status='open'
-```
+### 관계 데이터를 다시 만들어야 할 때 (재현 절차)
 
-## Step 3. test2 — 앱 가입 폼으로 (대시보드 금지)
-`realtor_applications` 행이 있어야 승인 흐름을 검증할 수 있고, 그 행은 가입 폼에서만 생긴다.
+지금은 필요 없다. 데이터가 유실된 경우에만 쓴다.
 
-`/signup/realtor` 진입 후 입력:
-- 이메일 `taesub7728+test2@gmail.com` / 비밀번호 직접 생성
-- 업체명 `테스트공인중개사2` ← **profiles.nickname이 되고 고객 화면에 표시된다**
-- 사업자등록번호 `000-00-00001` (형식 검증 없음)
-- **유선전화번호 `02-0000-0001`** ← test3와 반드시 다르게
-- 중개등록번호 `TEST-0002` / 주소·담당자명·연락처 아무 값
-- 서류 2개: 아무 이미지 파일 (내용 검증 없음)
-
-## Step 4. test2 승인 (admin 'dada')
-`/admin/login` → AdminDashboard 지원서 탭 → 승인
-```sql
-select p.nickname, p.role from profiles p join auth.users u on u.id = p.id
-where u.email = 'taesub7728+test2@gmail.com';   -- 기대: role='realtor'
-```
-
-## Step 5. test2로 응답 + 채팅 (관계 데이터 생성 / 023 전 기준선)
-1. test2 로그인 → "받을 수 있는 요청" → `area-routing-verify` 요청서에 매물 1건 응답
-2. test1 로그인 → ResponseStatus에서 부동산 이름이 `테스트공인중개사2`로 보이는지 확인
-3. "채팅하기" → 메시지 1건 전송
-4. test2 로그인 → 같은 방에서 답장 1건
-
-2·4번 결과가 **023 적용 후에도 동일해야** 통과다.
-
-## Step 6. test3 — 가입만, 승인하지 않음
-Step 3과 동일하되:
-- 이메일 `taesub7728+test3@gmail.com` / 업체명 `테스트공인중개사3`
-- **유선전화번호 `02-0000-0003`** ← test2와 같은 번호를 쓰면
-  `check_landline_duplicate()`(migration_014)가 "이미 등록된 업체예요"로 가입 자체를 막는다
-- 중개등록번호 `TEST-0003`
-
-**★ 승인하지 않는다.** 023 적용 후 T34에서 이 계정을 승인하는 것이 검증 대상이다.
-```sql
-select p.role, (ra.id is not null) as has_application
-from profiles p join auth.users u on u.id = p.id
-left join realtor_applications ra on ra.profile_id = p.id
-where u.email = 'taesub7728+test3@gmail.com';
--- 기대: role='customer', has_application=true  (심사 대기 상태)
-```
+1. `user@naver.com`의 요청서 중 `status='open'` + 응답 0건인 것을 고른다
+   (없으면 앱에서 요청서를 새로 하나 쓴다 — 계정 생성이 아니다. `createRequest()`에
+   "이미 열린 요청서가 있으면 막는" 게이트는 없다, `requests.api.js:10`)
+2. `aaa@naver.com` 로그인 → 주소창에 `/realtor/respond/<requestId>` 직접 입력
+   (목록에서 고르지 않는다 — `listOpenRequests()`가 지역 필터 없이 모든 open 요청서를
+   보여준다, `requests.api.js:61`. 영업지역 라우팅 028~030은 미적용)
+3. 필수 입력 5개(제목/방타입/보증금/월세/주소)만 채우고 제출 (`RealtorRespond.jsx:57`).
+   같은 요청서에 같은 중개사가 두 번 응답하는 것은
+   `properties_request_realtor_unique`(migration_007)가 막는다
+4. `user@naver.com` 로그인 → `/requests/<requestId>` → "채팅하기" → 메시지 1건
+   (채팅방은 이때 생성된다, `chat.api.js:26-44`)
+5. `aaa@naver.com`으로 답장 1건
 
 ---
 
@@ -1011,94 +1138,143 @@ where u.email = 'taesub7728+test3@gmail.com';
 → **T27(anon 호출 시 권한 거부)은 SQL Editor로 확인 불가.**
    프론트 A 배포 후 브라우저(비로그인 상태)에서 확인하는 항목으로 옮긴다.
 
-## 대상 행 식별 (각각 정확히 1행이어야 한다)
+**보고할 때 이 셋을 섞지 않는다.** S1~S4가 전부 통과해도 그것은 **함수 내부
+authorization 조건(auth.uid() 기반 행 제한)이 맞다**는 뜻일 뿐이다.
+"anon/authenticated가 이 함수를 호출할 수 있는가/없는가"는 **아직 검증되지 않은 상태**로
+남는다. 결과를 적을 때 세 줄로 나눠 쓴다:
+1. 함수 내부 authorization → S1~S4 (SQL Editor)
+2. 함수 ACL(PUBLIC/anon EXECUTE 부재) → **완료** (`pg_proc.proacl`, 022 적용 시 확인)
+3. 실제 anon/authenticated 호출 권한 → **미검증**, 프론트 A 배포 후 브라우저에서 확인
 
-`limit 1`을 쓰지 않는다. 기존 데이터가 섞이면 엉뚱한 행을 골라 테스트가 무의미해진다.
+## 대상 행 식별 (S1~S4 실행 전 1회)
+
+request/chat_room UUID는 확정값을 그대로 쓴다. **사용자 UUID와 property UUID만 조회한다.**
 
 ```sql
-select 'request' as kind, count(*) as cnt
-from requests r join auth.users u on u.id = r.customer_id
-where r.region_text = 'area-routing-verify'
-  and u.email = 'taesub7728+test1@gmail.com'
-union all
-select 'chat_room', count(*)
-from chat_rooms cr
-join properties p  on p.id = cr.property_id
-join requests   r  on r.id = p.request_id
-join auth.users uc on uc.id = cr.customer_id
-join auth.users ur on ur.id = cr.realtor_id
-where r.region_text = 'area-routing-verify'
-  and uc.email = 'taesub7728+test1@gmail.com'
-  and ur.email = 'taesub7728+test2@gmail.com';
--- 기대: 두 행 모두 cnt = 1. 아니면 아래 테스트를 하지 말고 데이터를 먼저 정리한다
+select
+  (select u.id from auth.users u where u.email = 'user@naver.com')     as customer_id,
+  (select u.id from auth.users u where u.email = 'aaa@naver.com')      as realtor_id,
+  (select u.id from auth.users u where u.email = 'test3@naver.com')    as unrelated_id,
+  'cc193972-160e-47d1-a51c-23e628cc4ad4'::uuid                         as request_id,
+  'a325fc9a-a97d-4588-8e66-abbdd2d3d3a1'::uuid                         as chat_room_id,
+  (select pr.id from properties pr
+    where pr.request_id = 'cc193972-160e-47d1-a51c-23e628cc4ad4'
+      and pr.title = 'dz'
+      and pr.realtor_id = (select u.id from auth.users u where u.email = 'aaa@naver.com')
+  ) as property_id;
+-- 6개 값이 전부 non-null이어야 한다. 하나라도 null이면 S1~S4를 돌리지 말고 원인부터 본다
+-- 2026-08-07 실측: customer=4b20f04b / realtor=b28f1e03 / unrelated=0cc53965
+--                  property_id=c8ab5299-c236-4c21-b165-50107d283a06
+-- ★ property_id(c8ab5299)와 chat_room_id(a325fc9a)를 바꿔 넣지 말 것. 위 경고 박스 참고
 ```
 
-## [S1] 정상 — test1이 자기 요청서의 응답 조회
+정합성도 함께 본다(요청서 주인 / 채팅방 참여자가 예상과 같은지):
+
+```sql
+select r.id as request_id, r.customer_id, r.status, r.region_text, r.response_deadline,
+       cr.id as chat_room_id, cr.customer_id as room_customer, cr.realtor_id as room_realtor,
+       (select count(*) from properties pr where pr.request_id = r.id) as responses,
+       (select count(*) from chat_messages m where m.chat_room_id = cr.id) as messages
+from requests r
+join chat_rooms cr on cr.id = 'a325fc9a-a97d-4588-8e66-abbdd2d3d3a1'
+where r.id = 'cc193972-160e-47d1-a51c-23e628cc4ad4';
+-- 기대: status='open', region_text='신촌', response_deadline은 7일 뒤(임시 연장분),
+--       room_customer=user UUID, room_realtor=aaa UUID, messages>=2
+-- responses는 1이 아닐 수도 있다(다른 중개사 응답이 섞였을 경우). S1은 그래도 유효하다 - 아래 참고
+```
+
+## [S1] 정상 — 고객이 자기 요청서의 응답 조회
+
 ```sql
 begin;
 select set_config('request.jwt.claims',
   json_build_object('sub', (select u.id::text from auth.users u
-                            where u.email = 'taesub7728+test1@gmail.com'))::text, true);
+                            where u.email = 'user@naver.com'))::text, true);
 select * from public.list_request_responses_for_customer(
-  (select r.id from requests r join auth.users u on u.id = r.customer_id
-   where r.region_text = 'area-routing-verify'
-     and u.email = 'taesub7728+test1@gmail.com'));
+  'cc193972-160e-47d1-a51c-23e628cc4ad4');
 rollback;
--- 기대: 1행. realtor_display_name = '테스트공인중개사2'
---       컬럼 정확히 11개, phone 없음, customer_id/created_by 없음
 ```
 
-## [S2] 차단 — test2(중개사)가 남의 요청서 응답 조회 시도
+기대:
+- **`title='dz'` 행이 결과에 포함된다.** ★ "정확히 1행"으로 판정하지 않는다 — 이 요청서에
+  다른 중개사 응답이 이미 있거나 나중에 붙을 수 있다. **`dz` 행의 존재와 그 내용**으로 본다
+- 그 행의 `realtor_display_name` = `베스트공인중개사사무소`
+- 그 행의 `realtor_id` = 위 식별 쿼리의 `realtor_id`(aaa 계정 UUID)와 일치
+- 반환 컬럼은 정의된 **11개뿐이고 `phone` 컬럼 자체가 없다**
+  (`row.phone is null`이 아니라 **컬럼 부재**로 확인. SQL Editor 결과 헤더에 없어야 한다)
+- `customer_id` / `created_by`도 반환되지 않는다
+
+## [S2] 차단 — 중개사가 고객의 응답 목록 조회 시도
+
 ```sql
 begin;
 select set_config('request.jwt.claims',
   json_build_object('sub', (select u.id::text from auth.users u
-                            where u.email = 'taesub7728+test2@gmail.com'))::text, true);
+                            where u.email = 'aaa@naver.com'))::text, true);
 select * from public.list_request_responses_for_customer(
-  (select r.id from requests r join auth.users u on u.id = r.customer_id
-   where r.region_text = 'area-routing-verify'
-     and u.email = 'taesub7728+test1@gmail.com'));
+  'cc193972-160e-47d1-a51c-23e628cc4ad4');
 rollback;
 -- 기대: 0행  (T28)
+-- 이 함수는 "요청서 주인"에게만 열린다. 자기가 응답한 요청서라도 남의 응답 목록은 못 본다
 ```
 
-## [S3] 정상 — 채팅 참여자 조회
+## [S3] 정상 — 고객이 자신이 참여한 채팅방 참여자 조회
+
 ```sql
 begin;
 select set_config('request.jwt.claims',
   json_build_object('sub', (select u.id::text from auth.users u
-                            where u.email = 'taesub7728+test1@gmail.com'))::text, true);
+                            where u.email = 'user@naver.com'))::text, true);
 select * from public.get_chat_participants(
-  (select cr.id from chat_rooms cr
-   join properties p  on p.id = cr.property_id
-   join requests   r  on r.id = p.request_id
-   join auth.users uc on uc.id = cr.customer_id
-   join auth.users ur on ur.id = cr.realtor_id
-   where r.region_text = 'area-routing-verify'
-     and uc.email = 'taesub7728+test1@gmail.com'
-     and ur.email = 'taesub7728+test2@gmail.com'));
+  'a325fc9a-a97d-4588-8e66-abbdd2d3d3a1');   -- chat_room_id (property_id 아님)
 rollback;
--- 기대: 정확히 2행, 컬럼 3개(participant_id / nickname / preferred_language)
 ```
 
-## [S4] 차단 — 무관한 사용자(test3)가 그 방 조회
+기대:
+- **정확히 2행** (`user`, `베스트공인중개사사무소`)
+- 반환 컬럼 3개뿐: `participant_id` / `nickname` / `preferred_language`
+- **`phone` 컬럼 자체가 없다** (값이 null인 게 아니라 컬럼 부재)
+
+## [S4] 차단 — 무관한 사용자가 채팅 참여자 조회 시도
+
 ```sql
 begin;
 select set_config('request.jwt.claims',
   json_build_object('sub', (select u.id::text from auth.users u
-                            where u.email = 'taesub7728+test3@gmail.com'))::text, true);
+                            where u.email = 'test3@naver.com'))::text, true);
 select * from public.get_chat_participants(
-  (select cr.id from chat_rooms cr
-   join properties p  on p.id = cr.property_id
-   join requests   r  on r.id = p.request_id
-   join auth.users uc on uc.id = cr.customer_id
-   join auth.users ur on ur.id = cr.realtor_id
-   where r.region_text = 'area-routing-verify'
-     and uc.email = 'taesub7728+test1@gmail.com'
-     and ur.email = 'taesub7728+test2@gmail.com'));
+  'a325fc9a-a97d-4588-8e66-abbdd2d3d3a1');   -- chat_room_id (property_id 아님)
 rollback;
 -- 기대: 0행  (T21)
+-- test3은 읽기만 한다. 이 테스트로는 소진되지 않는다(T34 대상 유지)
 ```
+
+네 테스트 모두 `begin` → `set_config(..., true)` → 호출 → `rollback` 구조라
+JWT claim이 트랜잭션 밖에 남지 않고 데이터도 바뀌지 않는다.
+
+## 실행 결과 — 2026-08-07 전부 통과
+
+| 테스트 | 결과 | 확인된 것 |
+| --- | --- | --- |
+| S1 | 통과 | `title='dz'` 행 반환, `realtor_display_name='베스트공인중개사사무소'`, `realtor_id=b28f1e03` 일치. 컬럼 11개(`property_id, realtor_id, realtor_display_name, title, address, description, deposit, monthly_rent, room_type, created_at, property_images`). `phone`/`customer_id`/`created_by` **컬럼 자체 부재**. `property_images`는 `[]`(사진 없는 매물이라 `coalesce` 폴백이 의도대로 동작) |
+| S2 | 통과 | 0행. 중개사는 자기가 응답한 요청서라도 남의 응답 목록을 볼 수 없다 (T28) |
+| S3 | 통과 | 정확히 2행(`b28f1e03`=`베스트공인중개사사무소`/ko, `4b20f04b`=`user`/ko). 컬럼 3개. `phone` 부재 |
+| S4 | 통과 | 0행. 무관한 사용자 차단 (T21). test3은 읽기만 했으므로 **소진되지 않음** |
+
+부수 확인: `chat_rooms`의 `customer_id=user`, `realtor_id=aaa`로 정상 저장돼 있다 —
+`chat.api.js:23`의 `?? user.id` 폴백은 이 데이터에서 발현되지 않았다
+(발현 조건과 030 이후의 위험은 아래 「프론트 A」 항목 참고).
+
+표시명 정합성 확인(2026-08-07): `profiles.nickname` 원본 `length=11`,
+S1의 `realtor_display_name`과 S3의 `nickname` 모두 `length=11`로 동일.
+한때 S3 결과가 `베스트공인중개사`(8자)로 보였던 것은 **SQL Editor 컬럼 폭에 의한 표시
+잘림**이었다. 두 RPC 모두 `profiles.nickname`을 가공 없이 그대로 반환한다
+(`migration_022:138`, `:190`). 데이터는 수정하지 않았다.
+
+**이 결과로 확정된 것은 함수 내부 authorization뿐이다.**
+1. 함수 내부 authorization → **완료** (S1~S4)
+2. 함수 ACL(PUBLIC/anon EXECUTE 부재) → **완료** (`pg_proc.proacl`, 022 적용 시)
+3. 실제 anon/authenticated 호출 권한(T27) → **미검증.** 프론트 A 배포 후 브라우저에서 확인
 
 `set_config(..., true)`는 트랜잭션 로컬이고 전부 `rollback`으로 닫으므로 데이터가 바뀌지 않는다.
 
@@ -1110,8 +1286,10 @@ rollback;
 
 **1단계 — `get_chat_participants` 반환값 확인** (S3 또는 브라우저 콘솔)
 - [ ] 정확히 **2행** 반환
-- [ ] test1의 `preferred_language` = `ko`
-- [ ] test2의 `preferred_language` = 실제 설정값 (가입 시 `ko`로 생성됨)
+- [ ] `user@naver.com`(nickname `user`)의 `preferred_language` = 실제 설정값
+- [ ] `aaa@naver.com`(nickname `베스트공인중개사사무소`)의 `preferred_language` = 실제 설정값
+      (기존 계정이라 `ko`가 아닐 수 있다. **「계정 상태 확인 쿼리」로 미리 확인한 값과
+      같은지**를 본다)
 - [ ] **`Object.keys(row)`에 `phone` 키 자체가 없음** — `row.phone === null`로 판단하지 말 것
 
 **2단계 — Chat UI 별도 검증**
@@ -1120,3 +1298,101 @@ rollback;
 - [ ] 번역이 동작한다 (양쪽 언어가 다를 때)
 
 1단계가 통과하지 않으면 2단계 결과는 의미가 없다.
+
+---
+
+# 발견 사항 (2026-08-07, 관계 데이터 생성 중 발견 — 조사·기록만, 수정 안 함)
+
+두 건 다 023 작업과 무관하다. **지금 고치지 않는다.** 022~032가 끝난 뒤 별도 항목으로 다룬다.
+
+## ① 응답 매물 "상세 보기"가 준비 중 화면으로 간다
+
+- **현재 상태**: 버그가 아니라 **의도적 placeholder**다. 링크가 `/coming-soon`으로
+  **하드코딩**되어 있다. 다만 "응답 매물 상세 화면이 아예 없다"는 기능 공백은 실재한다.
+
+- **재현 경로**: `user@naver.com` 로그인 → `/requests/cc193972-...` → 응답 카드의
+  **"상세 보기"** → `/coming-soon`(준비 중 화면). 4개 언어 모두 동일
+  (`detailBtn`: 상세 보기 / 詳細を見る / 查看详情 / Details).
+
+- **영향**: 고객이 응답받은 매물의 **사진·상세설명·주소·거래조건을 볼 수 있는 화면이 없다.**
+  ResponseStatus 카드에 나오는 요약(대표 사진 1장, 주소, 보증금/월세, description)이
+  전부이고, 그 이상을 보려면 **채팅으로 물어보는 수밖에 없다.**
+  중개사가 사진을 여러 장 올려도 고객은 첫 장만 본다
+  (`ResponseStatus.jsx:140-148`이 `sort_order` 최솟값 1장만 렌더).
+
+- **관련 파일·route**
+  - `src/pages/ResponseStatus/ResponseStatus.jsx:165` — `<Link to="/coming-soon">{t.detailBtn}</Link>`
+  - `src/pages/ResponseStatus/translations.js` — `detailBtn` (ko/ja/zh/en)
+  - `src/App.jsx:78` — `/coming-soon` → `ComingSoon`
+  - `src/App.jsx:43` — `/property/:propertyId` → `PropertyDetail` (**존재하지만 연결 안 됨**)
+
+- **왜 연결되지 않았는가 (핵심)**: `PropertyDetail`은 **지도 공개 매물 전용**이다.
+  URL 직접 진입 시 `listPublicProperties()` = `get_public_listings()` RPC로 조회하는데
+  (`PropertyDetail.jsx:43-54`, `properties.api.js:66`), 이 함수는
+  `is_public = true and listing_status = 'active' and lat/lng is not null`인 행만 반환한다
+  (`migration_011_address_privacy.sql:51-54`).
+  **응답 매물은 `is_public=false`에 좌표도 없으므로 여기서 절대 나오지 않는다.**
+  즉 링크만 `/property/:id`로 바꾸면 화면은 뜨지만 **"매물을 찾을 수 없어요"**
+  (`PropertyDetail.jsx:49`)가 뜬다. 링크 한 줄 교체로 끝나는 일이 아니다.
+  RLS 자체는 이미 열려 있다 — `properties_select_related`(`policies.sql:54-63`)가
+  요청서 주인에게 SELECT를 허용하고 `property_images`도 같은 조건으로 열려 있다
+  (`policies.sql:87-102`). 막고 있는 것은 **조회 경로(공개 전용 RPC)이지 권한이 아니다.**
+
+- **후속 해결 후보**
+  - (a) `PropertyDetail`에 "응답 매물" 모드 추가 — 공개 매물이면 `get_public_listings()`,
+    아니면 `getPropertyById()`(`properties.api.js:35`, RLS가 이미 보호)로 분기.
+    좌표·지도·즐겨찾기 표시는 공개 매물 전용이라 함께 분기해야 한다.
+    채팅 진입은 분기할 필요가 없다 — **채팅방 생성 함수는 `getOrCreatePropertyChatRoom()`
+    하나뿐이고**(`chat.api.js:10`) `PropertyDetail.handleContact`와 `/chat/:propertyId`가
+    같은 함수를 쓴다. 방이 두 개 생길 위험은 없다
+  - (b) 응답 매물 전용 상세 화면을 새로 만든다 (`/requests/:requestId/response/:propertyId` 등).
+    공개 매물용 개인정보 마스킹 로직을 안 물고 가는 게 장점
+  - (c) ResponseStatus 카드를 확장(사진 캐러셀 + 전체 설명 펼치기)해 별도 화면 자체를 없앤다.
+    가장 싸지만 매물 정보가 늘어나면 다시 좁아진다
+  - 어느 쪽이든 **`023` 적용 후에 착수한다.** 023이 `profiles` 접근 경로를 바꾸므로
+    중개사 이름 표시 방식이 먼저 확정돼야 한다
+
+## ② "24시간 안에 응답" 안내 문구가 실제 `response_deadline`과 분리돼 있다
+
+- **현재 상태**: 카운트다운은 **실제 값**으로 계산되고, 안내 문구만 **"24시간" 하드코딩**이다.
+  두 값이 같은 출처를 쓰지 않는다. DB 기본값이 24시간이라 **평소에는 우연히 일치**하고,
+  이번처럼 deadline이 달라지는 순간 어긋난다.
+
+- **재현 경로**: 요청서 `cc193972-...`의 `response_deadline`을 7일 뒤로 연장
+  (이번 테스트에서 실제로 함) → `/requests/cc193972-...` →
+  카운트다운은 `167시간 55분`을 정확히 표시하는데 바로 아래 문구는
+  **"24시간 안에 부동산에서 응답이 도착해요"** 로 고정.
+
+- **영향**: 지금은 **운영 사용자에게 드러나지 않는다** — `response_deadline` 기본값이
+  `now() + interval '24 hours'`(`schema.sql:79`)라 모든 실제 요청서가 24시간이기 때문이다.
+  **응답 기간 정책을 바꾸는 순간(운영 중 조정, 지역별 차등, 프로모션 등) 전 화면이
+  거짓말을 하게 된다.** 지금 고쳐야 할 결함이라기보다 **구조적 결합 누락**으로 기록한다.
+  같은 "24시간" 주장이 여러 화면에 흩어져 있어, 정책을 바꿀 때 한 곳만 고치면 불일치가 남는다.
+
+- **관련 파일·route** (전부 4개 언어 하드코딩)
+  | 위치 | 키 | 문구 |
+  | --- | --- | --- |
+  | `ResponseStatus/translations.js:6,21,36,51` | `timerSub` | 24시간 안에 부동산에서 응답이 도착해요 / 24時間以内に不動産から返答が届きます / 24小时内将收到中介的回复 / Agents will respond within 24 hours |
+  | `RequestSuccess/translations.js:4,10,16,22` | `desc` | 24시간 이내 여러 공인중개사가 제안을 보내드립니다 (+ja/zh/en) |
+  | `Landing/translations.js:9,43,77,111` | `trustLine` | 여러 공인중개사가 24시간 안에 답해요 (+ja/zh/en) |
+  | `LandingV3/translations.js:10` | `trustLine` | 여러 공인중개사가 24시간 안에 답해요 (ko만) |
+
+  - 카운트다운 계산: `ResponseStatus.jsx:24-32` `splitRemaining()` —
+    `request.response_deadline`과 `Date.now()`의 차이. **DB 값 기반이라 정확하다**
+  - 렌더: `ResponseStatus.jsx:113-120` — 숫자는 `remaining`, 문구는 `t.timerSub`(정적 문자열)
+  - 마감 후 문구 `timerExpired`는 정상 동작 (`remaining.expired` 분기, `:109-110`)
+  - 값의 단일 출처: `schema.sql:79`의 컬럼 DEFAULT. **애플리케이션 코드에는 이 24시간을
+    나타내는 상수가 없다** — 프론트는 이 숫자를 알 방법이 지금 없다
+
+- **후속 해결 후보** (우선 검토 방향: **`response_deadline`을 기준으로 문구를 동적 생성**)
+  - (a) `timerSub`를 함수형 번역으로 바꾼다 — `CustomerHome/translations.js`의
+    `rentLine`/`depositLine` 함수형 포맷터 패턴이 이미 이 저장소에 있음.
+    `created_at` → `response_deadline` 차이에서 시간을 계산해 "N시간 안에…"로 생성.
+    ResponseStatus는 두 값을 이미 갖고 있어 추가 조회가 없다
+  - (b) 응답 기간을 설정값으로 승격 — 환경변수 또는 DB 설정 테이블에 두고 컬럼 DEFAULT와
+    프론트 문구가 같은 값을 참조. Landing/RequestSuccess처럼 **요청서가 아직 없는 화면**은
+    (a)로 해결이 안 되므로 이쪽이 필요하다
+  - (c) 요청서 없는 화면의 문구에서 숫자를 빼는 안("빠르게 답해요")도 후보.
+    다만 24시간은 마케팅 메시지의 핵심이라 제품 판단이 필요하다
+  - **선행 결정**: 응답 기간을 앞으로도 24시간 고정으로 갈 것인지. 고정이면 (a)만으로 충분하고,
+    가변으로 갈 거면 (b)가 선행되어야 한다. 이건 제품 결정이라 사용자가 정한다

@@ -6,6 +6,7 @@ import { getCurrentProfile } from '../../api/auth.api'
 import { getPropertyById } from '../../api/properties.api'
 import {
   getOrCreatePropertyChatRoom,
+  getChatParticipants,
   listMessages,
   sendMessage,
   subscribeToMessages,
@@ -48,7 +49,26 @@ export default function Chat() {
       setChatRoom(room)
       const isCustomer = room.customer_id === profile.id
       isCustomerRef.current = isCustomer
-      setOtherProfile(isCustomer ? room.realtor : room.customer)
+
+      // 상대 프로필은 022 RPC로 가져온다. 예전에는 chat_rooms에 profiles를 embedded join해서
+      // room.realtor / room.customer로 받았는데, 023이 profiles를 잠그면 그 조인이 에러 없이
+      // null이 되어 "메시지가 조용히 안 나가는" 상태가 된다(handleSend의 !otherProfile 가드).
+      // 인자는 room.id(chat_room_id)다 - propertyId를 넣으면 0행이 온다.
+      //
+      // ★ "RPC 호출이 실패한 것"과 "호출은 됐는데 상대가 없는 것"을 구분한다.
+      //   둘 다 otherProfile=null로 뭉개면, 예컨대 023 정책을 잘못 넣어 RPC가 권한 거부를
+      //   내는 상황에서도 화면은 "연결이 오래됐어요"라고 말하게 된다 - 원인을 정반대로
+      //   짚게 만드는 안내다. 실패는 아래 error 화면으로, 참여자 없음은 staleConnection으로 간다.
+      const { data: participants, error: participantsError } = await getChatParticipants(room.id)
+      if (participantsError) {
+        // 화면에는 고정 문구만 내보낸다(DB 원문 노출 금지 - Phase 2에서 세운 원칙).
+        // 실제 원인은 콘솔에만 남긴다.
+        console.error('[chat] get_chat_participants 실패:', participantsError)
+        setError(t.participantsFailed)
+        setLoading(false)
+        return
+      }
+      setOtherProfile(participants?.find((p) => p.participant_id !== profile.id) ?? null)
 
       getPropertyById(propertyId).then(({ data }) => setProperty(data))
 
@@ -167,16 +187,26 @@ export default function Chat() {
         <div ref={bottomRef}></div>
       </div>
 
+      {/* 상대 프로필을 못 가져온 상태에서는 handleSend가 조용히 return해 버린다.
+          입력은 되는데 전송만 무시되면 사용자는 새로고침할 이유조차 알 수 없으므로,
+          입력창을 막고 이유를 표시한다. (023 적용 후 구버전 번들 탭에서 실제로 이 상태가 된다) */}
+      {!otherProfile && (
+        <div className="rt-notice-text" style={{ padding: '0 20px', marginTop: 0, textAlign: 'center' }}>
+          {t.staleConnection}
+        </div>
+      )}
+
       <div className="chat-input-bar">
         <input
           className="chat-input"
           type="text"
-          placeholder={t.inputPlaceholder}
+          placeholder={otherProfile ? t.inputPlaceholder : t.staleConnection}
           value={text}
+          disabled={!otherProfile}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSend() }}
         />
-        <button className="chat-send-btn" disabled={sending || !text.trim()} onClick={handleSend} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button className="chat-send-btn" disabled={sending || !text.trim() || !otherProfile} onClick={handleSend} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Send size={17} strokeWidth={2} />
         </button>
       </div>
