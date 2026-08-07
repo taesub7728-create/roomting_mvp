@@ -905,9 +905,13 @@ Supabase Auth 탭 → User Signups 섹션)
 ## 다음 단계 (이 순서대로) — 다음 세션은 여기서 시작
 1. ~~관계 데이터 생성~~ **완료 (2026-08-07)**
 2. ~~Step 7 스모크 테스트~~ **완료 (2026-08-07, S1~S4 전부 통과)**
-3. ~~프론트 A 코드 수정~~ **완료 (2026-08-07)** — 아래 「프론트 A」 참고. **배포는 사용자가 한다**
-4. **브라우저 검증** ← **다음 시작점** (T27 포함 — SQL Editor로는 확인 불가)
-5. **023 적용**
+3. ~~프론트 A 코드 수정·배포~~ **완료 (2026-08-07)**
+4. ~~브라우저 검증 (T27 포함)~~ **완료 (2026-08-07)**
+5. ~~023 적용~~ **완료 (2026-08-07)** — 아래 「023 적용 완료」 참고
+6. **남은 것**: T31~T33(트리거) / T26 실제 승인·T34(보류, 사용자 판단 필요) /
+   `user@naver.com`의 `preferred_language` ko 원복 확인
+7. 그다음: 024~027 시드 적재 → 028 → 영업지역 지정 → 029 → 프론트 B → 030
+   (순서는 아래 「지역 라우팅 검증 시나리오」와 029 헤더의 HARD PREREQUISITE 참고)
 
 ---
 
@@ -944,6 +948,171 @@ Chat.jsx의 두 실패 경로를 섞지 않는다:
   (동명 사무소 혼입 방지). 코드에 주석으로 남겼다
 
 빌드/린트: `vite build` 성공, `oxlint` 신규 경고 0건(기존 경고 7건은 이번에 만진 파일과 무관).
+
+---
+
+# 023 적용 완료 (2026-08-07) — profiles 원본 SELECT 잠금
+
+**적용됨.** 변경 범위는 migration 파일의 실행문 6개 그대로이며, `profiles_update_own`과
+다른 테이블 정책은 건드리지 않았다.
+
+## 적용 전 스냅샷 (원복 기준)
+
+- 정책 2행: `profiles_select_authenticated`(qual=`true`) + `profiles_update_own`
+- 트리거 1행: `trg_prevent_self_role_change`, `tgenabled='O'`
+- `prevent_realtor_nickname_change` **0행**(미적용 확인) /
+  `current_user_role`·`handle_new_user`·`prevent_self_role_change` 존재
+- `rls_enabled=true`, `rls_forced=false`
+
+## 적용 후 구조 검증 — 통과
+
+- 정책 **3행**: SELECT `profiles_select_admin`(`current_user_role() = 'admin'::user_role`),
+  SELECT `profiles_select_own`(`id = auth.uid()`), UPDATE `profiles_update_own`(스냅샷과
+  문자열 동일). `profiles_select_authenticated` 제거 확인, 관계 기반 정책 없음 확인
+- 트리거 **2행** 둘 다 `tgenabled='O'`: `trg_prevent_realtor_nickname_change`(신규),
+  `trg_prevent_self_role_change`(기존)
+- 함수 `prevent_realtor_nickname_change`: `security_definer=true`,
+  `config={"search_path=pg_catalog, public"}`, `acl_explicit=true`,
+  `acl={postgres=X/postgres, service_role=X/postgres}` — **PUBLIC·anon·authenticated 없음**
+
+## T17~T19 — 023의 존재 이유. 실계정 세션으로 실측
+
+`aaa@naver.com`(승인된 중개사) 실제 세션에서:
+
+| | 결과 |
+| --- | --- |
+| **before** (023 적용 전) `profiles?select=*` | **6행** — 전체 사용자 |
+| **after** (023 적용 후) 같은 요청 | **본인 1행만** |
+| 고객 UUID 직접 조회 — **채팅 관계 있음** | **`[]`** |
+| 고객 UUID 직접 조회 — **요청서 응답 관계 있음** | **`[]`** |
+
+**관계 존재 여부와 무관하게 중개사가 고객 `profiles` 원본 행을 직접 읽을 수 없음을
+실측 확인했다.** before/after 대조가 있으므로 이 결과가 정책 변경에서 온 것임이 확정된다.
+관계 기반 조회는 022의 두 RPC만 담당한다는 설계가 성립한다.
+
+## T22~T25 정상 기능 회귀 — 통과
+
+ResponseStatus 정상 / Chat 정상 / AdminDashboard 3경로(요청서 고객 nickname · 지원서
+profile · 공개 매물 중개사 nickname) 정상 / pending realtor 신청서 정상 유지.
+
+## ⚠ 트리거 함수 EXECUTE revoke — 실측 결과 (일반화 금지)
+
+`prevent_realtor_nickname_change()`의 `authenticated` 직접 EXECUTE가 회수된 상태에서
+**실제 `profiles.preferred_language` UPDATE가 정상 성공했다.**
+
+→ **현재 배포 DB와 현재 트리거 구성에서는** 트리거 함수의 직접 EXECUTE 회수가 트리거를
+통한 `profiles` UPDATE를 방해하지 않는다. **revoke는 되돌리지 않는다.**
+
+**이것은 이 구성에서의 실측이지 PostgreSQL 전체 동작에 대한 일반화가 아니다.**
+버전·트리거 구성·함수 소유자가 달라지면 다시 확인해야 한다. 위 15번 항목("트리거 함수
+EXECUTE 회수는 실측이 필요하다")의 미검증 상태는 **이 구성에 한해** 해소된 것으로 기록한다.
+
+## ⏳ 미완료 — `preferred_language` 원복 확인
+
+위 실측 과정에서 **`user@naver.com`(`4b20f04b-...`)의 `preferred_language`가 `ja`로
+바뀌었다.** `ko`로 원복한 뒤 아래 쿼리로 확인해야 하며, **확인 전까지 이 항목은 완료가
+아니다.**
+
+```sql
+select preferred_language from profiles
+where id = '4b20f04b-dc7c-4c75-b29e-9f97ce660d84';
+-- 기대: ko
+```
+
+## 미실시
+
+T26 실제 승인 / T31~T33(아래 SQL 준비됨) / T34(보류 — test3 소진 판단 필요).
+
+## T31~T33 — nickname 트리거 (전부 BEGIN/ROLLBACK, 실데이터 무변경)
+
+### ⚠ 이 테스트가 검증하는 것과 하지 않는 것
+
+`set_config('request.jwt.claims', ...)`는 `auth.uid()`가 읽는 값을 흉내 낼 뿐이고
+**SQL Editor의 실제 DB role은 postgres다.** 따라서 아래 3개가 검증하는 것은
+
+- ✅ `prevent_realtor_nickname_change()`의 **`auth.uid()` 분기 판정**
+- ✅ 이 트리거가 **다른 UPDATE(언어 변경 등)에 간섭하지 않는지**
+
+이고, **검증하지 않는 것**은
+
+- ❌ authenticated/admin 세션의 **RLS UPDATE 권한**(`profiles_update_own`)
+
+이다. T27에서 "SQL Editor로는 anon EXECUTE를 검증할 수 없다"고 구분한 것과 같은 이유다.
+RLS UPDATE 경로는 실제 브라우저 세션(T25 마이페이지 언어 변경, T26 admin 승인)으로 본다.
+
+### T31 — 승인된 중개사 본인이 nickname 변경 시도 → 42501
+
+```sql
+begin;
+select set_config('request.jwt.claims',
+  json_build_object('sub', 'b28f1e03-db3f-4faa-be52-eba2f7d50294')::text, true);
+
+-- 기대: ERROR 42501 '승인된 중개사의 사무소명은 관리자만 변경할 수 있습니다.'
+update profiles set nickname = 'T31-침해시도'
+where id = 'b28f1e03-db3f-4faa-be52-eba2f7d50294';
+
+rollback;
+```
+- 예외가 나면 성공이다. 그 시점에 트랜잭션이 abort되므로 `rollback;`만 실행하면 된다.
+- **예외 없이 통과하면 트리거가 죽은 것이다.** 023의 ⑥ revoke를 의심하고 재확인한다.
+- 확인:
+```sql
+select nickname from profiles where id = 'b28f1e03-db3f-4faa-be52-eba2f7d50294';
+-- 기대: 베스트공인중개사사무소 (변경 없음)
+```
+
+### T32 — admin이 그 중개사의 nickname 변경 → 트리거가 막지 않는다
+
+```sql
+begin;
+select set_config('request.jwt.claims',
+  json_build_object('sub', '00d6aa35-d64b-43fd-a659-a2f4af23fabc')::text, true);  -- admin 'dada'
+
+update profiles set nickname = 'T32-임시명'
+where id = 'b28f1e03-db3f-4faa-be52-eba2f7d50294';
+
+select nickname from profiles where id = 'b28f1e03-db3f-4faa-be52-eba2f7d50294';
+-- 기대: T32-임시명 (트랜잭션 안에서만)
+
+rollback;
+```
+확인:
+```sql
+select nickname from profiles where id = 'b28f1e03-db3f-4faa-be52-eba2f7d50294';
+-- 기대: 베스트공인중개사사무소 (rollback으로 원상복귀)
+```
+성립 근거: 트리거 조건이 `auth.uid() = old.id`라 **호출자와 대상이 다르면 통과**한다
+(`023:93-105`). admin role을 해석하는 게 아니라 관계를 본다.
+
+### T33 — 중개사의 preferred_language 변경 → nickname 트리거가 간섭하지 않는다
+
+```sql
+begin;
+select set_config('request.jwt.claims',
+  json_build_object('sub', 'b28f1e03-db3f-4faa-be52-eba2f7d50294')::text, true);
+
+update profiles set preferred_language = 'ja'
+where id = 'b28f1e03-db3f-4faa-be52-eba2f7d50294';
+
+select preferred_language from profiles where id = 'b28f1e03-db3f-4faa-be52-eba2f7d50294';
+-- 기대: ja (트랜잭션 안에서만)
+
+rollback;
+```
+확인:
+```sql
+select preferred_language from profiles where id = 'b28f1e03-db3f-4faa-be52-eba2f7d50294';
+-- 기대: ko (rollback으로 원상복귀)
+```
+`nickname`이 그대로이므로 트리거의 첫 조건(`new.nickname is distinct from old.nickname`)이
+false가 되어 통과해야 한다. **여기서 42501이 나면 트리거가 과잉 차단하는 것이다** —
+언어 변경 기능 전체가 죽으므로 즉시 보고 대상.
+
+**세 테스트 모두 독립된 `begin`/`rollback`이고, `set_config(..., true)`는 트랜잭션
+로컬이다. 실패해도 실데이터가 남지 않는다.** T32는 운영 표시명을, T33은 실제 언어 설정을
+건드리므로 **반드시 rollback까지 한 묶음으로 실행한다**(중간에 창을 닫지 말 것).
+
+---
 
 ## 🚫 HARD PREREQUISITE — 프론트 B(`resolve_chat_customer_id()` 전환)는 030의 선행 조건이다
 
@@ -1396,3 +1565,115 @@ S1의 `realtor_display_name`과 S3의 `nickname` 모두 `length=11`로 동일.
     다만 24시간은 마케팅 메시지의 핵심이라 제품 판단이 필요하다
   - **선행 결정**: 응답 기간을 앞으로도 24시간 고정으로 갈 것인지. 고정이면 (a)만으로 충분하고,
     가변으로 갈 거면 (b)가 선행되어야 한다. 이건 제품 결정이라 사용자가 정한다
+
+## ③ MyPage 다국어 누락 (2026-08-07, 023 검증 중 발견)
+
+- **현재 상태**: 기존 누락. **023과 무관하다**(정책 변경이 문구에 영향을 줄 수 없다).
+  023 검증 과정에서 언어를 ja로 바꿨다가 눈에 띄었다.
+- **재현 경로**: 로그인 → 언어를 일본어로 전환 → `/mypage`
+- **증상**: "마이페이지", "고객 계정", "응답 대기 중", "확인하기" 등이 한국어로 남는다.
+- **영향**: 초기 타깃이 외국인 사용자인데 로그인 후 첫 화면 중 하나가 절반만 번역된 상태다.
+  기능 장애는 아니지만 신뢰도에 직접 영향.
+- **관련 파일**: `src/pages/MyPage/`에는 `MyPage.jsx` / `MyPage.css` 둘뿐이고
+  **`translations.js`가 없다** (2026-08-07 확인). 다른 페이지가 쓰는 "페이지별
+  `translations.js` + `useLanguage()`" 패턴이 이 화면에만 적용되지 않았다. 즉 문구가
+  JSX에 하드코딩돼 있어서 언어 전환이 애초에 닿지 않는다.
+- **후속**: `MyPage/translations.js` 신설 + `useLanguage()` 적용. 다른 화면과 같은 패턴이라
+  난이도는 낮다. 이 기회에 하드코딩 한글 잔존 여부를 전체 화면으로 훑는 편이 낫다 —
+  같은 누락이 다른 페이지에도 있을 수 있다. **지금 고치지 않는다.**
+
+---
+
+# 지역 라우팅 검증 시나리오 (2026-08-07 정리 · 실행은 028 이후)
+
+## 현재 상태 확인 — 라우팅은 아직 전혀 검증되지 않았다
+
+2026-08-07 기준 사실:
+
+- **024~032 전부 미적용.** 적용된 것은 022, 023뿐이다
+- `realtor_service_areas` 테이블은 **028**에서 생성된다 → **아직 존재하지 않는다.**
+  따라서 **어떤 중개사도 담당 지역을 가진 적이 없다**
+- 라우팅 RPC(`list_open_requests_for_realtor` 등)는 **029**, 테이블 직접 조회를 막는
+  정책 잠금은 **030**이다
+- 지금 중개사 목록은 `listOpenRequests()`(`requests.api.js:61`)가 `.eq('status','open')`만
+  걸고 전부 가져오며, RLS(`policies.sql:36`)도 `role='realtor'`면 전체 requests를 허용한다
+  → **aaa 대시보드에 신촌·강남이 모두 보이는 것이 현재로선 정상이다.** 버그가 아니다
+
+**024/025/026은 빈 테이블만 만든다.** `insert`/`copy`가 한 줄도 없다(파일 전수 확인).
+`scripts/seed-stations/` 디렉터리도 아직 없다. 즉 **시드 적재가 별도 선행 작업**이다.
+
+## 선행 조건 (이 순서를 지킨다)
+
+```
+① 024~027 적용 + 시드 적재 (districts / lines / stations / station_lines /
+   station_districts / station_aliases)
+② 기존 요청서 백필 — station_id를 채워야 district_code가 파생된다
+③ 028 적용
+④ 사용자가 중개사별 담당 지역 지정 (admin, realtor_service_areas INSERT)
+⑤ 029 적용 + 프론트 B 배포
+⑥ 030 적용   ← 프론트 B 없이 먼저 적용 금지(위 HARD PREREQUISITE)
+```
+
+**②를 빠뜨리면 라우팅이 전부 빈 목록으로 보인다.** 027의 `fill_request_location()`은
+`station_id`가 null이면 `district_code`도 null로 둔다(`027:135-140`). 그리고 029의
+`list_open_requests_for_realtor()`는 `sa.district_code = r.district_code` 매칭을 요구한다
+(`029:168-174`). 즉 **기존 요청서는 전부 어느 중개사에게도 보이지 않게 된다.**
+`cc193972-...`(신촌)의 백필 대상은 2호선 신촌역이다(위 14번 항목 — **추정값**이라는 점과
+경의중앙선 신촌역과의 구분 문제를 함께 볼 것. 두 역 모두 서대문구라 라우팅 결과는 같다).
+
+**프론트도 함께 바뀌어야 한다** (이 시나리오의 숨은 전제):
+- `RealtorDashboard` → `list_open_requests_for_realtor()` 전환
+- `RealtorRespond` → `get_open_request_for_realtor()` 전환
+  (030 후 `getRequestById()`는 중개사에게 0행이다 — `029` 2번 함수 주석)
+- `RequestWizard` 지역 단계 → **역 선택 UI**. 지금은 자유 입력이라 신규 요청서의
+  `station_id`가 계속 null이 되고, 백필해도 새 요청서가 또 라우팅 밖으로 샌다
+
+## 검증 시나리오 — 누구에게 어느 구를 주고 무엇이 보여야 하는가
+
+**지금 정해둔다.** 나중에 결과를 보고 기준을 맞추면 검증이 아니다.
+
+### 담당 지역 배정 (④ 단계에서 이대로 넣는다)
+
+| 중개사 | 담당 구 | 코드 | 역할 |
+| --- | --- | --- | --- |
+| `aaa@naver.com` (베스트공인중개사사무소) | 서대문구 | `11410` | **양성 대조** — 신촌 요청서를 받아야 한다 |
+| `test2@naver.com` (대박공인중개사) | 강남구 | `11680` | **음성 대조** — 신촌 요청서를 받으면 안 된다 |
+
+`test2@naver.com`은 지금까지 미사용 계정이었는데, **음성 대조군으로 여기서 쓴다.**
+중개사가 하나뿐이면 "안 보여야 할 사람에게 안 보인다"를 확인할 수 없다.
+코드값은 시드 적재 후 `select code, name_ko from districts where name_ko in ('서대문구','강남구')`로
+**반드시 실물 확인**한다(위 표는 행정표준코드 기준 값이며 시드와 대조 전이다).
+
+### 요청서 배치
+
+| 요청서 | 역/구 | 출처 |
+| --- | --- | --- |
+| `cc193972-...` (신촌) | 신촌역 → 서대문구 | 기존. ② 백필 대상 |
+| 신규 강남 요청서 1건 | 강남역 → 강남구 | ⑤ 이후 `user@naver.com`으로 작성(역 선택 UI 필요) |
+
+### 판정 기준
+
+| # | 세션 | 확인 | 기대 |
+| --- | --- | --- | --- |
+| R1 | `aaa` | `list_open_requests_for_realtor()` | 신촌 요청서 **포함** |
+| R2 | `aaa` | 같은 호출 | 강남 요청서 **미포함** |
+| R3 | `test2` | 같은 호출 | 강남 요청서 **포함** |
+| R4 | `test2` | 같은 호출 | 신촌 요청서 **미포함** |
+| R5 | `test2` | `get_open_request_for_realtor('cc193972-...')` | **0행** (URL 직접 접근 차단) |
+| R6 | `test2` | `/realtor/respond/cc193972-...` 직접 진입 후 응답 시도 | **INSERT 거부** (030의 `properties_insert_realtor`가 영업지역을 검사) |
+| R7 | 담당 지역 없는 중개사 | `list_open_requests_for_realtor()` | **0행** (전국이 보이지 않는다) |
+| R8 | `user` | ResponseStatus / Chat | 023 이후와 동일하게 정상 |
+
+**R2·R4가 이 검증의 핵심이다.** R1·R3만 통과하는 것은 "전부 보이는" 현재 상태와
+구분되지 않는다. **안 보여야 할 것이 안 보이는지**를 봐야 라우팅이 실제로 작동하는 것이다.
+
+R5·R6은 목록에서 감추는 것과 실제 접근 차단이 다르다는 점을 확인한다 — 목록만 필터링하고
+직접 접근이 열려 있으면 라우팅은 UI 장식일 뿐이다.
+
+### 배정 전 기준선 (④ 직전에 찍어둘 것)
+
+```sql
+-- 028 적용 직후, 아직 아무 영업지역도 넣지 않은 상태에서
+select count(*) from realtor_service_areas;   -- 기대: 0
+-- 이 상태로 R7을 먼저 확인하면 "지역 없으면 0행"이 기본 동작임을 증명할 수 있다
+```
