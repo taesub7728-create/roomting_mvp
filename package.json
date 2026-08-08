@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "roomting-making",
   "private": true,
   "version": "0.0.0",
@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.mjs",
     "seed:stations": "node scripts/seed-stations/run.mjs",
-    "seed:stations:selftest": "node scripts/seed-stations/selftest.mjs"
+    "seed:stations:selftest": "node scripts/seed-stations/selftest.mjs",
+    "seed:stations:inventory": "node scripts/seed-stations/manual-review-inventory.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",
