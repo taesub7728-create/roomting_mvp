@@ -23,6 +23,15 @@ dist-ssr
 # 화면 미리보기용 standalone HTML (실제 컴포넌트와 별개, 프로덕션 코드 아님)
 prototypes/
 
+# 역 시드용 원본 공공데이터 (data.go.kr에서 재다운로드 가능. 용량이 커서 커밋하지 않는다)
+scripts/seed-stations/data/
+# 좌표->시군구 역변환 캐시 (지워도 무방. 다시 호출할 뿐이다)
+scripts/seed-stations/.cache/
+# --no-kakao 로 만든 dry-run 리포트는 검수용이 아니다
+scripts/seed-stations/merge_report.dryrun.csv
+# 수동 검수용 inventory 산출물. DB 입력도 seed SQL도 아니고 매번 재생성된다
+scripts/seed-stations/output/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
