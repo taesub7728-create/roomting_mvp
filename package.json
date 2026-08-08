@@ -11,7 +11,9 @@
     "icons": "node scripts/generate-icons.mjs",
     "seed:stations": "node scripts/seed-stations/run.mjs",
     "seed:stations:selftest": "node scripts/seed-stations/selftest.mjs",
-    "seed:stations:inventory": "node scripts/seed-stations/manual-review-inventory.mjs"
+    "seed:stations:inventory": "node scripts/seed-stations/manual-review-inventory.mjs",
+    "seed:stations:display-review": "node scripts/seed-stations/review-display-lines.mjs",
+    "seed:stations:generate-sql": "node scripts/seed-stations/generate-seed-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

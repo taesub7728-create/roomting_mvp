@@ -844,6 +844,31 @@ migration 022~032 파일을 작성했고 **아직 하나도 적용하지 않았�
   204번째 줄대 주석 참고)를 확정하는 시점에 광운대역 케이스를 반드시 포함해서 검토한다.
 - **관련 위치**: `scripts/seed-stations/manual-overrides.mjs`(RV-24e08948),
   `scripts/seed-stations/config.mjs`(`lineDisplayOrder`)
+- **2026-08-09 갱신**: display line 매핑이 확정됐다(`scripts/seed-stations/lib/display-lines.mjs`).
+  **재검토 조건이 채워졌는데도 문제는 아직 그대로 남아 있다.** 광운대역은 station 병합
+  결과대로 `I4102@N`(1호선)·`I4108@GJ`(경의중앙선)·`I4108@GC`(경춘선) 3개 identity를
+  그대로 갖고, `stationDisplayLines()`는 이 3개를 서로 다른 display line으로 정상 계산해
+  "1호선 · 경의중앙선 · 경춘선"을 낸다(family 관계로 뭉개지 않는 것 자체는 옳다 - selftest
+  X15/X16 참고). 즉 **"실제로 못 타는 경의중앙선이 노선 목록에 뜨는 문제"는 display line
+  계층에서 해결할 성격이 아니라, 애초에 이 3-identity CONFIRMED_MERGE 병합 판정 자체를
+  재검토해야 하는 문제다.** `scripts/seed-stations/output/seed_stations.sql`(2026-08-09
+  생성, 아직 미실행)에도 이 상태 그대로 들어가 있다.
+
+## 18. station/line seed 재시딩(reconciliation) 전략 미결
+
+- **현재 상태**: `scripts/seed-stations/generate-seed-sql.mjs`가 만드는
+  `output/seed_stations.sql`은 **one-shot 전제**다 - migration 024/025 적용 직후
+  `lines`/`stations`/`station_lines`가 전부 비어 있다고 가정하고, `gen_random_uuid()`로
+  새 id를 발급한다. empty-table guard가 있어 두 번째 실행은 항상 실패한다(의도).
+- **남은 문제**: `requests.station_id`(migration 027)가 실제로 `stations.id`를 참조하기
+  시작한 뒤에 재시딩이 필요해지면(표준데이터 연 1회 갱신, 병합 판정 재검토 등),
+  **이미 발급된 station.id를 그대로 보존해야 한다** - id가 바뀌면 과거 요청서의
+  `station_id` 참조가 조용히 끊긴다. 지금 seed 생성기에는 이 경우를 위한 별도 로직이
+  없다.
+- **재검토 조건**: `requests.station_id` 백필이 실제로 시작되기 전에, "이미 있는 station을
+  건드리지 않고 신규/변경분만 반영하는" reconciliation pipeline을 별도로 설계한다.
+- **관련 위치**: `scripts/seed-stations/generate-seed-sql.mjs`,
+  `supabase/migration_027_requests_location.sql`(`station_id`)
 ---
 
 # ⚠ Known Bug — 중개사 가입이 이메일 확인 설정에서 막힌다

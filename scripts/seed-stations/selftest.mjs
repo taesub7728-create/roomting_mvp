@@ -12,6 +12,10 @@
 //     경원선     : I4102 한 번호가 역번호 1014 이하 / 1015 이상에서 다른 실체
 
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { unlink, writeFile } from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import { COORD_MERGE_MAX_M } from './config.mjs'
 import {
   coordinatePriorityOf,
@@ -19,6 +23,13 @@ import {
   transferCodeAdapter,
   transferIdentitiesOf,
 } from './line-identity.mjs'
+import {
+  compareWithLegacyLineDisplayOrder,
+  identityToDisplayLineKey,
+  IDENTITY_TO_DISPLAY_LINE_KEY,
+  stationDisplayLines,
+  validateDisplayLineMapping,
+} from './lib/display-lines.mjs'
 import { groupFingerprint } from './lib/fingerprint.mjs'
 import { assertNormalizerMatchesSql, normalizeStationQuery } from './lib/normalize.mjs'
 import { collectOverrideSchemaErrors } from './lib/override-schema.mjs'
@@ -29,6 +40,12 @@ import { manualOverrides } from './manual-overrides.mjs'
 import { annotateIdentities, mergeStations } from './merge.mjs'
 import { buildReportRows } from './report.mjs'
 import {
+  assertNoSuspiciousI18nValues,
+  isSuspiciousI18nValue,
+  loadSeoulMetroI18n,
+} from './sources/seoul-metro-i18n.mjs'
+import {
+  assertNoSuspiciousReferenceFields,
   decomposeStationName,
   loadRailwayStandard,
   parseTransferFlag,
@@ -36,6 +53,7 @@ import {
   TRANSFER_VALUES_FALSE,
   TRANSFER_VALUES_TRUE,
 } from './sources/railway-standard.mjs'
+import { isSuspiciousReferenceText } from './lib/reference-text-quality.mjs'
 
 let seq = 0
 
@@ -156,6 +174,76 @@ const caseGwangwoondae = [
   unit({ rawName: '광운대역', lineName: '경춘선', lineCode: 'I4108', stationCode: '1019', lat: 37.62380, lng: 127.06160,
     districtCode: '11350', districtName: '노원구', operator: '한국철도공사', transferRaw: '환승역', transferCodes: ['I4102'] }),
 ]
+
+// ----------------------------------------
+// I18N ENCODING 픽스처
+//
+// 서울교통공사_역명다국어표기.csv 실물에서 그대로 뽑은 EUC-KR raw byte(hex)다 -
+// 합성 문자열이 아니라 2026-08-09 byte-level 진단에서 실제로 확인한 값이다.
+// 공개 데이터(data.go.kr)라 역명/한자/영문 표기를 그대로 픽스처에 남겨도 된다.
+//   HEADER: 연번,호선,한글,한자,영문,중국어,일본어
+//   CLEAN : 9,1호선,제기동,祭基洞,Jegidong,祭基洞,チェギドン                (손상 없음)
+//   CORRUPT: 10,1호선,청량리(서울시립대입구),... ,중국어="?凉里(首?市立大?)"  (원본 자체 손상)
+// ----------------------------------------
+const I18N_HEADER_HEX = 'bfacb9f82cc8a3bcb12cc7d1b1db2cc7d1c0da2cbfb5b9ae2cc1dfb1b9beee2cc0cfbabbbeee'
+const I18N_CLEAN_ROW_HEX = '392c31c8a3bcb12cc1a6b1e2b5bf2cf0aed0f1d4d72c4a656769646f6e672cf0aed0f1d4d72cabc1aba7abaeabc9abf3'
+const I18N_CORRUPT_ROW_HEX = '31302c31c8a3bcb12cc3bbb7aeb8ae28bcadbfefbdc3b8b3b4ebc0d4b1b8292cf4e8d5d8d7ec28bcadbfefe3bcd8a1d3deecfdcfa2292c4368656f6e676e79616e676e6928556e6976657273697479206f662053656f756c292c3fd5d8d7ec28e2cf3fe3bcd8a1d3de3f292cabc1abe7abf3abcbabe3abf3abcb'
+
+async function buildI18nFixture() {
+  const lineBufs = [I18N_HEADER_HEX, I18N_CLEAN_ROW_HEX, I18N_CORRUPT_ROW_HEX].map((h) => Buffer.from(h, 'hex'))
+  const csvBuf = Buffer.concat(lineBufs.flatMap((b, i) => (i === 0 ? [b] : [Buffer.from('\r\n'), b])))
+  const tmpPath = path.join(os.tmpdir(), `seed-stations-i18n-fixture-${process.pid}-${Date.now()}.csv`)
+  await writeFile(tmpPath, csvBuf)
+  try {
+    return await loadSeoulMetroI18n(tmpPath)
+  } finally {
+    await unlink(tmpPath).catch(() => {})
+  }
+}
+
+// top-level await - selftest.mjs 는 ESM(.mjs)이라 지원된다.
+// 실패하면 sentinel 을 남기고, 아래 Z 섹션의 check() 안에서 개별 실패로 보고한다
+// (여기서 곧바로 throw 하면 이 픽스처와 무관한 나머지 테스트 전부가 출력되지 않는다).
+let i18nFixture = null
+let i18nFixtureError = null
+try {
+  i18nFixture = await buildI18nFixture()
+} catch (err) {
+  i18nFixtureError = err
+}
+
+// ----------------------------------------
+// RAILWAY-STANDARD ENCODING 픽스처
+//
+// 전체_도시철도역사정보 CSV 실물에서 그대로 뽑은 EUC-KR raw byte(hex)다(2026-08-10 진단).
+//   HEADER : 역번호,역사명,노선번호,노선명,영문역사명,한자역사명,환승역구분,환승노선번호,
+//            환승노선명,역위도,역경도,운영기관명,역사도로명주소,역사전화번호,데이터기준일자
+//   CLEAN  : D007,강남,I11D1,신분당선,Gangnam,江南,...                  (손상 없음)
+//   CORRUPT: S401,샛강,L11SL,...,Saetgang,한자역사명="?江",...           (원본 자체 손상)
+// ----------------------------------------
+const RAILWAY_HEADER_HEX = 'bfaab9f8c8a32cbfaabbe7b8ed2cb3ebbcb1b9f8c8a32cb3ebbcb1b8ed2cbfb5b9aebfaabbe7b8ed2cc7d1c0dabfaabbe7b8ed2cc8afbdc2bfaab1b8bad02cc8afbdc2b3ebbcb1b9f8c8a32cc8afbdc2b3ebbcb1b8ed2cbfaac0a7b5b52cbfaab0e6b5b52cbfeebfb5b1e2b0fcb8ed2cbfaabbe7b5b5b7ceb8edc1d6bcd22cbfaabbe7c0fcc8adb9f8c8a32cb5a5c0ccc5cdb1e2c1d8c0cfc0da'
+const RAILWAY_CLEAN_ROW_HEX = '443030372cb0adb3b22c49313144312cbdc5bad0b4e7bcb12c47616e676e616d2ccbb0d1f52cb5b5bdc3c3b6b5b520c8afbdc2bfaa2c49313144312cbcf6b5b5b1c720b1a4bfaac3b6b5b520bdc5bad0b4e7bcb12c33372e34393733383534342c3132372e303237383738392cb0e6b1e2b5b520bdc5bad0b4e7bcb12cbcadbfefc6afbab0bdc320b0adb3b2b1b820b0adb3b2b4ebb7ce20c1f6c7cf203339362c303229203831302d353834302c323032362d30362d3138'
+const RAILWAY_CORRUPT_ROW_HEX = '533430312cbbfbb0ad2c4c3131534c2cbcf6b5b5b1c720b0e6b7aeb5b5bdc3c3b6b5b520bdc5b8b2bcb12c5361657467616e672c3fcbb02cc8afbdc2bfaa2c53313153312cbcf6b5b5b1c72020b5b5bdc3c3b6b5b52039c8a3bcb12c33372e35313732313939342c3132362e3932393430342cb3b2bcadbfefb0e6c0fcc3b620c1d6bdc4c8b8bbe72cbcadbfefc6afbab0bdc320bfb5b5eec6f7b1b820c0c7bbe7b4e7b4ebb7ce20c1f6c7cf3136362028bfa9c0c7b5b5b5bf292c30322d3839302d323232377e382c323032352d30392d3233'
+
+async function buildRailwayFixture() {
+  const lineBufs = [RAILWAY_HEADER_HEX, RAILWAY_CLEAN_ROW_HEX, RAILWAY_CORRUPT_ROW_HEX].map((h) => Buffer.from(h, 'hex'))
+  const csvBuf = Buffer.concat(lineBufs.flatMap((b, i) => (i === 0 ? [b] : [Buffer.from('\r\n'), b])))
+  const tmpPath = path.join(os.tmpdir(), `seed-stations-railway-fixture-${process.pid}-${Date.now()}.csv`)
+  await writeFile(tmpPath, csvBuf)
+  try {
+    return await loadRailwayStandard(tmpPath)
+  } finally {
+    await unlink(tmpPath).catch(() => {})
+  }
+}
+
+let railwayFixture = null
+let railwayFixtureError = null
+try {
+  railwayFixture = await buildRailwayFixture()
+} catch (err) {
+  railwayFixtureError = err
+}
 
 // ----------------------------------------
 function run() {
@@ -749,6 +837,197 @@ function run() {
   check('V5 정상 항목은 통과한다', () => {
     const ok = [overrideFixture({ reviewId: 'RV-00000000', fingerprint: 'fp_0000000000000000', verdict: 'CONFIRMED_MERGE' })]
     assert.deepEqual(collectOverrideSchemaErrors(ok), [])
+  })
+
+  // ===== 표시 노선(display line) — merge 결과를 소비만 한다. merge.mjs/fingerprint 는 이 파일을 모른다 =====
+  check('X1 identityToDisplayLineKey - 1호선/2호선/경의중앙선/경춘선 매핑', () => {
+    assert.equal(identityToDisplayLineKey('I4101'), 'line_1')
+    assert.equal(identityToDisplayLineKey('I1101'), 'line_1')
+    assert.equal(identityToDisplayLineKey('I4102@N'), 'line_1')
+    assert.equal(identityToDisplayLineKey('S1102'), 'line_2')
+    assert.equal(identityToDisplayLineKey('S1121'), 'line_2')
+    assert.equal(identityToDisplayLineKey('S1122'), 'line_2')
+    assert.equal(identityToDisplayLineKey('I4108@GJ'), 'gyeongui_jungang')
+    assert.equal(identityToDisplayLineKey('I4102@S'), 'gyeongui_jungang')
+    assert.equal(identityToDisplayLineKey('I4108@GC'), 'gyeongchun')
+    assert.equal(identityToDisplayLineKey('I41K2'), 'gyeongchun')
+  })
+  check('X2 미등록 identity 는 조용히 넘어가지 않고 중단한다', () => {
+    assert.throws(() => identityToDisplayLineKey('Z9999'), /매핑에 없는 identity/)
+  })
+  check('X3 청량리 - 3개 identity(1호선+경의중앙선 2개) 가 2개 display line 으로 dedupe 된다', () => {
+    const { lines, dedupRemovedCount } = stationDisplayLines(['I4101', 'I4108@GJ', 'I4102@S'])
+    assert.deepEqual(lines.map((l) => l.key), ['line_1', 'gyeongui_jungang'])
+    assert.equal(dedupRemovedCount, 1)
+  })
+  check('X4 displayOrder 기준으로 정렬된다 (입력 순서와 무관)', () => {
+    const { lines } = stationDisplayLines(['I4108@GJ', 'I4101', 'S1102'])
+    assert.deepEqual(lines.map((l) => l.key), ['line_1', 'line_2', 'gyeongui_jungang'])
+  })
+  check('X5 identity 가 이미 유일하면 dedupRemovedCount 는 0', () => {
+    const { lines, dedupRemovedCount } = stationDisplayLines(['S1106', 'I41K2'])
+    assert.equal(lines.length, 2)
+    assert.equal(dedupRemovedCount, 0)
+  })
+  check('X6 validateDisplayLineMapping - 매핑에 없는 identity 는 hard fail', () => {
+    assert.throws(() => validateDisplayLineMapping(['I4101', 'Z9999']), /\[A\]/)
+  })
+  check('X7 validateDisplayLineMapping - 서울 대상 24종 전수는 통과하고 24 -> 18 을 보고한다', () => {
+    const result = validateDisplayLineMapping(Object.keys(IDENTITY_TO_DISPLAY_LINE_KEY))
+    assert.equal(result.identityCount, 24)
+    assert.equal(result.displayLineKeyCount, 18)
+    assert.deepEqual(result.unusedMeta, [])
+  })
+  check('X8 metadata 자체의 nameKo/displayOrder 중복 검사는 관측 identity 가 없어도 통과한다', () => {
+    assert.doesNotThrow(() => validateDisplayLineMapping([]))
+  })
+  check('X9 legacy config.mjs lineDisplayOrder 와 비교 - 서울 18개는 order 불일치가 없다', () => {
+    const { mismatches } = compareWithLegacyLineDisplayOrder()
+    assert.deepEqual(mismatches, [])
+  })
+  check('X10 legacy 에만 있는 항목(서울 MVP 범위 밖) 이 보고된다', () => {
+    const { legacyOnly } = compareWithLegacyLineDisplayOrder()
+    const names = legacyOnly.map((x) => x.name)
+    for (const n of ['경강선', '의정부경전철', '인천1호선', '인천2호선', '분당선']) {
+      assert.ok(names.includes(n), `legacyOnly 에 ${n} 이 없다`)
+    }
+  })
+  check('X11 legacy 의 "분당선"/"수인분당선" order 중복 등록이 명시적으로 보고된다', () => {
+    const { bundangDuplicateInLegacy } = compareWithLegacyLineDisplayOrder()
+    assert.equal(bundangDuplicateInLegacy, true)
+  })
+  check('X12 merge.mjs 는 display-lines.mjs 를 import 하지 않는다 (결합 차단 계약)', () => {
+    const src = readFileSync(new URL('./merge.mjs', import.meta.url), 'utf-8')
+    assert.ok(!/display-lines/.test(src), 'merge.mjs 가 display-lines 를 참조한다 - 결합이 생겼다')
+  })
+  check('X13 lib/fingerprint.mjs 는 display-lines.mjs 를 import 하지 않는다 (fingerprint payload 불변 계약)', () => {
+    const src = readFileSync(new URL('./lib/fingerprint.mjs', import.meta.url), 'utf-8')
+    assert.ok(!/display-lines/.test(src), 'fingerprint.mjs 가 display-lines 를 참조한다 - payload 에 영향을 줄 수 있다')
+  })
+  check('X14 display line 계산이 station 원본 lineIdentities/lineNames/좌표 선택을 바꾸지 않는다', () => {
+    const { stations } = prepare(caseGwangwoondae)
+    const s = stations[0]
+    const before = {
+      lineIdentities: [...s.lineIdentities], lineNames: [...s.lineNames],
+      coordFromIdentity: s.coordFromIdentity, coordPriority: s.coordPriority,
+    }
+    stationDisplayLines(s.lineIdentities)
+    assert.deepEqual(s.lineIdentities, before.lineIdentities)
+    assert.deepEqual(s.lineNames, before.lineNames)
+    assert.equal(s.coordFromIdentity, before.coordFromIdentity)
+    assert.equal(s.coordPriority, before.coordPriority)
+  })
+  check('X15 자동 merge된 [I4102@N+I4108@GC](경춘 family) cluster - 두 identity 는 서로 다른 display line 이다', () => {
+    // line-identity.mjs L16 이 확인한 그대로: 경원선(북부)↔경춘선은 family 로 자동 merge 되지만,
+    // family 는 환승 동치성이지 표시 노선이 아니다. I4102@N 은 1호선, I4108@GC 는 경춘선으로 남아야 한다.
+    const { stations } = prepare(caseGwangwoondae)
+    const familyMerged = stations.find((s) => s.lineIdentities.includes('I4102@N') && s.lineIdentities.includes('I4108@GC'))
+    assert.ok(familyMerged, '경춘 family 자동 merge cluster 를 찾지 못했다 - fixture 또는 병합 규칙이 바뀌었을 수 있다')
+    const { lines } = stationDisplayLines(familyMerged.lineIdentities)
+    assert.deepEqual(lines.map((l) => l.key), ['line_1', 'gyeongchun'], 'family 관계가 display line 을 하나로 뭉갰다')
+  })
+  check('X16 override 로 강제 병합된 광운대(3-identity) - 1호선/경의중앙선/경춘선 3개 그대로, dedupe 없음', () => {
+    const baseline = prepare(caseGwangwoondae)
+    const gwKey = normalizeStationQuery(caseGwangwoondae[0].mainName)
+    const gwGroup = baseline.groups.find((g) => g.key === gwKey)
+    const ov = overrideFixture({ reviewId: gwGroup.reviewId, fingerprint: gwGroup.fingerprint, verdict: 'CONFIRMED_MERGE' })
+    const { stations } = prepare(caseGwangwoondae, [ov])
+    assert.equal(stations.length, 1)
+    const { lines, dedupRemovedCount } = stationDisplayLines(stations[0].lineIdentities)
+    assert.deepEqual(lines.map((l) => l.key), ['line_1', 'gyeongui_jungang', 'gyeongchun'])
+    assert.equal(dedupRemovedCount, 0, '이 3개 identity 는 서로 다른 display line 이므로 dedupe 가 발생하면 안 된다')
+  })
+
+  // ===== i18n encoding 손상 (역명다국어표기.csv 원본 자체의 literal '?', 2026-08-09 발견) =====
+  check('Z1 isSuspiciousI18nValue - null/빈 값은 손상이 아니다', () => {
+    assert.equal(isSuspiciousI18nValue(null), false)
+    assert.equal(isSuspiciousI18nValue(undefined), false)
+    assert.equal(isSuspiciousI18nValue(''), false)
+  })
+  check('Z2 isSuspiciousI18nValue - literal ? 탐지', () => {
+    assert.equal(isSuspiciousI18nValue('?凉里(首?市立大?)'), true)
+    assert.equal(isSuspiciousI18nValue('Sangwolgok(KIST)?'), true)
+  })
+  check('Z3 isSuspiciousI18nValue - U+FFFD 탐지', () => {
+    assert.equal(isSuspiciousI18nValue('��'), true)
+  })
+  check('Z4 isSuspiciousI18nValue - 정상 CJK 문자열은 손상이 아니다', () => {
+    assert.equal(isSuspiciousI18nValue('祭基洞'), false)
+    assert.equal(isSuspiciousI18nValue('チェギドン'), false)
+    assert.equal(isSuspiciousI18nValue('淸凉里(서울市立大入口)'), false)
+  })
+  check('Z5 실제 EUC-KR raw byte 픽스처 - 정상 행은 통과, 손상 행은 해당 필드만 null로 정제된다', () => {
+    if (i18nFixtureError) throw new Error(`픽스처 생성 실패: ${i18nFixtureError.message}`)
+    assert.equal(i18nFixture.encoding, 'euc-kr', '픽스처가 EUC-KR 로 디코딩되지 않았다 - 실 데이터와 다른 경로를 탄다')
+
+    const clean = i18nFixture.byName.get(normalizeStationQuery('제기동'))
+    assert.ok(clean, '정상 행(제기동)이 byName 에 없다')
+    assert.equal(clean.nameZh, '祭基洞')
+    assert.equal(clean.nameJa, 'チェギドン')
+
+    const corrupt = i18nFixture.byName.get(normalizeStationQuery('청량리'))
+    assert.ok(corrupt, '손상 행(청량리)이 byName 에서 통째로 사라졌다 - nameJa 는 멀쩡하므로 행 자체는 남아야 한다')
+    assert.equal(corrupt.nameZh, null, '손상된 nameZh 가 정제되지 않고 그대로 남았다')
+    assert.equal(corrupt.nameJa, 'チョンニャンニ', '멀쩡한 nameJa 까지 함께 지워졌다')
+
+    assert.equal(i18nFixture.corrupted.nameZh, 1)
+    assert.equal(i18nFixture.corrupted.nameJa, 0)
+    assert.equal(i18nFixture.corrupted.nameEn, 0)
+  })
+  check('Z6 assertNoSuspiciousI18nValues - 정제 후 byName 은 그대로 통과한다', () => {
+    if (i18nFixtureError) throw new Error(`픽스처 생성 실패: ${i18nFixtureError.message}`)
+    assert.doesNotThrow(() => assertNoSuspiciousI18nValues(i18nFixture.byName))
+  })
+  check('Z7 assertNoSuspiciousI18nValues - 손상 값이 남아 있으면 중단한다', () => {
+    const dirty = new Map([['테스트역', { nameKo: '테스트역', nameJa: null, nameZh: '?凉里' }]])
+    assert.throws(() => assertNoSuspiciousI18nValues(dirty), /손상된 값/)
+    const dirtyFffd = new Map([['테스트역2', { nameKo: '테스트역2', nameJa: '�', nameZh: null }]])
+    assert.throws(() => assertNoSuspiciousI18nValues(dirtyFffd), /손상된 값/)
+  })
+
+  // ===== railway-standard.mjs 손상 (전체_도시철도역사정보 CSV 원본 자체의 literal '?') =====
+  check('Y1 isSuspiciousReferenceText - 공용 helper 는 seoul-metro-i18n 의 판정과 동일하다', () => {
+    assert.equal(isSuspiciousReferenceText('?江'), true)
+    assert.equal(isSuspiciousReferenceText('江南'), false)
+    assert.equal(isSuspiciousReferenceText(null), false)
+    assert.equal(isSuspiciousI18nValue('?江'), isSuspiciousReferenceText('?江'))
+  })
+  check('Y2 실제 EUC-KR raw byte 픽스처 - 정상 행은 통과, 손상 행은 nameHanja만 null로 정제된다', () => {
+    if (railwayFixtureError) throw new Error(`픽스처 생성 실패: ${railwayFixtureError.message}`)
+    assert.equal(railwayFixture.encoding, 'euc-kr', '픽스처가 EUC-KR 로 디코딩되지 않았다')
+    assert.equal(railwayFixture.units.length, 2, '두 행 모두 필수값을 채웠으므로 skip 되면 안 된다')
+
+    const clean = railwayFixture.units.find((u) => u.mainName === '강남')
+    assert.ok(clean, '정상 행(강남)이 없다')
+    assert.equal(clean.nameHanja, '江南')
+    assert.equal(clean.nameEn, 'Gangnam')
+    assert.equal(clean.stationCode, 'D007')
+    assert.equal(clean.lineCode, 'I11D1')
+
+    const corrupt = railwayFixture.units.find((u) => u.mainName === '샛강')
+    assert.ok(corrupt, '손상 행(샛강)이 없다 - nameEn 은 멀쩡하므로 행 자체는 남아야 한다')
+    assert.equal(corrupt.nameHanja, null, '손상된 nameHanja 가 정제되지 않고 그대로 남았다')
+    assert.equal(corrupt.nameEn, 'Saetgang', '멀쩡한 nameEn 까지 함께 지워졌다')
+    // ★ nameKo/stationCode/lineCode/좌표/matching 관련 값은 이번 정제와 무관해야 한다
+    assert.equal(corrupt.mainName, '샛강')
+    assert.equal(corrupt.stationCode, 'S401')
+    assert.equal(corrupt.lineCode, 'L11SL')
+    assert.equal(corrupt.lat, 37.51721994)
+    assert.equal(corrupt.lng, 126.929404)
+    assert.equal(corrupt.isTransfer, true)
+
+    assert.equal(railwayFixture.corrupted.nameHanja, 1)
+    assert.equal(railwayFixture.corrupted.nameEn, 0)
+  })
+  check('Y3 assertNoSuspiciousReferenceFields - 정제 후 units 는 그대로 통과한다', () => {
+    if (railwayFixtureError) throw new Error(`픽스처 생성 실패: ${railwayFixtureError.message}`)
+    assert.doesNotThrow(() => assertNoSuspiciousReferenceFields(railwayFixture.units))
+  })
+  check('Y4 assertNoSuspiciousReferenceFields - 손상 값이 남아 있으면 중단한다', () => {
+    const dirty = [{ sourceRow: 1, mainName: '테스트역', nameHanja: '?院', nameEn: null }]
+    assert.throws(() => assertNoSuspiciousReferenceFields(dirty), /손상된 값/)
+    const dirtyFffd = [{ sourceRow: 2, mainName: '테스트역2', nameHanja: null, nameEn: '�' }]
+    assert.throws(() => assertNoSuspiciousReferenceFields(dirtyFffd), /손상된 값/)
   })
 
   // ----------------------------------------

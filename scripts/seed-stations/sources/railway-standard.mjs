@@ -4,9 +4,19 @@
 //   좌표 / name_en / name_hanja / 환승역 구분(병합 규칙 4) / 환승 노선(병합 규칙 5) / 운영기관
 //
 // 이 파일의 한 행 = "한 역의 한 노선"이다. 환승역은 노선 수만큼 행이 있다.
+//
+// ★ 원본 CSV 손상 (2026-08-10 byte-level 진단으로 확정, sources/seoul-metro-i18n.mjs와
+//   같은 원인 - 서로 다른 파일이지만 판정 기준은 lib/reference-text-quality.mjs 로 공용화)
+//   한자역사명/영문역사명 컬럼에 원본 파일 자체에 이미 ASCII '?'(0x3F)가 저장된 행이
+//   있다(전국 1099행 중 한자 53행/영문 4행). EUC-KR 디코딩은 전체 파일에서 U+FFFD 0건 -
+//   디코더 실패가 아니라 원본 데이터 자체의 손실이다. 손상된 개별 값은 결손과 동일하게
+//   null 로 둔다(025 설계 의도 3). 역사명(nameKo)도 전국 2건 손상이 있지만 전부 괄호 안
+//   부역명에만 있고("용산(서부법원?검찰청입구)"/대구, "하남시청(덕풍?신장)"/경기) 둘 다
+//   서울 대상 밖이며 mainName(조인 키)에는 영향이 없어 정제하지 않는다 - 실측 확인함.
 
 import { readCsv } from '../lib/csv.mjs'
 import { pick, resolveColumns } from '../lib/columns.mjs'
+import { isSuspiciousReferenceText } from '../lib/reference-text-quality.mjs'
 import { normalizeStationQuery } from '../lib/normalize.mjs'
 
 // ========================================
@@ -136,6 +146,9 @@ export async function loadRailwayStandard(filePath) {
   const skipped = []
   const unknownTransferValues = []
   let baseDate = null
+  // 손상된 값을 결손(null)으로 대체한 건수(전국 기준). 위 주석 참고 - 정제하지 않는다:
+  // nameKo/stationCode/lineCode/좌표/matching 값.
+  const corrupted = { nameHanja: 0, nameEn: 0 }
 
   for (const [index, row] of rows.entries()) {
     const line = index + 2
@@ -167,6 +180,12 @@ export async function loadRailwayStandard(filePath) {
 
     const name = decomposeStationName(rawName)
 
+    // ★ 원본 손상 값은 결손과 동일하게 null 로 둔다(추정 복구하지 않는다 - 파일 상단 주석 참고).
+    let nameEn = pick(row, map, 'nameEn')
+    let nameHanja = pick(row, map, 'nameHanja')
+    if (isSuspiciousReferenceText(nameEn)) { corrupted.nameEn += 1; nameEn = null }
+    if (isSuspiciousReferenceText(nameHanja)) { corrupted.nameHanja += 1; nameHanja = null }
+
     units.push({
       source: 'railway-standard',
       sourceRow: line,
@@ -178,8 +197,8 @@ export async function loadRailwayStandard(filePath) {
       subName: name.sub,
       mainNameNormalized: normalizeStationQuery(name.main),
 
-      nameEn: pick(row, map, 'nameEn'),
-      nameHanja: pick(row, map, 'nameHanja'),
+      nameEn,
+      nameHanja,
       nameJa: null,
       nameZh: null,
 
@@ -221,5 +240,22 @@ export async function loadRailwayStandard(filePath) {
     )
   }
 
-  return { units, skipped, encoding, baseDate, missingOptional, rowCount: rows.length }
+  // 정제 후 재확인 - 정제 로직 자체가 깨지면(예: 새 nullable 참조 필드 추가 시
+  // isSuspiciousReferenceText 적용을 빠뜨리는 경우) 손상된 값이 units 에 남을 수 있다.
+  assertNoSuspiciousReferenceFields(units)
+
+  return { units, skipped, encoding, baseDate, corrupted, missingOptional, rowCount: rows.length }
+}
+
+/** 정제 후 units 에 손상된(literal '?' 또는 U+FFFD) nameHanja/nameEn 이 하나도 없는지 확인한다. */
+export function assertNoSuspiciousReferenceFields(units) {
+  for (const u of units) {
+    if (isSuspiciousReferenceText(u.nameHanja) || isSuspiciousReferenceText(u.nameEn)) {
+      throw new Error(
+        `loadRailwayStandard: 정제 후에도 손상된 값이 남아 있습니다 (sourceRow=${u.sourceRow}, ` +
+        `mainName="${u.mainName}", nameHanja=${JSON.stringify(u.nameHanja)}, nameEn=${JSON.stringify(u.nameEn)}). ` +
+        '정제 로직(isSuspiciousReferenceText 적용 누락 등)을 확인하십시오.',
+      )
+    }
+  }
 }
