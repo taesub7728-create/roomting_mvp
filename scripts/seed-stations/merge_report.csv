@@ -8,20 +8,22 @@
 고속터미널,고속터미널,11650 서초구,3,3호선 · 7호선 · 서울 도시철도 9호선,0339 0734 4123,297,고속터미널,Y,true,true,false,false,merge,false,
 홍대입구,홍대입구,11440 마포구,3,2호선 · 경의중앙선 · 인천국제공항선,A03 0239 1264,296,홍대입구 | 홍대입구역,Y,true,true,false,false,merge,false,
 신당,신당,11140 중구,2,2호선 · 6호선,0206 0635,293,신당,Y,true,false,false,false,merge,false,
+종로3가,종로3가,11110 종로구,3,1호선 · 3호선 · 5호선,0130 0329 0534,277,종로3가 | 종로3가(탑골공원) | 탑골공원,Y,false,false,false,false,merge,false,[OVERRIDE RV-7939e47f CONFIRMED_MERGE]
+신설동,신설동,11230 동대문구 | 11110 종로구,3,1호선 · 2호선 · 우이신설선,0126 2114 S122,275,신설동,mixed,false,true,false,false,merge,false,[OVERRIDE RV-bac68788 CONFIRMED_MERGE]
 종합운동장,종합운동장,11710 송파구,2,2호선 · 수도권  도시철도 9호선,0218 4130,271,종합운동장,Y,true,true,false,false,merge,false,
 청량리,청량리,11230 동대문구,3,1호선 · 경의중앙선 · 경원선,0124 1014 1014,269,청량리 | 청량리(서울시립대입구) | 청량리역 | 서울시립대입구,Y,false,true,false,false,merge,false,
 신길,신길역,11560 영등포구,2,경부선 · 5호선,0525 1032,261,신길역 | 신길,Y,true,true,false,false,merge,false,
 총신대입구,총신대입구,11650 서초구 | 11590 동작구,2,4호선 · 7호선,0432 0736,256,총신대입구 | 총신대입구(이수) | 이수,Y,true,false,false,false,merge,false,
 시청,시청,11140 중구,2,1호선 · 2호선,0132 0201,253,시청,Y,true,false,false,false,merge,false,
-김포공항,김포공항,11500 강서구,4,5호선 · 서울 도시철도 9호선 · 서해선 · 인천국제공항선,A05 0512 4102 1980,245,김포공항 | 김포공항역,Y,false,true,false,false,hold,true,인천국제공항선↔김포도시철도 33m: 환승노선 불일치(김포도시철도쪽 환승노선번호 공란) | 김포도시철도↔5호선 52m: 환승노선 불일치(김포도시철도쪽 환승노선번호 공란) | 김포도시철도↔서울 도시철도 9호선 33m: 환승노선 불일치(김포도시철도쪽 환승노선번호 공란) | 김포도시철도↔서해선 197m: 환승노선 불일치(김포도시철도쪽 환승노선번호 공란)
+김포공항,김포공항,11500 강서구,5,5호선 · 서울 도시철도 9호선 · 서해선 · 인천국제공항선 · 김포도시철도,A05 G109 0512 4102 1980,245,김포공항 | 김포공항역,Y,false,true,false,false,merge,false,[OVERRIDE RV-1897605b CONFIRMED_MERGE]
 영등포구청,영등포구청,11560 영등포구,2,2호선 · 5호선,0236 0523,224,영등포구청,Y,true,false,false,false,merge,false,
 동작,동작,11650 서초구 | 11590 동작구,2,4호선 · 서울 도시철도 9호선,0431 4120,184,동작 | 동작(현충원) | 현충원,Y,true,true,false,false,merge,false,
 대림,대림,11530 구로구 | 11560 영등포구,2,2호선 · 7호선,0233 0744,181,대림 | 대림(구로구청) | 구로구청,Y,true,false,false,false,merge,false,
 옥수,옥수,11200 성동구,2,3호선 · 경원선,0335 1011,177,옥수 | 옥수역,Y,true,true,false,false,merge,false,
 건대입구,건대입구,11215 광진구,2,2호선 · 7호선,0212 0727,173,건대입구,Y,true,false,false,false,merge,false,
+공덕,공덕,11440 마포구,4,5호선 · 6호선 · 경의중앙선 · 인천국제공항선,A02 0529 0626 1262,172,공덕 | 공덕역,Y,false,true,false,false,merge,false,[OVERRIDE RV-1c101d1f CONFIRMED_MERGE]
 상봉,상봉,11260 중랑구,3,7호선 · 경의중앙선 · 경춘선,0720 1202 1202,169,상봉 | 상봉역,Y,false,true,false,false,merge,false,
 왕십리,왕십리,11200 성동구,4,2호선 · 5호선 · 경원선 · 분당선,0208 0540 1013 1013,166,왕십리 | 왕십리(성동구청) | 왕십리역 | 성동구청,Y,true,true,false,false,merge,false,
-종로3가,종로3가,11110 종로구,2,3호선 · 5호선,0329 0534,166,종로3가 | 종로3가(탑골공원) | 탑골공원,Y,true,false,false,false,hold,true,"1호선↔3호선 125m: 환승노선 불일치(3호선쪽[S1105,I1101]에 I4101 없음) | 1호선↔5호선 277m: 환승노선 불일치(5호선쪽[I1103,I1101]에 I4101 없음)"
 을지로3가,을지로3가,11140 중구,2,2호선 · 3호선,0203 0330,154,을지로3가,Y,true,false,false,false,merge,false,
 삼각지,삼각지,11170 용산구,2,4호선 · 6호선,0428 0628,152,삼각지 | 삼각지(전쟁기념관) | 전쟁기념관,Y,true,false,false,false,merge,false,
 충정로,충정로,11410 서대문구,2,2호선 · 5호선,0243 0531,152,충정로 | 충정로(경기대입구) | 경기대입구,Y,true,false,false,false,merge,false,
@@ -38,6 +40,7 @@
 연신내,연신내,11380 은평구,2,3호선 · 6호선,0321 0614,103,연신내,Y,true,false,false,false,merge,false,
 효창공원앞,효창공원앞,11170 용산구,2,6호선 · 경의중앙선,0627 1261,103,효창공원앞 | 효창공원앞역,Y,true,true,false,false,merge,false,
 마곡나루,마곡나루,11500 강서구,2,서울 도시철도 9호선 · 인천국제공항선,A042 4105,100,마곡나루 | 마곡나루(서울식물원) | 서울식물원,Y,true,true,true,true,merge,false,
+신내,신내,11260 중랑구,2,6호선 · 경춘선,0648 1311,98,신내 | 신내역,mixed,false,true,false,false,merge,false,[OVERRIDE RV-01c72fd1 CONFIRMED_MERGE]
 가락시장,가락시장,11710 송파구,2,3호선 · 8호선,0350 0817,92,가락시장,Y,true,false,false,false,merge,false,
 샛강,샛강,11560 영등포구,2,서울 도시철도 9호선 · 수도권 경량도시철도 신림선,S401 4116,89,샛강,Y,true,true,true,true,merge,false,
 을지로4가,을지로4가,11140 중구,2,2호선 · 5호선,0204 0535,87,을지로4가,Y,true,false,false,false,merge,false,
@@ -45,28 +48,39 @@
 노량진,노량진역,11590 동작구,2,경부선 · 서울 도시철도 9호선,4117 1004,80,노량진역 | 노량진,Y,true,true,true,true,merge,false,
 천호,천호,11740 강동구,2,5호선 · 8호선,0547 0811,79,천호 | 천호(풍납토성) | 풍납토성,Y,true,false,false,false,merge,false,
 강남구청,강남구청,11680 강남구,2,7호선 · 분당선,0730 1849,75,강남구청 | 강남구청역,Y,true,true,false,false,merge,false,
+신림,신림,11620 관악구,2,2호선 · 수도권 경량도시철도 신림선,S408 0230,75,신림,mixed,false,true,false,false,merge,false,[OVERRIDE RV-f9d22839 CONFIRMED_MERGE]
 약수,약수,11140 중구,2,3호선 · 6호선,0333 0633,75,약수,Y,true,false,false,false,merge,false,
+강남,강남,11680 강남구,2,2호선 · 신분당선,D007 0222,74,강남,Y,false,true,false,false,merge,false,[OVERRIDE RV-109e8208 CONFIRMED_MERGE]
 수서,수서,11680 강남구,2,3호선 · 분당선,0349 1030,73,수서 | 수서역,Y,true,true,false,false,merge,false,
 선릉,선릉,11680 강남구,2,2호선 · 분당선,0220 1023,72,선릉 | 선릉역,Y,true,true,false,false,merge,false,
-공덕,공덕,11440 마포구,2,5호선 · 6호선,0529 0626,70,공덕,Y,true,false,false,false,hold,true,인천국제공항선↔5호선 153m: 환승노선 불일치(5호선쪽[S1106]에 I28A1 없음) | 인천국제공항선↔6호선 98m: 환승노선 불일치(6호선쪽[S1105]에 I28A1 없음) | 5호선↔경의중앙선 172m: 환승노선 불일치(5호선쪽[S1106]에 I4108@GJ 없음) | 6호선↔경의중앙선 106m: 환승노선 불일치(6호선쪽[S1105]에 I4108@GJ 없음)
+도봉산,도봉산,11320 도봉구,2,7호선 · 경원선,0710 1903,69,도봉산 | 도봉산역,Y,false,true,false,false,merge,false,[OVERRIDE RV-9c5fd97a CONFIRMED_MERGE]
+창동,창동,11320 도봉구,2,4호선 · 경원선,0412 1022,58,창동 | 창동역,Y,false,true,false,false,merge,false,[OVERRIDE RV-31b4e4a3 CONFIRMED_MERGE]
 오금,오금,11710 송파구,2,3호선 · 5호선,0352 P552,57,오금,Y,true,false,false,false,merge,false,
+올림픽공원,올림픽공원,11710 송파구,2,5호선 · 수도권  도시철도 9호선,P550 4136,56,올림픽공원 | 올림픽공원(한국체대) | 한국체대,mixed,false,true,false,false,merge,false,[OVERRIDE RV-c23c23a5 CONFIRMED_MERGE]
+보라매,보라매,11560 영등포구 | 11590 동작구,2,7호선 · 수도권 경량도시철도 신림선,S404 0742,55,보라매,mixed,false,true,false,false,merge,false,[OVERRIDE RV-b933ce4b CONFIRMED_MERGE]
 선정릉,선정릉,11680 강남구,2,수도권  도시철도 9호선 · 분당선,4127 1850,55,선정릉 | 선정릉역,Y,true,true,false,false,merge,false,
-공덕,공덕역,11440 마포구,2,경의중앙선 · 인천국제공항선,A02 1262,44,공덕역 | 공덕,Y,true,true,false,false,hold,true,인천국제공항선↔5호선 153m: 환승노선 불일치(5호선쪽[S1106]에 I28A1 없음) | 인천국제공항선↔6호선 98m: 환승노선 불일치(6호선쪽[S1105]에 I28A1 없음) | 5호선↔경의중앙선 172m: 환승노선 불일치(5호선쪽[S1106]에 I4108@GJ 없음) | 6호선↔경의중앙선 106m: 환승노선 불일치(6호선쪽[S1105]에 I4108@GJ 없음)
+성신여대입구,성신여대입구,11290 성북구,2,4호선 · 우이신설선,0418 S120,55,성신여대입구 | 성신여대입구(돈암) | 돈암,mixed,false,true,false,false,merge,false,[OVERRIDE RV-f0953311 CONFIRMED_MERGE]
+신사,신사,11680 강남구,2,3호선 · 신분당선,D004 0337,55,신사,mixed,false,true,false,false,merge,false,[OVERRIDE RV-0916ec69 CONFIRMED_MERGE]
+석계,석계,11290 성북구 | 11350 노원구,2,6호선 · 경원선,0644 1018,42,석계 | 석계역,Y,false,true,false,false,merge,false,[OVERRIDE RV-07230d24 CONFIRMED_MERGE]
+광운대,광운대역,11350 노원구,3,경의중앙선 · 경원선 · 경춘선,1019 1019 1019,40,광운대역,Y,false,false,true,true,merge,false,[OVERRIDE RV-24e08948 CONFIRMED_MERGE]
 도곡,도곡,11680 강남구,2,3호선 · 분당선,0344 1025,36,도곡 | 도곡역,Y,true,true,false,false,merge,false,
+석촌,석촌,11710 송파구,2,8호선 · 수도권  도시철도 9호선,0815 4133,36,석촌,mixed,false,true,false,false,merge,false,[OVERRIDE RV-3fba854c CONFIRMED_MERGE]
 충무로,충무로,11140 중구,2,3호선 · 4호선,0331 0423,35,충무로,Y,true,false,false,false,merge,false,
 신도림,신도림역,11530 구로구,2,경부선 · 2호선,0234 1007,32,신도림역 | 신도림,Y,true,true,false,false,merge,false,
+보문,보문,11290 성북구,2,6호선 · 우이신설선,0638 S121,31,보문,mixed,false,true,false,false,merge,false,[OVERRIDE RV-dde34b81 CONFIRMED_MERGE]
 사당,사당,11590 동작구 | 11620 관악구,2,2호선 · 4호선,0226 0433,30,사당,Y,true,false,false,false,merge,false,
+온수,온수,11530 구로구,2,7호선 · 경인선,0750 1821,25,온수 | 온수(성공회대입구) | 온수역 | 성공회대입구,Y,false,true,false,false,merge,false,[OVERRIDE RV-55e2b39d CONFIRMED_MERGE]
 회기,회기역,11230 동대문구,2,경의중앙선 · 경원선,1015 1015,22,회기역,Y,true,false,true,true,merge,false,
-광운대,광운대역,11350 노원구,2,경원선 · 경춘선,1019 1019,16,광운대역,Y,true,false,true,true,hold,true,"경원선↔경의중앙선 40m: 환승노선 불일치(경원선쪽[I4108@GC,I41K2]에 I4108@GJ 없음) | 경의중앙선↔경춘선 30m: 환승노선 불일치(경의중앙선쪽[I4102@S,I4102@N]에 I4108@GC 없음 / 경춘선쪽[I4102@S,I4102@N]에 I4108@GJ 없음)"
+양재,양재,11680 강남구,2,3호선 · 신분당선,D008 0342,18,양재 | 양재(서초구청) | 서초구청,Y,false,true,false,false,merge,false,[OVERRIDE RV-f48d73b0 CONFIRMED_MERGE]
+신논현,신논현,11650 서초구 | 11680 강남구,2,서울 도시철도 9호선 · 신분당선,D006 4125,16,신논현,Y,false,true,true,true,merge,false,[OVERRIDE RV-efae0bc7 CONFIRMED_MERGE]
 여의도,여의도,11560 영등포구,2,5호선 · 서울 도시철도 9호선,0526 4115,15,여의도,Y,true,true,false,false,merge,false,
 군자,군자,11215 광진구,2,5호선 · 7호선,0544 0725,9,군자 | 군자(능동) | 능동,Y,true,false,false,false,merge,false,
+논현,논현,11680 강남구,2,7호선 · 신분당선,D005 0732,2,논현,mixed,false,true,false,false,merge,false,[OVERRIDE RV-35c5062d CONFIRMED_MERGE]
 청구,청구,11140 중구,2,5호선 · 6호선,0537 0634,2,청구,Y,true,false,false,false,merge,false,
 419민주묘지,4.19민주묘지,11305 강북구,1,우이신설선,S112,0,4.19민주묘지,N,n/a,false,true,true,single,false,
 가양,가양,11500 강서구,1,서울 도시철도 9호선,4107,0,가양,N,n/a,false,true,true,single,false,
 가오리,가오리,11305 강북구,1,우이신설선,S113,0,가오리,N,n/a,false,true,true,single,false,
 가좌,가좌역,11440 마포구,1,경의중앙선,1265,0,가좌역,N,n/a,false,true,true,single,false,
-강남,강남,11680 강남구,1,신분당선,D007,0,강남,Y,n/a,false,false,false,hold,true,신분당선↔2호선 74m: 환승노선 불일치(신분당선쪽[I11D1]에 S1102 없음)
-강남,강남,11680 강남구,1,2호선,0222,0,강남,Y,n/a,false,false,false,hold,true,신분당선↔2호선 74m: 환승노선 불일치(신분당선쪽[I11D1]에 S1102 없음)
 강동,강동,11740 강동구,1,5호선,0548,0,강동,N,n/a,false,false,false,single,false,
 강동구청,강동구청,11710 송파구,1,8호선,0812,0,강동구청,N,n/a,false,false,false,single,false,
 강변,강변,11215 광진구,1,2호선,0214,0,강변 | 강변(동서울터미널) | 동서울터미널,N,n/a,false,false,false,single,false,
@@ -85,7 +99,6 @@
 공항시장,공항시장,11500 강서구,1,서울 도시철도 9호선,4103,0,공항시장,N,n/a,false,true,true,single,false,
 관악산,관악산,11620 관악구,1,수도권 경량도시철도 신림선,S411,0,관악산,N,n/a,false,true,true,single,false,
 광나루,광나루,11215 광진구,1,5호선,0546,0,광나루 | 광나루(장신대) | 장신대,N,n/a,false,false,false,single,false,
-광운대,광운대역,11350 노원구,1,경의중앙선,1019,0,광운대역,Y,n/a,false,true,true,hold,true,"경원선↔경의중앙선 40m: 환승노선 불일치(경원선쪽[I4108@GC,I41K2]에 I4108@GJ 없음) | 경의중앙선↔경춘선 30m: 환승노선 불일치(경의중앙선쪽[I4102@S,I4102@N]에 I4108@GC 없음 / 경춘선쪽[I4102@S,I4102@N]에 I4108@GJ 없음)"
 광화문,광화문,11110 종로구,1,5호선,0533,0,광화문 | 광화문(세종문화회관) | 세종문화회관,N,n/a,false,false,false,single,false,
 광흥창,광흥창,11440 마포구,1,6호선,0624,0,광흥창 | 광흥창(서강) | 서강,N,n/a,false,false,false,single,false,
 구로,구로역,11530 구로구,1,경부선,1701,0,구로역,N,n/a,false,true,true,single,false,
@@ -102,7 +115,6 @@
 금호,금호,11200 성동구,1,3호선,0334,0,금호,N,n/a,false,false,false,single,false,
 길동,길동,11740 강동구,1,5호선,0549,0,길동,N,n/a,false,false,false,single,false,
 길음,길음,11290 성북구,1,4호선,0417,0,길음,N,n/a,false,false,false,single,false,
-김포공항,김포공항역,11500 강서구,1,김포도시철도,G109,0,김포공항역 | 김포공항,Y,n/a,false,false,false,hold,true,인천국제공항선↔김포도시철도 33m: 환승노선 불일치(김포도시철도쪽 환승노선번호 공란) | 김포도시철도↔5호선 52m: 환승노선 불일치(김포도시철도쪽 환승노선번호 공란) | 김포도시철도↔서울 도시철도 9호선 33m: 환승노선 불일치(김포도시철도쪽 환승노선번호 공란) | 김포도시철도↔서해선 197m: 환승노선 불일치(김포도시철도쪽 환승노선번호 공란)
 까치산,까치산,11500 강서구,1,5호선,0518,0,까치산,Y,n/a,false,false,false,single,false,
 낙성대,낙성대,11620 관악구,1,2호선,0227,0,낙성대 | 낙성대(강감찬) | 강감찬,N,n/a,false,false,false,single,false,
 남구로,남구로,11530 구로구,1,7호선,0745,0,남구로,N,n/a,false,false,false,single,false,
@@ -115,8 +127,6 @@
 녹번,녹번,11380 은평구,1,3호선,0323,0,녹번,N,n/a,false,false,false,single,false,
 녹사평,녹사평,11170 용산구,1,6호선,0629,0,녹사평 | 녹사평(용산구청) | 용산구청,N,n/a,false,false,false,single,false,
 녹천,녹천역,11350 노원구,1,경원선,1021,0,녹천역,N,n/a,false,true,true,single,false,
-논현,논현,11680 강남구,1,신분당선,D005,0,논현,Y,n/a,false,false,false,hold,true,"신분당선↔7호선 2m: 환승역 아님(7호선=""일반역"") / 환승노선 불일치(신분당선쪽[I11D1]에 S1107 없음 / 7호선쪽 환승노선번호 공란)"
-논현,논현,11680 강남구,1,7호선,0732,0,논현,N,n/a,false,false,false,hold,true,"신분당선↔7호선 2m: 환승역 아님(7호선=""일반역"") / 환승노선 불일치(신분당선쪽[I11D1]에 S1107 없음 / 7호선쪽 환승노선번호 공란)"
 답십리,답십리,11200 성동구,1,5호선,0542,0,답십리,N,n/a,false,false,false,single,false,
 당곡,당곡,11620 관악구,1,수도권 경량도시철도 신림선,S407,0,당곡,N,n/a,false,true,true,single,false,
 대모산입구,대모산입구역,11680 강남구,1,분당선,1028,0,대모산입구역,N,n/a,false,true,true,single,false,
@@ -125,8 +135,6 @@
 대흥,대흥,11440 마포구,1,6호선,0625,0,대흥 | 대흥(서강대앞) | 서강대앞,N,n/a,false,false,false,single,false,
 도림천,도림천,11530 구로구,1,2호선,2341,0,도림천,N,n/a,false,false,false,single,false,
 도봉,도봉역,11320 도봉구,1,경원선,1902,0,도봉역,N,n/a,false,true,true,single,false,
-도봉산,도봉산,11320 도봉구,1,7호선,0710,0,도봉산,Y,n/a,false,false,false,hold,true,7호선↔경원선 69m: 환승노선 불일치(7호선쪽[I4101]에 I4102@N 없음)
-도봉산,도봉산역,11320 도봉구,1,경원선,1903,0,도봉산역 | 도봉산,Y,n/a,false,false,false,hold,true,7호선↔경원선 69m: 환승노선 불일치(7호선쪽[I4101]에 I4102@N 없음)
 독립문,독립문,11110 종로구,1,3호선,0326,0,독립문,N,n/a,false,false,false,single,false,
 독바위,독바위,11380 은평구,1,6호선,0613,0,독바위,N,n/a,false,false,false,single,false,
 독산,독산역,11545 금천구,1,경부선,1714,0,독산역,N,n/a,false,true,true,single,false,
@@ -162,12 +170,8 @@
 방학,방학역,11320 도봉구,1,경원선,1901,0,방학역,N,n/a,false,true,true,single,false,
 방화,방화,11500 강서구,1,5호선,0510,0,방화,N,n/a,false,false,false,single,false,
 버티고개,버티고개,11140 중구,1,6호선,0632,0,버티고개,N,n/a,false,false,false,single,false,
-보라매,보라매,11590 동작구,1,수도권 경량도시철도 신림선,S404,0,보라매,Y,n/a,false,false,false,hold,true,"수도권 경량도시철도 신림선↔7호선 55m: 환승역 아님(7호선=""일반역"") / 환승노선 불일치(7호선쪽 환승노선번호 공란)"
-보라매,보라매,11560 영등포구,1,7호선,0742,0,보라매,N,n/a,false,false,false,hold,true,"수도권 경량도시철도 신림선↔7호선 55m: 환승역 아님(7호선=""일반역"") / 환승노선 불일치(7호선쪽 환승노선번호 공란)"
 보라매공원,보라매공원,11590 동작구,1,수도권 경량도시철도 신림선,S405,0,보라매공원,N,n/a,false,true,true,single,false,
 보라매병원,보라매병원,11590 동작구,1,수도권 경량도시철도 신림선,S406,0,보라매병원,N,n/a,false,true,true,single,false,
-보문,보문,11290 성북구,1,6호선,0638,0,보문,N,n/a,false,false,false,hold,true,"6호선↔우이신설선 31m: 환승역 아님(6호선=""일반역"") / 환승노선 불일치(6호선쪽[S1106]에 L11UI 없음)"
-보문,보문,11290 성북구,1,우이신설선,S121,0,보문,Y,n/a,false,false,false,hold,true,"6호선↔우이신설선 31m: 환승역 아님(6호선=""일반역"") / 환승노선 불일치(6호선쪽[S1106]에 L11UI 없음)"
 봉은사,봉은사,11680 강남구,1,수도권  도시철도 9호선,4129,0,봉은사,N,n/a,false,false,false,single,false,
 봉천,봉천,11620 관악구,1,2호선,0229,0,봉천,N,n/a,false,false,false,single,false,
 봉화산,봉화산,11260 중랑구,1,6호선,0647,0,봉화산 | 봉화산(서울의료원) | 서울의료원,N,n/a,false,false,false,single,false,
@@ -197,15 +201,9 @@
 서울지방병무청,서울지방병무청,11590 동작구,1,수도권 경량도시철도 신림선,S403,0,서울지방병무청,N,n/a,false,true,true,single,false,
 서원,서원,11620 관악구,1,수도권 경량도시철도 신림선,S409,0,서원,N,n/a,false,true,true,single,false,
 서초,서초,11650 서초구,1,2호선,0224,0,서초,N,n/a,false,false,false,single,false,
-석계,석계,11290 성북구,1,6호선,0644,0,석계,Y,n/a,false,false,false,hold,true,6호선↔경원선 42m: 환승노선 불일치(6호선쪽[I4101]에 I4102@N 없음)
-석계,석계역,11350 노원구,1,경원선,1018,0,석계역 | 석계,Y,n/a,false,false,false,hold,true,6호선↔경원선 42m: 환승노선 불일치(6호선쪽[I4101]에 I4102@N 없음)
-석촌,석촌,11710 송파구,1,8호선,0815,0,석촌,N,n/a,false,false,false,hold,true,"8호선↔수도권  도시철도 9호선 36m: 환승역 아님(8호선=""일반역"") / 환승노선 불일치(8호선쪽 환승노선번호 공란)"
-석촌,석촌,11710 송파구,1,수도권  도시철도 9호선,4133,0,석촌,Y,n/a,false,false,false,hold,true,"8호선↔수도권  도시철도 9호선 36m: 환승역 아님(8호선=""일반역"") / 환승노선 불일치(8호선쪽 환승노선번호 공란)"
 석촌고분,석촌고분,11710 송파구,1,수도권  도시철도 9호선,4132,0,석촌고분,N,n/a,false,false,false,single,false,
 선유도,선유도,11560 영등포구,1,서울 도시철도 9호선,4112,0,선유도,N,n/a,false,true,true,single,false,
 성수,성수,11200 성동구,1,2호선,0211,0,성수,N,n/a,false,false,false,single,false,
-성신여대입구,성신여대입구,11290 성북구,1,4호선,0418,0,성신여대입구 | 성신여대입구(돈암) | 돈암,N,n/a,false,false,false,hold,true,"4호선↔우이신설선 55m: 환승역 아님(4호선=""일반역"") / 환승노선 불일치(4호선쪽[I1104]에 L11UI 없음)"
-성신여대입구,성신여대입구,11290 성북구,1,우이신설선,S120,0,성신여대입구 | 성신여대입구(돈암),Y,n/a,false,false,false,hold,true,"4호선↔우이신설선 55m: 환승역 아님(4호선=""일반역"") / 환승노선 불일치(4호선쪽[I1104]에 L11UI 없음)"
 솔밭공원,솔밭공원,11305 강북구,1,우이신설선,S111,0,솔밭공원,N,n/a,false,true,true,single,false,
 솔샘,솔샘,11305 강북구,1,우이신설선,S117,0,솔샘,N,n/a,false,true,true,single,false,
 송정,송정,11500 강서구,1,5호선,0513,0,송정,N,n/a,false,false,false,single,false,
@@ -217,29 +215,18 @@
 숙대입구,숙대입구,11170 용산구,1,4호선,0427,0,숙대입구 | 숙대입구(갈월) | 갈월 | 숙대입구(서울시교육청),N,n/a,false,false,false,single,false,
 숭실대입구,숭실대입구,11590 동작구,1,7호선,0738,0,숭실대입구 | 숭실대입구(살피재) | 살피재,N,n/a,false,false,false,single,false,
 신금호,신금호,11200 성동구,1,5호선,0538,0,신금호,N,n/a,false,false,false,single,false,
-신내,신내,11260 중랑구,1,6호선,0648,0,신내,N,n/a,false,false,false,hold,true,"6호선↔경춘선 98m: 환승역 아님(6호선=""일반역"") / 환승노선 불일치(6호선쪽 환승노선번호 공란)"
-신내,신내역,11260 중랑구,1,경춘선,1311,0,신내역 | 신내,Y,n/a,false,false,false,hold,true,"6호선↔경춘선 98m: 환승역 아님(6호선=""일반역"") / 환승노선 불일치(6호선쪽 환승노선번호 공란)"
-신논현,신논현,11680 강남구,1,신분당선,D006,0,신논현,Y,n/a,false,true,true,hold,true,신분당선↔서울 도시철도 9호선 16m: 환승노선 불일치(신분당선쪽[I11D1]에 S1109 없음)
-신논현,신논현,11650 서초구,1,서울 도시철도 9호선,4125,0,신논현,Y,n/a,false,true,true,hold,true,신분당선↔서울 도시철도 9호선 16m: 환승노선 불일치(신분당선쪽[I11D1]에 S1109 없음)
 신답,신답,11200 성동구,1,2호선,2112,0,신답,N,n/a,false,false,false,single,false,
 신대방,신대방,11620 관악구,1,2호선,0231,0,신대방,N,n/a,false,false,false,single,false,
 신대방삼거리,신대방삼거리,11590 동작구,1,7호선,0741,0,신대방삼거리,N,n/a,false,false,false,single,false,
-신림,신림,11620 관악구,1,수도권 경량도시철도 신림선,S408,0,신림,Y,n/a,false,false,false,hold,true,"수도권 경량도시철도 신림선↔2호선 75m: 환승역 아님(2호선=""일반역"") / 환승노선 불일치(2호선쪽 환승노선번호 공란)"
-신림,신림,11620 관악구,1,2호선,0230,0,신림,N,n/a,false,false,false,hold,true,"수도권 경량도시철도 신림선↔2호선 75m: 환승역 아님(2호선=""일반역"") / 환승노선 불일치(2호선쪽 환승노선번호 공란)"
 신목동,신목동,11470 양천구,1,서울 도시철도 9호선,4111,0,신목동,N,n/a,false,true,true,single,false,
 신반포,신반포,11650 서초구,1,서울 도시철도 9호선,4122,0,신반포,N,n/a,false,true,true,single,false,
 신방화,신방화,11500 강서구,1,서울 도시철도 9호선,4104,0,신방화,N,n/a,false,true,true,single,false,
-신사,신사,11680 강남구,1,신분당선,D004,0,신사,Y,n/a,false,false,false,hold,true,"신분당선↔3호선 55m: 환승역 아님(3호선=""일반역"") / 환승노선 불일치(신분당선쪽[I11D1]에 I1103 없음 / 3호선쪽 환승노선번호 공란)"
-신사,신사,11680 강남구,1,3호선,0337,0,신사,N,n/a,false,false,false,hold,true,"신분당선↔3호선 55m: 환승역 아님(3호선=""일반역"") / 환승노선 불일치(신분당선쪽[I11D1]에 I1103 없음 / 3호선쪽 환승노선번호 공란)"
-신설동,신설동,11230 동대문구,1,1호선,0126,0,신설동,Y,n/a,false,false,false,hold,true,"1호선↔2호선 168m: 환승역 아님(2호선=""일반역"") / 환승노선 불일치(1호선쪽[S1102]에 S1121 없음 / 2호선쪽[S1121]에 I4101 없음) | 1호선↔우이신설선 141m: 환승노선 불일치(1호선쪽[S1102]에 L11UI 없음)"
-신설동,신설동,11230 동대문구,1,2호선,2114,0,신설동,N,n/a,false,false,false,hold,true,"1호선↔2호선 168m: 환승역 아님(2호선=""일반역"") / 환승노선 불일치(1호선쪽[S1102]에 S1121 없음 / 2호선쪽[S1121]에 I4101 없음) | 2호선↔우이신설선 275m: 환승역 아님(2호선=""일반역"") / 환승노선 불일치(2호선쪽[S1121]에 L11UI 없음 / 우이신설선쪽[I4101]에 S1121 없음)"
-신설동,신설동,11110 종로구,1,우이신설선,S122,0,신설동,Y,n/a,false,false,false,hold,true,"1호선↔우이신설선 141m: 환승노선 불일치(1호선쪽[S1102]에 L11UI 없음) | 2호선↔우이신설선 275m: 환승역 아님(2호선=""일반역"") / 환승노선 불일치(2호선쪽[S1121]에 L11UI 없음 / 우이신설선쪽[I4101]에 S1121 없음)"
 신용산,신용산,11170 용산구,1,4호선,0429,0,신용산,N,n/a,false,false,false,single,false,
 신이문,신이문역,11230 동대문구,1,경원선,1017,0,신이문역,N,n/a,false,true,true,single,false,
 신정,신정,11470 양천구,1,5호선,0519,0,신정 | 신정(은행정) | 은행정,N,n/a,false,false,false,single,false,
 신정네거리,신정네거리,11470 양천구,1,2호선,2343,0,신정네거리,N,n/a,false,false,false,single,false,
-신촌,신촌,11410 서대문구,1,2호선,0240,0,신촌 | 신촌(지하) | 지하,N,n/a,false,false,false,hold,true,"2호선↔경의중앙선 701m: 환승역 아님(2호선=""일반역"", 경의중앙선=""일반역"") / 환승노선 불일치(2호선쪽 환승노선번호 공란 / 경의중앙선쪽 환승노선번호 공란)"
-신촌,신촌역,11410 서대문구,1,경의중앙선,1252,0,신촌역 | 신촌(지하),N,n/a,false,false,false,hold,true,"2호선↔경의중앙선 701m: 환승역 아님(2호선=""일반역"", 경의중앙선=""일반역"") / 환승노선 불일치(2호선쪽 환승노선번호 공란 / 경의중앙선쪽 환승노선번호 공란)"
+신촌,신촌,11410 서대문구,1,2호선,0240,0,신촌 | 신촌(지하) | 지하,N,n/a,false,false,false,hold,false,"[OVERRIDE RV-a91b0e49 CONFIRMED_SPLIT] 2호선↔경의중앙선 701m: 환승역 아님(2호선=""일반역"", 경의중앙선=""일반역"") / 환승노선 불일치(2호선쪽 환승노선번호 공란 / 경의중앙선쪽 환승노선번호 공란)"
+신촌,신촌역,11410 서대문구,1,경의중앙선,1252,0,신촌역 | 신촌(지하),N,n/a,false,false,false,hold,false,"[OVERRIDE RV-a91b0e49 CONFIRMED_SPLIT] 2호선↔경의중앙선 701m: 환승역 아님(2호선=""일반역"", 경의중앙선=""일반역"") / 환승노선 불일치(2호선쪽 환승노선번호 공란 / 경의중앙선쪽 환승노선번호 공란)"
 신풍,신풍,11560 영등포구,1,7호선,0743,0,신풍,N,n/a,false,false,false,single,false,
 쌍문,쌍문,11320 도봉구,1,4호선,0413,0,쌍문,N,n/a,false,false,false,single,false,
 아차산,아차산,11215 광진구,1,5호선,0545,0,아차산 | 아차산(어린이대공원후문) | 어린이대공원후문,N,n/a,false,false,false,single,false,
@@ -251,8 +238,6 @@
 압구정,압구정,11680 강남구,1,3호선,0336,0,압구정,N,n/a,false,false,false,single,false,
 압구정로데오,압구정로데오역,11680 강남구,1,분당선,1848,0,압구정로데오역,N,n/a,false,true,true,single,false,
 애오개,애오개,11440 마포구,1,5호선,0530,0,애오개,N,n/a,false,false,false,single,false,
-양재,양재,11680 강남구,1,신분당선,D008,0,양재 | 양재(서초구청) | 서초구청,Y,n/a,false,false,false,hold,true,신분당선↔3호선 18m: 환승노선 불일치(신분당선쪽[I11D1]에 I1103 없음)
-양재,양재,11680 강남구,1,3호선,0342,0,양재 | 양재(서초구청) | 서초구청,Y,n/a,false,false,false,hold,true,신분당선↔3호선 18m: 환승노선 불일치(신분당선쪽[I11D1]에 I1103 없음)
 양재시민의숲,양재시민의숲,11650 서초구,1,신분당선,D009,0,양재시민의숲 | 양재시민의숲(매헌) | 매헌,N,n/a,false,true,true,single,false,
 양천구청,양천구청,11470 양천구,1,2호선,2342,0,양천구청,N,n/a,false,false,false,single,false,
 양천향교,양천향교,11500 강서구,1,서울 도시철도 9호선,4106,0,양천향교,N,n/a,false,true,true,single,false,
@@ -267,10 +252,6 @@
 영등포시장,영등포시장,11560 영등포구,1,5호선,0524,0,영등포시장,N,n/a,false,false,false,single,false,
 오류동,오류동역,11530 구로구,1,경인선,1802,0,오류동역,N,n/a,false,true,true,single,false,
 오목교,오목교,11470 양천구,1,5호선,0521,0,오목교 | 오목교(목동운동장앞) | 목동운동장앞,N,n/a,false,false,false,single,false,
-온수,온수,11530 구로구,1,7호선,0750,0,온수 | 온수(성공회대입구) | 성공회대입구,Y,n/a,false,false,false,hold,true,7호선↔경인선 25m: 환승노선 불일치(7호선쪽[I4101]에 I1101 없음)
-온수,온수역,11530 구로구,1,경인선,1821,0,온수역 | 온수(성공회대입구),Y,n/a,false,false,false,hold,true,7호선↔경인선 25m: 환승노선 불일치(7호선쪽[I4101]에 I1101 없음)
-올림픽공원,올림픽공원,11710 송파구,1,5호선,P550,0,올림픽공원 | 올림픽공원(한국체대) | 한국체대,N,n/a,false,false,false,hold,true,"5호선↔수도권  도시철도 9호선 56m: 환승역 아님(5호선=""일반역"") / 환승노선 불일치(5호선쪽 환승노선번호 공란)"
-올림픽공원,올림픽공원,11710 송파구,1,수도권  도시철도 9호선,4136,0,올림픽공원 | 올림픽공원(한국체대) | 한국체대,Y,n/a,false,false,false,hold,true,"5호선↔수도권  도시철도 9호선 56m: 환승역 아님(5호선=""일반역"") / 환승노선 불일치(5호선쪽 환승노선번호 공란)"
 외대앞,외대앞역,11230 동대문구,1,경원선,1016,0,외대앞역,N,n/a,false,true,true,single,false,
 용답,용답,11200 성동구,1,2호선,2111,0,용답,N,n/a,false,false,false,single,false,
 용두,용두,11230 동대문구,1,2호선,2113,0,용두 | 용두(동대문구청) | 동대문구청,N,n/a,false,false,false,single,false,
@@ -297,18 +278,14 @@
 정릉,정릉,11290 성북구,1,우이신설선,S119,0,정릉,N,n/a,false,true,true,single,false,
 제기동,제기동,11230 동대문구,1,1호선,0125,0,제기동,N,n/a,false,false,false,single,false,
 종각,종각,11110 종로구,1,1호선,0131,0,종각,N,n/a,false,false,false,single,false,
-종로3가,종로3가,11110 종로구,1,1호선,0130,0,종로3가 | 종로3가(탑골공원),Y,n/a,false,false,false,hold,true,"1호선↔3호선 125m: 환승노선 불일치(3호선쪽[S1105,I1101]에 I4101 없음) | 1호선↔5호선 277m: 환승노선 불일치(5호선쪽[I1103,I1101]에 I4101 없음)"
 종로5가,종로5가,11110 종로구,1,1호선,0129,0,종로5가,N,n/a,false,false,false,single,false,
 중계,중계,11350 노원구,1,7호선,0714,0,중계,N,n/a,false,false,false,single,false,
 중곡,중곡,11215 광진구,1,7호선,0724,0,중곡,N,n/a,false,false,false,single,false,
-중랑,중랑역,11260 중랑구,1,경의중앙선,1201,0,중랑역,Y,n/a,false,true,true,hold,true,"경의중앙선↔경춘선 0m: 환승노선 불일치(경춘선쪽[I4108@GC,I41K2]에 I4108@GJ 없음)"
-중랑,중랑역,11260 중랑구,1,경춘선,1201,0,중랑역,Y,n/a,false,true,true,hold,true,"경의중앙선↔경춘선 0m: 환승노선 불일치(경춘선쪽[I4108@GC,I41K2]에 I4108@GJ 없음)"
+중랑,중랑역,11260 중랑구,2,경의중앙선 · 경춘선,1201 1201,0,중랑역,Y,false,false,true,true,merge,false,[OVERRIDE RV-073ce0d7 CONFIRMED_MERGE]
 중앙보훈병원,중앙보훈병원,11740 강동구,1,수도권  도시철도 9호선,4138,0,중앙보훈병원,N,n/a,false,false,false,single,false,
 중화,중화,11260 중랑구,1,7호선,0719,0,중화,N,n/a,false,false,false,single,false,
 증미,증미,11500 강서구,1,서울 도시철도 9호선,4108,0,증미,N,n/a,false,true,true,single,false,
 증산,증산,11380 은평구,1,6호선,0617,0,증산 | 증산(명지대앞) | 명지대앞,N,n/a,false,false,false,single,false,
-창동,창동,11320 도봉구,1,4호선,0412,0,창동,Y,n/a,false,false,false,hold,true,4호선↔경원선 58m: 환승노선 불일치(4호선쪽[I4101]에 I4102@N 없음)
-창동,창동역,11320 도봉구,1,경원선,1022,0,창동역 | 창동,Y,n/a,false,false,false,hold,true,4호선↔경원선 58m: 환승노선 불일치(4호선쪽[I4101]에 I4102@N 없음)
 창신,창신,11110 종로구,1,6호선,0637,0,창신,N,n/a,false,false,false,single,false,
 천왕,천왕,11530 구로구,1,7호선,0749,0,천왕,N,n/a,false,false,false,single,false,
 청계산입구,청계산입구,11650 서초구,1,신분당선,D010,0,청계산입구,N,n/a,false,true,true,single,false,

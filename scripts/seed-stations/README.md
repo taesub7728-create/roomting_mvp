@@ -133,6 +133,98 @@ district가 미해결인 리포트를 진짜 검수 리포트로 착각하지 �
 `config.mjs`의 `COORD_MERGE_MAX_M` 조정, `lineDisplayOrder` 보강, 또는
 `merge.mjs`의 규칙 (5) 양방향 요구 완화 — 어느 쪽이든 025 주석에도 같은 판단을 남긴다.
 
+그런데 규칙 자체는 맞고(예: 신설동처럼 원본 데이터의 환승 정보가 실제로 결손된 경우), 사람이 실물을
+확인해서 "이건 병합해도/분리해도 된다"고 확정한 건은 규칙을 건드리지 않고 `manual-overrides.mjs`
+(아래)로 표시한다.
+
+## manual override — 사람이 확정한 병합/분리 판정
+
+`hold`로 남은 candidate group 중 **사람이 실물(지도/현장/공식 자료)로 확인해서 최종 판정을 내린 것**은
+`manual-overrides.mjs`에 등록한다. **git 추적되는 source-of-truth**다(`data/`·`output/`·`.cache/`처럼
+매번 재생성되는 산출물이 아니다).
+
+이건 자동 알고리즘의 예외 규칙이 아니다. `evaluatePair()`/union-find(`merge.mjs`)의 자동 판정은
+**항상 그대로 수행**되고, 그 결과가 나온 뒤에만 override 가 candidate group 단위로 최종 partition 을
+덮어쓴다. 특정 역명으로 자동 규칙 자체를 바꾸는 코드는 여전히 금지다.
+
+### 항목 구조
+
+```js
+{
+  reviewId:      'RV-a91b0e49',   // candidate group 식별자. matching 은 이 값만 쓴다
+  candidateName: '신촌',          // 사람이 읽기 위한 라벨. matching 에는 안 쓴다
+  fingerprint:   'fp_b4f70...',   // 판정 시점 그룹 내용의 스냅샷 해시
+  verdict:       'CONFIRMED_SPLIT', // CONFIRMED_MERGE | CONFIRMED_SPLIT | MIXED
+  note:          '...',           // 근거. 20자 초과 필수
+  decidedAt:     '2026-08-08',
+}
+```
+
+- **CONFIRMED_MERGE**: 그룹의 모든 source row 를 하나의 station 으로 확정한다.
+- **CONFIRMED_SPLIT**: "지금 자동 결과를 아무렇게나 유지"가 아니라, **판정 당시의 automatic
+  partition을 그대로 최종 승인**한다는 뜻이다. `partition` 필드는 쓰지 않는다 - fingerprint 안에
+  이미 그 automatic partition 서명이 들어 있어서, 나중에 partition 이 달라지면 자동으로 stale 이 된다.
+- **MIXED**: 3개 이상 source row 중 일부만 합친다. `partition`(sourceRowKey 문자열 배열의 배열)이
+  필수이고, 그룹의 모든 row 를 정확히 1번씩 덮어야 한다.
+
+`fingerprint`는 **손으로 만들지 않는다.** `npm run seed:stations:inventory` 로 만든
+`manual_review_inventory.csv`/`.md` 에 `review_id`와 나란히 실제 계산값이 나온다(`source_row_key` 열도
+같이 나오므로 MIXED `partition` 은 거기서 그대로 옮겨 적는다). 임의로 지어 넣으면 안전장치가
+무의미해진다.
+
+### fingerprint 는 무엇을 지키나
+
+`reviewId`는 `normalize(main_name)` 만의 해시라 그룹 구성이 바뀌어도 값이 그대로다("이 그룹이
+무엇을 가리키는가"만 식별한다). `fingerprint`는 반대로 "그때 사람이 실제로 본 내용"의 스냅샷이다 -
+각 source row 의 역명/노선/식별/환승 정보/좌표/구, 그리고 **그 시점의 automatic partition**까지
+포함한다(`lib/fingerprint.mjs`). 아래 중 하나라도 바뀌면 fingerprint 도 반드시 바뀐다:
+
+- source row 가 추가/삭제됨 (표준데이터 갱신)
+- line identity / 환승 여부 / 환승 노선 / 좌표 / 시군구가 바뀜
+- **자동 병합 로직(`evaluatePair`/union-find) 자체가 바뀌어 같은 입력에서도 automatic partition 이
+  달라짐** - 입력 행은 그대로여도 override 가 "예전 자동 판정 기준"을 조용히 덮어쓰지 못하게 한다
+
+### stale / unused — 둘 다 `npm run seed:stations` 를 실패시킨다
+
+- **stale**: `reviewId`는 있는데 저장된 fingerprint 와 지금 계산한 fingerprint 가 다르다.
+- **unused**: override 의 `reviewId` 가 이번 실행의 어떤 candidate group 에도 없다(대개 역명 표기가
+  바뀌어 `reviewId` 자체가 달라진 경우다 - 그러면 그 역은 override 없이 **자동 판정으로 조용히
+  시드에 들어간다.** 예: 김포공항이 갈린 채로 들어간다. 그래서 unused 도 hard fail 이다).
+
+하나라도 있으면:
+
+1. `output/override_audit.csv` 를 먼저 쓴다(무엇이 깨졌는지 보이게)
+2. stale/unused 상세를 콘솔에 출력한다 (review_id / candidate_name / 저장 vs 현재 fingerprint)
+3. **`merge_report.csv` 는 갱신하지 않는다** - 직전의 정상 검수 리포트가 그대로 남는다. "실패한
+   이번 실행 결과"를 정상 리포트처럼 덮어써서 사람이 오인하게 만들지 않기 위해서다
+4. `process.exitCode = 1` 로 끝난다
+
+**`--ignore-stale` 같은 우회 옵션은 의도적으로 만들지 않았다.** 대신 재판정 경로가 항상 같다:
+
+1. `npm run seed:stations:inventory` 로 inventory 를 다시 만든다
+2. 콘솔/`override_audit.csv` 에 찍힌 review_id 들의 새 fingerprint 를
+   `manual_review_inventory.csv`/`.md` 에서 확인한다
+3. **그룹 구성이 왜 바뀌었는지 사람이 직접 재검토한다** (자동으로 승인하지 않는다 - stale 은 데이터가
+   바뀌었다는 사실만 알려줄 뿐, 새 상태가 여전히 병합해도 되는 상태인지는 아무도 보장하지 않는다)
+4. `manual-overrides.mjs` 의 `fingerprint`(필요하면 `reviewId`/`verdict`/`partition`도)를 갱신한다
+
+### 리포트에서 override 는 어떻게 보이나
+
+`merge_report.csv` 의 `REPORT_COLUMNS`는 `migration_025_stations_lines.sql:41-43`에 고정돼 있어
+**늘리지 않는다**(기존 migration 파일도 수정하지 않는다). override 가 유효하게 적용된 행은 기존 열
+안에서만 표시된다:
+
+| 열 | override 적용 시 |
+| --- | --- |
+| `decision` | 기존 enum(`merge`/`single`/`hold`) 그대로. 새 값을 추가하지 않는다 |
+| `needs_review` | `true` → `false` (사람이 이미 확인했다는 뜻) |
+| `review_reason` | 기존 automatic 근거를 지우지 않고 앞에 `[OVERRIDE RV-xxxxxxxx VERDICT]` 를 붙인다 |
+
+`note` 전문은 여기 복제하지 않는다 - 상세 근거는 `manual-overrides.mjs` 와
+`output/override_audit.csv`(review_id/candidate_name/verdict/status/fingerprint 2종/
+automatic·final cluster 수/note)에 남는다. `output/` 은 매 실행 재생성되는 산출물이라
+`.gitignore` 대상이다.
+
 ## 정규화 함수 포팅
 
 `lib/normalize.mjs`는 `migration_026`의 `normalize_station_query` / `hangul_chosung`을 JS로 옮긴 것이다.

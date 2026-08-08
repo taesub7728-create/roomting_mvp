@@ -23,6 +23,10 @@ import { createRegionResolver } from './lib/kakao.mjs'
 import { annotateIdentities, mergeStations } from './merge.mjs'
 import { loadRailwayStandard } from './sources/railway-standard.mjs'
 
+// ★ fingerprint 는 여기서 다시 계산하지 않는다. mergeStations() 가 override 적용 로직과
+//   똑같은 lib/fingerprint.mjs 로 계산한 값을 groups(리포트)에 실어 돌려준다 - 그 값을 그대로 쓴다.
+//   두 곳에서 각자 계산하면 "같은 함수를 쓴다"는 보장이 실제로는 "같은 로직을 두 번 베꼈다"가 된다.
+
 const outputDir = path.join(scriptDir, 'output')
 
 // ========================================
@@ -49,16 +53,6 @@ const CAUSE = {
   INTENTIONAL_IDENTITY_SEPARATION: 'intentional_identity_separation',
   DISTANCE_OVER_THRESHOLD: 'distance_over_threshold',
   OTHER: 'other',
-}
-
-/** 실행마다 같은 값이 나오는 검수표 식별자. DB id 도 override id 도 아니다. */
-function reviewId(normalizedName) {
-  let h = 0x811c9dc5
-  for (const ch of normalizedName) {
-    h ^= ch.codePointAt(0)
-    h = Math.imul(h, 0x01000193) >>> 0
-  }
-  return `RV-${h.toString(16).padStart(8, '0')}`
 }
 
 function policyGroupOf(identityA, identityB) {
@@ -104,7 +98,8 @@ function classifyPair(a, b) {
   return { causes: [...causes], distanceM, aHasB, bHasA }
 }
 
-function buildGroups(units, stations) {
+function buildGroups(units, stations, mergeGroupReports) {
+  const fingerprintByKey = new Map(mergeGroupReports.map((g) => [g.key, g]))
   const byKey = new Map()
   for (const u of units) {
     if (!byKey.has(u.mainNameNormalized)) byKey.set(u.mainNameNormalized, { rows: [], clusters: [] })
@@ -151,8 +146,12 @@ function buildGroups(units, stations) {
     const districts = [...new Set(g.rows.map((u) => u.district?.districtCode).filter(Boolean))]
     const causeCodes = [...new Set(pairs.flatMap((p) => p.causes))].sort()
 
+    const fpInfo = fingerprintByKey.get(key)
+    if (!fpInfo) throw new Error(`candidate group "${key}" 의 fingerprint 를 찾을 수 없습니다 (mergeStations 결과와 불일치).`)
+
     groups.push({
-      reviewId: reviewId(key),
+      reviewId: fpInfo.reviewId,
+      fingerprint: fpInfo.fingerprint,
       key,
       rows: g.rows,
       clusters: g.clusters,
@@ -197,16 +196,20 @@ function markdown(groups, stats) {
     L.push('')
     L.push(`## ${g.reviewId} — ${g.rows[0].mainName} (\`${g.key}\`)`)
     L.push('')
+    L.push(`- fingerprint: \`${g.fingerprint}\``)
+    L.push(`  (manual-overrides.mjs 에 이 값을 그대로 붙여넣는다. 다음 실행에서 이 값이 바뀌면 재검토 대상이다.)`)
     L.push(`- source row **${g.rows.length}** / cluster **${g.clusters.length}** / unresolved pair **${g.pairs.length}**`)
     L.push(`- group 내 최대 거리 **${Math.round(g.maxDistanceM)}m** / district **${g.districts.length}종** (${g.districts.join(', ')})`)
     L.push(`- 사유: ${g.causeCodes.map((c) => `\`${c}\``).join(' , ')}`)
     L.push('')
     L.push('### source rows')
     L.push('')
-    L.push('| raw_name | main | sub | 역번호 | source line | raw 노선명 | identity | 환승 | raw transfer codes | acceptable identities | lat | lng | district |')
-    L.push('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |')
+    L.push('MIXED override 를 쓸 때는 `source_row_key` 열의 값을 partition 에 그대로 옮겨 적는다.')
+    L.push('')
+    L.push('| source_row_key | raw_name | main | sub | 역번호 | source line | raw 노선명 | identity | 환승 | raw transfer codes | acceptable identities | lat | lng | district |')
+    L.push('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |')
     for (const u of g.rows) {
-      L.push(`| ${u.rawName} | ${u.mainName} | ${u.subName ?? ''} | ${u.stationCode} | ${u.lineCode} | ${u.lineName} | \`${u.lineIdentity}\` | ${u.isTransferRaw} | ${u.transferLineCodes.join(' ') || '(공란)'} | ${[...u.transferIdentities].join(' ') || '(없음)'} | ${u.lat} | ${u.lng} | ${u.district?.districtCode ?? ''} |`)
+      L.push(`| \`${u.sourceRowKey}\` | ${u.rawName} | ${u.mainName} | ${u.subName ?? ''} | ${u.stationCode} | ${u.lineCode} | ${u.lineName} | \`${u.lineIdentity}\` | ${u.isTransferRaw} | ${u.transferLineCodes.join(' ') || '(공란)'} | ${[...u.transferIdentities].join(' ') || '(없음)'} | ${u.lat} | ${u.lng} | ${u.district?.districtCode ?? ''} |`)
     }
     L.push('')
     L.push('### 현재 cluster 구성')
@@ -260,9 +263,11 @@ async function main() {
 
   const units = inBox.filter((u) => u.district && regionFilter.sidoCodes.includes(u.district.districtCode.slice(0, 2)))
   annotateIdentities(units)
-  const { stations } = mergeStations(units)
+  // override 는 넘기지 않는다 - 이 스크립트는 사람이 판정할 재료(reviewId/fingerprint)를
+  // 내놓는 단계이고, 판정을 적용하는 것은 run.mjs(실제 시드 준비) 의 책임이다.
+  const { stations, groups: mergeGroupReports } = mergeStations(units)
 
-  const groups = buildGroups(units, stations)
+  const groups = buildGroups(units, stations, mergeGroupReports)
   const stats = {
     groupCount: groups.length,
     holdClusterCount: stations.filter((s) => s.decision === 'hold').length,
@@ -277,10 +282,12 @@ async function main() {
 
   await writeCsv(
     path.join(outputDir, 'manual_review_inventory.csv'),
-    ['review_id', 'candidate_name', 'source_row_count', 'cluster_count', 'unresolved_pair_count',
-      'max_distance_m', 'district_count', 'cause_codes', 'raw_station_names', 'line_identities', 'current_decision'],
+    ['review_id', 'fingerprint', 'candidate_name', 'source_row_count', 'cluster_count', 'unresolved_pair_count',
+      'max_distance_m', 'district_count', 'cause_codes', 'raw_station_names', 'line_identities',
+      'source_row_keys', 'current_decision'],
     groups.map((g) => ({
       review_id: g.reviewId,
+      fingerprint: g.fingerprint,
       candidate_name: g.rows[0].mainName,
       source_row_count: g.rows.length,
       cluster_count: g.clusters.length,
@@ -290,6 +297,8 @@ async function main() {
       cause_codes: g.causeCodes.join(' '),
       raw_station_names: [...new Set(g.rows.map((u) => u.rawName))].join(' | '),
       line_identities: g.rows.map((u) => u.lineIdentity).join(' '),
+      // MIXED override 를 쓸 때 partition 에 그대로 옮겨 적을 수 있도록 원문을 남긴다.
+      source_row_keys: g.rows.map((u) => u.sourceRowKey).join(' | '),
       current_decision: 'HOLD',
     })),
   )

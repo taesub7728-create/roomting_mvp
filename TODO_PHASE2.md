@@ -831,6 +831,19 @@ migration 022~032 파일을 작성했고 **아직 하나도 적용하지 않았�
 - **재검토 조건**: 사무소명 사칭이 실제로 관측되면 승인 시점의 검증된 `company_name`을
   별도 공개 필드에 고정하는 방식(B안)을 재검토한다.
 - **관련 위치**: `migration_023_profiles_lockdown.sql` 2번
+
+## 17. 광운대역 - 경의중앙선 행의 노선 표시 처리 (station 병합은 확정, 표시는 미확정)
+
+- **현재 상태**: `scripts/seed-stations/manual-overrides.mjs`(RV-24e08948, 2026-08-08)에서
+  경원선(1호선 방면)·경춘선·경의중앙선 3개 source row 를 station 1개로 CONFIRMED_MERGE 확정.
+  **병합 여부 자체는 이 항목의 대상이 아니다 - 이미 끝났다.**
+- **남은 문제**: 경의중앙선 행은 실제로 여객 열차가 서지 않는 선로(광운대역 자체는 경원선/경춘선
+  분기점 인근의 같은 역사, 40m)다. `lines`/`station_lines` 시드 단계에서 사용자에게 노출할
+  노선 목록에 "경의중앙선"을 넣으면 실제로 탈 수 없는 노선이 검색·필터에 나타나게 된다.
+- **재검토 조건**: `config.mjs`의 `lineDisplayOrder`(표시 노선 모델, 아직 미확정 - line-identity.mjs
+  204번째 줄대 주석 참고)를 확정하는 시점에 광운대역 케이스를 반드시 포함해서 검토한다.
+- **관련 위치**: `scripts/seed-stations/manual-overrides.mjs`(RV-24e08948),
+  `scripts/seed-stations/config.mjs`(`lineDisplayOrder`)
 ---
 
 # ⚠ Known Bug — 중개사 가입이 이메일 확인 설정에서 막힌다

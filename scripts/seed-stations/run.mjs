@@ -6,27 +6,42 @@
 // ★ 이 스크립트는 DB에 아무것도 쓰지 않는다. 시드 SQL 도 만들지 않는다.
 //   목적은 "병합 결과를 사람이 검수할 수 있는 형태로 내놓는 것" 하나다.
 
+import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import {
   dryRunReportPath,
   regionFilter,
   repoRoot,
   reportPath,
+  scriptDir,
   sourceFiles,
 } from './config.mjs'
+import { writeCsv } from './lib/csv.mjs'
 import { findSourceFile } from './lib/files.mjs'
 import { createRegionResolver } from './lib/kakao.mjs'
 import { assertNormalizerMatchesSql } from './lib/normalize.mjs'
+import { overridesForRun } from './lib/override-scope.mjs'
+import { validateManualOverrides } from './lib/override-schema.mjs'
 import {
   coordinatePriority,
   nameSplits,
   segmentSplits,
   transferCodeAdapter,
 } from './line-identity.mjs'
+import { manualOverrides } from './manual-overrides.mjs'
 import { annotateIdentities, attachI18n, mergeStations } from './merge.mjs'
 import { writeReport } from './report.mjs'
 import { loadRailwayStandard } from './sources/railway-standard.mjs'
 import { loadSeoulMetroI18n } from './sources/seoul-metro-i18n.mjs'
+
+const outputDir = path.join(scriptDir, 'output')
+const overrideAuditPath = path.join(outputDir, 'override_audit.csv')
+
+const OVERRIDE_AUDIT_COLUMNS = [
+  'review_id', 'candidate_name', 'verdict', 'status',
+  'stored_fingerprint', 'current_fingerprint',
+  'automatic_cluster_count', 'final_cluster_count', 'partition_summary', 'note',
+]
 
 const useKakao = !process.argv.includes('--no-kakao')
 
@@ -66,7 +81,15 @@ async function main() {
   log(`  통과 ${assertNormalizerMatchesSql()}건`)
 
   // ----------------------------------------
-  step(2, '원본 데이터 파싱')
+  step(2, '수동 override 구조 검증 (manual-overrides.mjs)')
+  validateManualOverrides(manualOverrides)
+  log(`  항목 ${manualOverrides.length}건 형식 통과`)
+  log(`  verdict 분포: ${JSON.stringify(
+    manualOverrides.reduce((a, o) => { a[o.verdict] = (a[o.verdict] ?? 0) + 1; return a }, {}),
+  )}`)
+
+  // ----------------------------------------
+  step(3, '원본 데이터 파싱')
   const railwayPath = await findSourceFile(sourceFiles.railwayStandard, '전국도시철도역사정보표준데이터')
   const railway = await loadRailwayStandard(railwayPath)
   log(`  ${railwayPath}`)
@@ -84,12 +107,12 @@ async function main() {
   }
 
   // ----------------------------------------
-  step(3, '대상 지역 사전 필터 (bbox)')
+  step(4, '대상 지역 사전 필터 (bbox)')
   const inRegionBox = railway.units.filter(inBbox)
   log(`  ${railway.units.length} -> ${inRegionBox.length}행`)
 
   // ----------------------------------------
-  step(4, useKakao ? '좌표 -> 시군구 코드 역변환 (Kakao coord2regioncode)' : '역변환 건너뜀')
+  step(5, useKakao ? '좌표 -> 시군구 코드 역변환 (Kakao coord2regioncode)' : '역변환 건너뜀')
   const resolver = await createRegionResolver({ enabled: useKakao })
   let resolved = 0
   for (const unit of inRegionBox) {
@@ -114,7 +137,7 @@ async function main() {
   }
 
   // ----------------------------------------
-  step(5, '시도 코드로 최종 필터')
+  step(6, '시도 코드로 최종 필터')
   // [C] district 는 여기서 "대상 범위 판정"에만 쓴다. 그룹핑 키에는 쓰지 않는다.
   const units = useKakao
     ? inRegionBox.filter((u) => u.district && regionFilter.sidoCodes.includes(u.district.districtCode.slice(0, 2)))
@@ -123,7 +146,7 @@ async function main() {
   if (units.length === 0) throw new Error('대상 지역에 남은 역이 없습니다. config.mjs 의 regionFilter 를 확인하십시오.')
 
   // ----------------------------------------
-  step(6, 'line identity 해석')
+  step(7, 'line identity 해석')
   const { unresolvedCodes, missingPriority } = annotateIdentities(units)
 
   const identityCount = new Map()
@@ -173,8 +196,9 @@ async function main() {
   }
 
   // ----------------------------------------
-  step(7, '병합 (candidate group = normalize(main_name))')
-  const { stations, groups, pairStats } = mergeStations(units)
+  step(8, '병합 (candidate group = normalize(main_name))')
+  const { stations, groups, pairStats, overrideAudit, blockingIssues } =
+    mergeStations(units, overridesForRun(useKakao, manualOverrides))
   const splitGroups = groups.filter((g) => g.clusterCount > 1)
   log(`  역-노선 ${units.length}건 -> candidate group ${groups.length}개 -> station ${stations.length}행`)
   log(`  그룹 내 전체 쌍 ${pairStats.total} / 규칙(5) 판정 필요 쌍 ${pairStats.need5} / 그중 PASS ${pairStats.pass} / 미해결 ${pairStats.need5 - pairStats.pass}`)
@@ -182,7 +206,49 @@ async function main() {
   log(`  같은 이름인데 갈라진 그룹: ${splitGroups.length}개`)
 
   // ----------------------------------------
-  step(8, '다국어 표기(ja/zh) 결합')
+  step(9, 'manual override 적용 결과')
+  if (!useKakao) {
+    log('  --no-kakao: district 미해결이라 override 를 적용하지 않았습니다 (검수용 실행에서만 적용됩니다).')
+  }
+  await mkdir(outputDir, { recursive: true })
+  await writeCsv(overrideAuditPath, OVERRIDE_AUDIT_COLUMNS, overrideAudit)
+  log(`  ${overrideAuditPath}`)
+
+  const applied = overrideAudit.filter((a) => a.status === 'applied')
+  const stale = overrideAudit.filter((a) => a.status === 'stale')
+  const unused = overrideAudit.filter((a) => a.status === 'unused')
+  log(`  적용 ${applied.length} / stale ${stale.length} / unused ${unused.length} (전체 override ${useKakao ? manualOverrides.length : 0}건)`)
+
+  if (blockingIssues.length > 0) {
+    log('')
+    log('!'.repeat(72))
+    log(`  override stale/unused ${blockingIssues.length}건 - 이번 실행은 검수 완료로 취급하지 않습니다.`)
+    log('!'.repeat(72))
+    for (const issue of stale) {
+      log(`  STALE   ${issue.review_id}  ${issue.candidate_name}`)
+      log(`          저장된 fingerprint  ${issue.stored_fingerprint}`)
+      log(`          현재   fingerprint  ${issue.current_fingerprint}`)
+    }
+    for (const issue of unused) {
+      log(`  UNUSED  ${issue.review_id}  ${issue.candidate_name}`)
+      log('          이번 실행의 어떤 candidate group 도 이 reviewId 를 내지 않았습니다.')
+    }
+    log('')
+    log('  재판정 경로 (README.md 「override 가 stale/unused 로 걸렸을 때」):')
+    log('    1) npm run seed:stations:inventory 로 inventory 를 다시 만든다')
+    log('    2) 위 review_id 들의 새 fingerprint 를 manual_review_inventory.csv/md 에서 확인한다')
+    log('    3) 그룹 구성이 실제로 왜 바뀌었는지 사람이 재검토한다 (자동으로 승인하지 않는다)')
+    log('    4) manual-overrides.mjs 의 fingerprint(그리고 필요하면 reviewId/판정)를 갱신한다')
+    log('')
+    log(`  ${useKakao ? reportPath : dryRunReportPath} 는 이전 실행 결과 그대로 두고 갱신하지 않습니다.`)
+    throw new Error(
+      `manual override stale/unused ${blockingIssues.length}건. 정상 검수 리포트를 생성하지 않고 중단합니다 - 위 로그와 ${overrideAuditPath} 를 확인하십시오.`,
+    )
+  }
+  log('  stale/unused 없음 - 계속 진행합니다.')
+
+  // ----------------------------------------
+  step(10, '다국어 표기(ja/zh) 결합')
   const i18nPath = await findSourceFile(sourceFiles.seoulMetroI18n, '서울교통공사 역명다국어표기')
   const i18n = await loadSeoulMetroI18n(i18nPath)
   log(`  ${i18nPath}`)
@@ -192,7 +258,7 @@ async function main() {
   if (i18n.conflicts.length > 0) warnings.push(`다국어 파일 값 충돌 ${i18n.conflicts.length}건(먼저 읽은 값 유지).`)
 
   // ----------------------------------------
-  step(9, '검수 리포트 생성')
+  step(11, '검수 리포트 생성')
   const outPath = useKakao ? reportPath : dryRunReportPath
   const summary = await writeReport(outPath, stations)
   log(`  ${outPath}`)

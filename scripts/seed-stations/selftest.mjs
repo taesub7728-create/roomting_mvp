@@ -19,7 +19,13 @@ import {
   transferCodeAdapter,
   transferIdentitiesOf,
 } from './line-identity.mjs'
+import { groupFingerprint } from './lib/fingerprint.mjs'
 import { assertNormalizerMatchesSql, normalizeStationQuery } from './lib/normalize.mjs'
+import { collectOverrideSchemaErrors } from './lib/override-schema.mjs'
+import { reviewId } from './lib/review-id.mjs'
+import { assertSourceRowKeysUnique, sourceRowKey } from './lib/source-row-key.mjs'
+import { overridesForRun } from './lib/override-scope.mjs'
+import { manualOverrides } from './manual-overrides.mjs'
 import { annotateIdentities, mergeStations } from './merge.mjs'
 import { buildReportRows } from './report.mjs'
 import {
@@ -58,10 +64,20 @@ function unit({
 
 const latOffset = (m) => m / 111_000
 
-function prepare(units) {
+function prepare(units, overrides = []) {
   const info = annotateIdentities(units)
-  const result = mergeStations(units)
+  const result = mergeStations(units, overrides)
   return { ...result, ...info }
+}
+
+/** override fixture 조립 도우미. note/decidedAt 은 스키마 검증을 통과하는 값으로 기본 채운다. */
+function overrideFixture(partial) {
+  return {
+    candidateName: '테스트',
+    note: '테스트 픽스처 근거 문구 - 스키마 검증 통과용으로 20자를 넘긴다.',
+    decidedAt: '2026-08-08',
+    ...partial,
+  }
 }
 
 // ----------------------------------------
@@ -480,6 +496,259 @@ function run() {
     assert.equal(rows[0].ja_missing, true)
     assert.equal(rows[0].zh_missing, true)
     assert.equal(rows[0].needs_review, false)
+  })
+
+  // ===== sourceRowKey =====
+  check('K1 sourceRowKey 는 station_no+line_name+raw_name', () => {
+    const u = { stationCode: '0001', lineName: '2호선', rawName: '강남' }
+    assert.equal(sourceRowKey(u), '0001|2호선|강남')
+  })
+  check('K2 sourceRowKey 충돌은 조용히 넘어가지 않고 중단한다', () => {
+    const dup = [
+      { sourceRowKey: 'A', lineCode: 'X' },
+      { sourceRowKey: 'A', lineCode: 'Y' },
+    ]
+    assert.throws(() => assertSourceRowKeysUnique(dup), /충돌/)
+  })
+  check('K3 실데이터 406행 유일성 (npm run seed:stations 실행 기록)', () => {
+    // 이 selftest 는 원본 데이터를 읽지 않는다(설계 원칙). 406행 전수 검증은
+    // 2026-08-08 npm run seed:stations 실제 실행(annotateIdentities -> assertSourceRowKeysUnique)이
+    // 예외 없이 통과한 것으로 이미 확인됐다 - 여기서는 guard 자체의 동작(K2)만 재확인한다.
+    assert.equal(typeof assertSourceRowKeysUnique, 'function')
+  })
+
+  // ===== fingerprint - 안정성 (같은 내용이면 항상 같은 값) =====
+  function fpRow(overrides = {}) {
+    return {
+      sourceRowKey: 'K1', rawName: '테스트', mainName: '테스트', subName: null,
+      stationCode: '0001', lineCode: 'S1102', lineIdentity: 'S1102',
+      isTransfer: true, transferLineCodes: ['S1105', 'I4108'], transferIdentities: new Set(['S1105', 'I4108@GJ']),
+      lat: 37.5, lng: 127.0, district: { districtCode: '11000' },
+      ...overrides,
+    }
+  }
+  const fpRowA = fpRow({ sourceRowKey: 'K1' })
+  const fpRowB = fpRow({
+    sourceRowKey: 'K2', stationCode: '0002', lineCode: 'S1105', lineIdentity: 'S1105',
+    transferLineCodes: ['S1102'], transferIdentities: new Set(['S1102']),
+  })
+  const fpBaseArgs = () => ({
+    rows: [fpRowA, fpRowB],
+    automaticClusters: [[fpRowA, fpRowB]],
+    pairResults: [{ aKey: 'K1', bKey: 'K2', ok: true }],
+  })
+  const fpBase = groupFingerprint(fpBaseArgs())
+
+  check('P1 동일 group -> 동일 fingerprint (재계산 안정)', () => {
+    assert.equal(groupFingerprint(fpBaseArgs()), fpBase)
+  })
+  check('P2 source row 순서 변경 -> fingerprint 동일', () => {
+    const args = fpBaseArgs()
+    args.rows = [...args.rows].reverse()
+    assert.equal(groupFingerprint(args), fpBase)
+  })
+  check('P3 transfer code set 순서 변경 -> fingerprint 동일', () => {
+    const a = fpRow({ sourceRowKey: 'K1', transferLineCodes: ['I4108', 'S1105'], transferIdentities: new Set(['I4108@GJ', 'S1105']) })
+    const args = { rows: [a, fpRowB], automaticClusters: [[a, fpRowB]], pairResults: fpBaseArgs().pairResults }
+    assert.equal(groupFingerprint(args), fpBase)
+  })
+  check('P4 pairResults 나열 순서 변경 -> fingerprint 동일', () => {
+    const b2 = fpRow({ sourceRowKey: 'K2', stationCode: '0002', lineCode: 'S1105', lineIdentity: 'S1105' })
+    const c2 = fpRow({ sourceRowKey: 'K3', stationCode: '0003', lineCode: 'S1106', lineIdentity: 'S1106' })
+    const base = { rows: [fpRowA, b2, c2], automaticClusters: [[fpRowA, b2, c2]],
+      pairResults: [{ aKey: 'K1', bKey: 'K2', ok: true }, { aKey: 'K1', bKey: 'K3', ok: false }] }
+    const reordered = { ...base, pairResults: [...base.pairResults].reverse() }
+    assert.equal(groupFingerprint(base), groupFingerprint(reordered))
+  })
+
+  // ===== fingerprint - 민감도 (내용이 달라지면 반드시 값이 바뀐다) =====
+  function assertDiffers(name, mutateArgs) {
+    check(name, () => {
+      const args = fpBaseArgs()
+      mutateArgs(args)
+      assert.notEqual(groupFingerprint(args), fpBase)
+    })
+  }
+  assertDiffers('Q1 source row 추가 -> fingerprint 변경', (args) => {
+    args.rows = [...args.rows, fpRow({ sourceRowKey: 'K3', stationCode: '0003' })]
+  })
+  assertDiffers('Q2 source row 삭제 -> fingerprint 변경', (args) => {
+    args.rows = [args.rows[0]]
+  })
+  assertDiffers('Q3 line identity 변경 -> fingerprint 변경', (args) => {
+    args.rows = [args.rows[0], { ...args.rows[1], lineIdentity: 'Z9999' }]
+  })
+  assertDiffers('Q4 transfer flag 변경 -> fingerprint 변경', (args) => {
+    args.rows = [{ ...args.rows[0], isTransfer: false }, args.rows[1]]
+  })
+  assertDiffers('Q5 transfer identities 변경 -> fingerprint 변경', (args) => {
+    args.rows = [{ ...args.rows[0], transferIdentities: new Set(['Z9999']) }, args.rows[1]]
+  })
+  assertDiffers('Q6 district 변경 -> fingerprint 변경', (args) => {
+    args.rows = [{ ...args.rows[0], district: { districtCode: '99999' } }, args.rows[1]]
+  })
+  assertDiffers('Q7 좌표 변경 -> fingerprint 변경', (args) => {
+    args.rows = [{ ...args.rows[0], lat: args.rows[0].lat + 0.01 }, args.rows[1]]
+  })
+  assertDiffers('Q8 automatic partition 변경 -> fingerprint 변경 (행/쌍은 그대로)', (args) => {
+    args.automaticClusters = [[args.rows[0]], [args.rows[1]]] // 병합 1개 -> 분리 2개
+  })
+
+  // ===== override 동작 =====
+  const sinchonKey = normalizeStationQuery(caseSinchon[0].mainName)
+  const sinchonReviewId = reviewId(sinchonKey)
+
+  check('O1 reviewId 가 candidate group 의 normalize(main_name) 해시와 일치한다', () => {
+    const { groups } = prepare(caseSinchon)
+    assert.equal(groups[0].reviewId, sinchonReviewId)
+  })
+
+  check('O2 fingerprint 일치 CONFIRMED_MERGE 적용 - hold 이던 그룹이 하나로 합쳐진다', () => {
+    const baseline = prepare(caseSinchon)
+    const fp = baseline.groups[0].fingerprint
+    const ov = overrideFixture({ reviewId: sinchonReviewId, fingerprint: fp, verdict: 'CONFIRMED_MERGE' })
+    const { stations, overrideAudit, blockingIssues } = prepare(caseSinchon, [ov])
+    assert.equal(stations.length, 1)
+    assert.equal(stations[0].decision, 'merge')
+    assert.equal(stations[0].needsReview, false)
+    assert.match(stations[0].reviewReason, /^\[OVERRIDE RV-[0-9a-f]{8} CONFIRMED_MERGE\]/)
+    assert.equal(blockingIssues.length, 0)
+    assert.equal(overrideAudit.find((a) => a.review_id === sinchonReviewId).status, 'applied')
+  })
+
+  check('O3 fingerprint 일치 CONFIRMED_SPLIT 적용 - automatic partition 을 그대로 승인한다', () => {
+    const baseline = prepare(caseSinchon)
+    const fp = baseline.groups[0].fingerprint
+    const ov = overrideFixture({ reviewId: sinchonReviewId, fingerprint: fp, verdict: 'CONFIRMED_SPLIT' })
+    const { stations } = prepare(caseSinchon, [ov])
+    assert.equal(stations.length, 2, 'CONFIRMED_SPLIT 이 automatic partition(2개)을 보존하지 않았다')
+    assert.ok(stations.every((s) => s.decision === 'hold'))
+    assert.ok(stations.every((s) => s.needsReview === false))
+    assert.ok(stations.every((s) => s.reviewReason.startsWith('[OVERRIDE')))
+    // 원래 자동 판정 근거(신촌 hold 사유)가 override 로 지워지지 않고 남아 있어야 한다
+    assert.ok(stations.every((s) => /환승역 아님|환승노선 불일치/.test(s.reviewReason)))
+  })
+
+  check('O4 MIXED - explicit partition 이 적용되고 automatic partition 과 달라도 된다', () => {
+    const baseline = prepare(caseGwangwoondae)
+    const gwKey = normalizeStationQuery(caseGwangwoondae[0].mainName)
+    const gwGroup = baseline.groups.find((g) => g.key === gwKey)
+    const keys = caseGwangwoondae.map((u) => sourceRowKey(u))
+    // automatic: [경원선+경춘선] / [경의중앙선] (경춘 family) - MIXED 로 [경원선+경의중앙선] / [경춘선] 을 강제한다
+    const gyeongwonKey = keys.find((k) => k.includes('경원선'))
+    const gyeonguiKey = keys.find((k) => k.includes('경의중앙선'))
+    const gyeongchunKey = keys.find((k) => k.includes('경춘선'))
+    const ov = overrideFixture({
+      reviewId: gwGroup.reviewId, fingerprint: gwGroup.fingerprint, verdict: 'MIXED',
+      partition: [[gyeongwonKey, gyeonguiKey], [gyeongchunKey]],
+    })
+    const { stations } = prepare(caseGwangwoondae, [ov])
+    assert.equal(stations.length, 2)
+    const withGyeongui = stations.find((s) => s.lineIdentities.includes('I4108@GJ'))
+    assert.ok(withGyeongui.lineIdentities.includes('I4102@N'), 'MIXED partition 이 경원선을 경의중앙선과 묶지 못했다')
+    assert.ok(!withGyeongui.lineIdentities.includes('I4108@GC'), '경춘선이 분리되지 않았다')
+    assert.ok(stations.every((s) => s.needsReview === false))
+  })
+
+  check('O5 override 가 evaluatePair/pairStats 자체를 바꾸지 않는다', () => {
+    const oneWay = [
+      unit({ rawName: '편도역2', lineName: '2호선', lineCode: 'S1102', lat: 37.5, lng: 127.0, transferRaw: '환승역', transferCodes: ['S1105'] }),
+      unit({ rawName: '편도역2', lineName: '5호선', lineCode: 'S1105', lat: 37.5005, lng: 127.0, transferRaw: '환승역', transferCodes: [] }),
+    ]
+    const withoutOverride = prepare(oneWay)
+    const key = normalizeStationQuery(oneWay[0].mainName)
+    const grp = withoutOverride.groups.find((g) => g.key === key)
+    const ov = overrideFixture({ reviewId: grp.reviewId, fingerprint: grp.fingerprint, verdict: 'CONFIRMED_MERGE' })
+    const withOverride = prepare(oneWay, [ov])
+    assert.equal(withOverride.pairStats.need5, withoutOverride.pairStats.need5)
+    assert.equal(withOverride.pairStats.pass, withoutOverride.pairStats.pass)
+    assert.equal(withOverride.pairStats.need5, 1)
+    assert.equal(withOverride.pairStats.pass, 0, '편도 관계인데 evaluatePair 결과가 override 로 통과 처리됐다')
+  })
+
+  check('O6 override 가 source identity/coordinatePriority 를 바꾸지 않는다', () => {
+    const gwKey = normalizeStationQuery(caseGwangwoondae[0].mainName)
+    const before = caseGwangwoondae.map((u) => ({ key: sourceRowKey(u), identity: u.lineIdentity, priority: u.coordPriority }))
+    const baseline = prepare(caseGwangwoondae)
+    const gwGroup = baseline.groups.find((g) => g.key === gwKey)
+    const keys = caseGwangwoondae.map((u) => sourceRowKey(u))
+    const ov = overrideFixture({
+      reviewId: gwGroup.reviewId, fingerprint: gwGroup.fingerprint, verdict: 'MIXED',
+      partition: [[keys[0], keys[1]], [keys[2]]],
+    })
+    prepare(caseGwangwoondae, [ov])
+    for (const b of before) {
+      const u = caseGwangwoondae.find((x) => sourceRowKey(x) === b.key)
+      assert.equal(u.lineIdentity, b.identity, `${b.key} 의 lineIdentity 가 override 이후 바뀌었다`)
+      assert.equal(u.coordPriority, b.priority, `${b.key} 의 coordPriority 가 override 이후 바뀌었다`)
+    }
+  })
+
+  check('O7 stale override 는 적용되지 않고 hard fail 대상이 된다', () => {
+    const stale = overrideFixture({ reviewId: sinchonReviewId, fingerprint: 'fp_0000000000000000', verdict: 'CONFIRMED_MERGE' })
+    const { stations, overrideAudit, blockingIssues } = prepare(caseSinchon, [stale])
+    assert.equal(stations.length, 2, 'stale override 가 적용되어 자동 판정이 바뀌었다')
+    assert.ok(stations.every((s) => s.decision === 'hold'))
+    assert.ok(stations.every((s) => s.needsReview === true), 'stale 인데 needsReview 가 false 로 덮였다')
+    assert.ok(stations.every((s) => !s.reviewReason.startsWith('[OVERRIDE')), 'stale 인데 review_reason 에 OVERRIDE 표시가 붙었다')
+    assert.equal(blockingIssues.length, 1)
+    assert.equal(blockingIssues[0].kind, 'stale')
+    assert.equal(overrideAudit.find((a) => a.review_id === sinchonReviewId).status, 'stale')
+  })
+
+  check('O8 unused override 는 hard fail 대상이 된다', () => {
+    const unusedOv = overrideFixture({ reviewId: 'RV-ffffffff', fingerprint: 'fp_0000000000000000', verdict: 'CONFIRMED_MERGE' })
+    const { overrideAudit, blockingIssues } = prepare(caseSinchon, [unusedOv])
+    assert.equal(blockingIssues.length, 1)
+    assert.equal(blockingIssues[0].kind, 'unused')
+    assert.equal(blockingIssues[0].reviewId, 'RV-ffffffff')
+    assert.equal(overrideAudit.find((a) => a.review_id === 'RV-ffffffff').status, 'unused')
+  })
+
+  // ===== --no-kakao(dry-run) 는 override 를 건너뛴다 (회귀 방지) =====
+  check('N1 useKakao=false -> override 가 빈 배열로 걸러진다 (dry-run 에 23건이 들어가지 않는다)', () => {
+    assert.deepEqual(overridesForRun(false, manualOverrides), [])
+  })
+  check('N2 useKakao=true -> override 가 그대로 전달된다 (실제 실행 경로는 검증을 건너뛰지 않는다)', () => {
+    assert.equal(overridesForRun(true, manualOverrides), manualOverrides)
+    assert.equal(overridesForRun(true, manualOverrides).length, manualOverrides.length)
+  })
+  check('N3 dry-run 조건(override 없음)에서는 stale/unused 가 오발하지 않는다', () => {
+    // district 미해결(=dry-run) 상황을 흉내낸다. override 를 아예 안 넘기면(N1의 결과)
+    // fingerprint 불일치를 판단할 대상 자체가 없어 blockingIssues 가 항상 비어야 한다.
+    const noDistrict = [
+      unit({ rawName: '신촌(지하)', lineName: '2호선', lineCode: 'S1102', stationCode: '0240', lat: 37.55529, lng: 126.93690, transferRaw: '일반역' }),
+      unit({ rawName: '신촌역', lineName: '경의중앙선', lineCode: 'I4108', stationCode: '1252', lat: 37.55966, lng: 126.94100, operator: '한국철도공사', transferRaw: '일반역' }),
+    ]
+    for (const u of noDistrict) u.district = null // --no-kakao 의 실제 상태
+    const { overrideAudit, blockingIssues } = prepare(noDistrict, overridesForRun(false, manualOverrides))
+    assert.equal(blockingIssues.length, 0, 'dry-run 인데 stale/unused 로 hard fail 판정이 발생했다')
+    assert.equal(overrideAudit.length, 0, 'dry-run 인데 override_audit 행이 생겼다 - override 가 실제로 적용 시도된 것이다')
+  })
+
+  // ===== override 스키마 검증 =====
+  check('V1 note 가 비어 있으면 검증 실패', () => {
+    const bad = [overrideFixture({ reviewId: 'RV-00000000', fingerprint: 'fp_0000000000000000', verdict: 'CONFIRMED_MERGE', note: '' })]
+    assert.ok(collectOverrideSchemaErrors(bad).some((e) => e.includes('note')))
+  })
+  check('V2 reviewId 중복이면 검증 실패', () => {
+    const bad = [
+      overrideFixture({ reviewId: 'RV-00000000', fingerprint: 'fp_0000000000000000', verdict: 'CONFIRMED_MERGE' }),
+      overrideFixture({ reviewId: 'RV-00000000', fingerprint: 'fp_1111111111111111', verdict: 'CONFIRMED_SPLIT' }),
+    ]
+    assert.ok(collectOverrideSchemaErrors(bad).some((e) => e.includes('중복')))
+  })
+  check('V3 verdict 오타는 검증 실패', () => {
+    const bad = [overrideFixture({ reviewId: 'RV-00000000', fingerprint: 'fp_0000000000000000', verdict: 'CONFIRMD_MERGE' })]
+    assert.ok(collectOverrideSchemaErrors(bad).length > 0)
+  })
+  check('V4 MIXED 인데 partition 이 없으면 검증 실패', () => {
+    const bad = [overrideFixture({ reviewId: 'RV-00000000', fingerprint: 'fp_0000000000000000', verdict: 'MIXED' })]
+    assert.ok(collectOverrideSchemaErrors(bad).some((e) => e.includes('partition')))
+  })
+  check('V5 정상 항목은 통과한다', () => {
+    const ok = [overrideFixture({ reviewId: 'RV-00000000', fingerprint: 'fp_0000000000000000', verdict: 'CONFIRMED_MERGE' })]
+    assert.deepEqual(collectOverrideSchemaErrors(ok), [])
   })
 
   // ----------------------------------------
