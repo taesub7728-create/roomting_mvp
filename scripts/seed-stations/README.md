@@ -28,18 +28,23 @@
 
 ### 1. 원본 데이터
 
-`scripts/seed-stations/data/` 에 아래 두 CSV를 **가공하지 않고 그대로** 넣는다.
+`scripts/seed-stations/data/` 에 아래 파일을 **가공하지 않고 그대로** 넣는다.
 (이 폴더는 `.gitignore` 대상이다 — 용량이 크고 재다운로드가 가능하다.)
 
 | 파일 | 출처 | 이 파일이 1차 출처인 값 |
 | --- | --- | --- |
 | 전국도시철도역사정보표준데이터 | [data.go.kr/data/15013205](https://www.data.go.kr/data/15013205/standard.do) | 좌표, `name_en`, `name_hanja`, 환승역 구분, 환승 노선 목록, 운영기관 |
 | 서울교통공사_역명 다국어 표기 | [data.go.kr/data/15044232](https://www.data.go.kr/data/15044232/fileData.do) | `name_ja`, `name_zh` (1~8호선) |
+| 법정동코드 전체자료 | [code.go.kr](https://www.code.go.kr) (검색어: `법정동코드 전체자료`) | `districts` 전체 (`code`, `sido_code`, `name_ko`) |
+
+법정동코드 전체자료는 `districts` 시드에만 쓴다(`npm run seed:stations:generate-districts-sql`).
+`npm run seed:stations` 에는 필요 없다.
 
 파일명은 다운로드 시점마다 달라서 고정하지 않고 패턴으로 찾는다(`config.mjs`의 `sourceFiles`).
 못 찾거나 후보가 둘 이상이면 **조용히 아무거나 고르지 않고 중단한다.**
 
 인코딩(EUC-KR/UTF-8)은 자동 판별한다. 잘못 읽으면 역명이 전부 깨진 채로 진행되기 때문이다.
+법정동코드 전체자료는 EUC-KR 고정이며(실측), U+FFFD가 나오면 파일이 바뀐 것으로 보고 중단한다.
 
 ### 2. Kakao REST API 키
 
@@ -65,7 +70,34 @@ KAKAO_REST_API_KEY=발급받은_REST_키
 npm run seed:stations              # 정상 실행
 npm run seed:stations -- --no-kakao # 키 없이 파싱/병합만 확인 (dry run)
 npm run seed:stations:selftest     # 병합 규칙 자체 검증 (원본 데이터·키 불필요)
+
+npm run seed:stations:generate-sql            # lines/stations/station_lines seed SQL 생성
+npm run seed:stations:generate-districts-sql  # districts/station_districts seed SQL 생성
 ```
+
+두 생성기는 **SQL 파일을 만들기만 하고 실행하지 않는다.** DB에 연결하지 않는다.
+산출물은 `output/` 이며 `.gitignore` 대상이다. 사람이 검토한 뒤 Supabase SQL Editor에서 실행한다.
+
+DB 적용 순서는 아래 하나뿐이다(아래 「다음 단계」에 근거를 적었다):
+
+```
+024 → 025 → 026 → seed_stations.sql → seed_districts.sql → DB 검증 → 027
+```
+
+`seed_districts.sql`은 **026이 만드는 `station_districts` 테이블**과
+**`stations` 308행**을 둘 다 전제한다. 그 SQL 자신이 guard로 검사한다
+(대상 테이블이 비어 있지 않거나 `stations`가 308행이 아니면 즉시 실패).
+
+### districts 계층 규칙
+
+일반구가 있는 시는 **구만 남기고 상위 시 행을 뺀다**(성남시 제외 / 수정·중원·분당구 포함).
+부동산 영업지역의 실제 단위가 구이고, 서울 자치구와 입도가 같아야
+`realtor_service_areas` 가 한 가지 규칙으로 돌아가기 때문이다.
+
+**★ 법정동코드의 숫자 패턴으로 이 계층을 추론하지 않는다.** `법정동명` 토큰 계층으로 판정한다
+(`lib/district-hierarchy.mjs`). 코드 기반 규칙은 실데이터로 반증됐다 — `43740 영동군` 과
+`43745 증평군` 은 앞 4자리를 공유하지만 부모-자식이 아니다. 폐기된 후보와 반례는 그 파일 주석에
+남아 있고 selftest H5/H6가 회귀로 고정한다.
 
 `--no-kakao`의 결과는 `merge_report.dryrun.csv`로 나간다. 파일명을 분리한 이유는
 district가 미해결인 리포트를 진짜 검수 리포트로 착각하지 않게 하기 위해서다.
@@ -239,8 +271,20 @@ automatic·final cluster 수/note)에 남는다. `output/` 은 매 실행 재생
 ## 다음 단계 (이 스크립트 범위 밖)
 
 1. `merge_report.csv` 검수 — `needs_review=true` 건
-2. 024~027 적용 (026 적용 직후 정규화 확인 쿼리를 **먼저** 돌린다)
-3. 시드 SQL 생성 · 적재 (SQL Editor = postgres 전용. 쓰기 정책이 없다)
-4. `region_text` 백필 → `station_id` 채우기
+2. **DB 적용 순서 (2026-08-09 확정)**
+
+   ```
+   024 → 025 → 026 → seed_stations.sql → seed_districts.sql → DB 검증 → 027
+   ```
+
+   - **026을 seed 보다 먼저** 적용한다. 026은 스키마만 만들어서
+     `districts`/`stations`에 행이 없어도 적용되고, 반대로 `seed_districts.sql`은
+     026이 만드는 `station_districts` 테이블이 있어야 실행된다.
+   - 026 적용 직후 정규화 확인 쿼리를 **먼저** 돌린다.
+   - `seed_districts.sql`은 `stations` 308행을 전제한다(SQL 자신이 guard로 검사).
+     그래서 `seed_stations.sql`이 반드시 앞선다.
+   - 027은 `station_districts`에 행이 있어야 트리거가 의미를 갖는다(마지막).
+   - 시드 SQL 적재는 SQL Editor(postgres) 전용이다 — 세 테이블 모두 쓰기 정책이 없다.
+3. `region_text` 백필 → `station_id` 채우기
 
 자세한 순서와 판정 기준은 `TODO_PHASE2.md`의 「다음에 할 일」과 「지역 라우팅 검증 시나리오」에 있다.

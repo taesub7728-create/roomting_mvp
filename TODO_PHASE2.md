@@ -869,6 +869,110 @@ migration 022~032 파일을 작성했고 **아직 하나도 적용하지 않았�
   건드리지 않고 신규/변경분만 반영하는" reconciliation pipeline을 별도로 설계한다.
 - **관련 위치**: `scripts/seed-stations/generate-seed-sql.mjs`,
   `supabase/migration_027_requests_location.sql`(`station_id`)
+
+## 19. ★ 경계역의 secondary district가 routing에 사용되지 않는다 (2026-08-09 확인, 높은 우선순위)
+
+- **현재 상태**: 10개 multi-district station의 secondary district는 `station_districts`에
+  저장되지만 **routing에 사용되지 않는다.**
+- **원인**: `migration_027_requests_location.sql:146`의 트리거가 `and sd.is_primary`로
+  primary 하나만 파생해 `requests.district_code`(단일 text)에 넣고,
+  `migration_029_realtor_request_rpc.sql:173`/`:235`가
+  `sa.district_code = r.district_code` **단일값 등호 비교**로 판정한다.
+  `station_districts`를 읽는 코드는 027의 트리거 하나뿐이고 029에는 등장하지 않는다.
+- **판단**: `migration_026_station_mapping_search.sql:8-9`에 문서화된 의도이나
+  (MVP는 is_primary 하나로만 라우팅), **실제 영향 역이 10개로 확인됐다.**
+
+  실제 영향:
+  | 역 | primary | secondary | 결과 |
+  | --- | --- | --- | --- |
+  | 신논현 | 서초구 | 강남구 | 강남구-only 중개사가 못 봄 ★ 가장 시급 |
+  | 동작 | 서초구 | 동작구 | 동작구-only 중개사가 못 봄 |
+  | 총신대입구 | 서초구 | 동작구 | 동작구-only 중개사가 못 봄 |
+  | 신설동 | 동대문구 | 종로구 | 종로구-only 중개사가 못 봄 |
+
+  나머지 6개: 서울역(중구/용산구) · 디지털미디어시티(마포구/은평구) · 사당(동작구/관악구) ·
+  대림(구로구/영등포구) · 보라매(영등포구/동작구) · 석계(성북구/노원구).
+
+  **신논현이 가장 시급하다** — 강남 상권 인식이 강한 역이라 11월 영업에서 바로 체감될
+  가능성이 높다.
+- **감수하는 위험**: 경계역 요청서가 secondary 구 중개사에게 도달하지 않는다. 요청서가
+  사라지는 것은 아니고 primary 구 중개사에게는 정상 전달된다.
+- **재검토 조건 / 방향**: 향후 확장 시에는 `station_districts` live join보다
+  **"요청 작성 시점 eligible districts snapshot"** 방식을 우선 검토한다.
+  이유: `migration_027_requests_location.sql:19-20`의 "작성 시점 지역을 고정하여 과거 요청
+  routing이 station mapping 변경으로 흔들리지 않게 한다"는 원칙을 유지하기 위함이다.
+  live join으로 바꾸면 이 보장이 사라진다.
+
+  예상 구조(향후 설계 단계에서만 검토, 이번엔 구현 안 함):
+  ```
+  requests.district_code = 대표 표시용 primary
+  request_districts      = 작성 시점 routing eligible snapshot
+  ```
+- **이번 단계에서 하지 않은 것**: 027 수정 / 029 수정 / live join 전환 /
+  `requests`에 array·추가 관계 추가 / 특정 역 예외처리. **`station_districts` 318행은
+  secondary 10행을 포함해 그대로 시드한다** — 026:8-9가 상정한 그림 그대로이며,
+  나중에 029 술어만 넓히면 재시딩이 필요 없다.
+- **관련 위치**: `supabase/migration_026_station_mapping_search.sql`(8-9, 35-47),
+  `supabase/migration_027_requests_location.sql`(19-20, 142-158),
+  `supabase/migration_029_realtor_request_rpc.sql`(169-174, 231-236)
+
+## 20. sido(시도) master 테이블이 없다 (2026-08-09 기록)
+
+- **현재 상태**: `districts.sido_code`(2자리)는 있지만 **시도 이름을 담는 테이블이 없다.**
+  `districts.name_ko`에는 해당 district 자체의 이름만 넣기로 확정했다(예: `중구`,
+  `분당구`, `과천시`, `가평군`).
+- **드러나는 지점**: 전국 master를 시드하면 동명 구가 다수 생긴다(중구·남구·동구·서구 등).
+  `code`가 PK라 DB 무결성 문제는 없고 식별의 source-of-truth는 `code` + `sido_code`이지만,
+  중개사 영업지역 선택 UI 등에서 "서울특별시 · 중구" / "부산광역시 · 중구"로 구분해
+  보여주려면 시도명을 어디선가 가져와야 한다.
+- **제외 이유**: 서울 MVP에서는 시도가 하나(`11`)라 필요하지 않다. 지금 만들면
+  쓰이지 않는 테이블이 하나 늘어난다. `name_ko`를 인위적으로 길게 만드는 것
+  (`서울특별시 중구`)도 채택하지 않았다 — 표시 문제를 데이터에 섞는 것이기 때문이다.
+- **재검토 조건**: 확장축(1)로 경기/인천 이상을 열어 시도가 2개 이상이 되는 시점,
+  또는 전국 district 선택 UI를 실제로 만드는 시점. 그때 sido master 테이블을 만들지
+  프론트 상수로 둘지 결정한다(시도는 17개 고정이라 후자도 성립한다).
+- **★ 그때 반드시 알아야 할 것 (2026-08-09 실데이터 확인)**: 시도 master를 만들 때
+  **법정동 전체자료의 시도-level 행(`^\d{2}00000000$`)만 뽑으면 안 된다.**
+  **세종특별자치시는 시군구-level 행 `3611000000`은 있으나 시도-level 행 `3600000000`이
+  아예 없다.** 시도-level 존재 행은 15개인데 시군구를 가진 시도는 16개다. 시도-level
+  행만으로 master를 만들면 세종만 조용히 빠진다.
+- **관련 위치**: `supabase/migration_024_districts.sql`(`sido_code`),
+  `supabase/migration_028_realtor_service_areas.sql`(영업지역 선택 UI)
+
+## 21. districts 시드에 쓴 법정동코드 파일의 vintage (2026-08-09 기록)
+
+- **파일**: `scripts/seed-stations/data/법정동코드 전체자료.txt`
+  (행정안전부 행정표준코드, code.go.kr).
+- **★ 두 날짜를 혼동하지 말 것 — 서로 다른 값이다:**
+
+  | | 값 | 뜻 |
+  | --- | --- | --- |
+  | download date | **2026-08-09** | 파일을 내려받아 `data/`에 넣은 날 (파일 mtime 기준) |
+  | `source_version` | **20260701** | 아래 정의. **다운로드 날짜가 아니다** |
+
+- **★ 공식 기준일자를 확인할 수 없었다.** 다운로드 화면에 기준일자·자료기준일·최종갱신일
+  표기가 없고, 파일 내부에도 metadata가 없다(컬럼 3개 = `법정동코드`/`법정동명`/`폐지여부`,
+  날짜 컬럼 없음, 연도 패턴 0건).
+- **`source_version` 정책 재정의**: 실행일도 다운로드일도 쓰지 않는다. 대신
+  **"이 snapshot에서 현행 상태로 반영됨을 실데이터로 확인한 가장 최근 공식 법정동 변경
+  시행일"**로 정의하고 `'20260701'`을 쓴다.
+- **근거 (실데이터 확인 완료)**:
+  - 전남광주통합특별시(12) 통합 반영 — 시군구 27개 전부 `존재`, 폐지 0.
+    광주광역시(29)·전라남도(46)는 시도-level 포함 전 행이 `폐지`(존재 0건)
+  - 인천 개편 반영 — 제물포구(28125)·영종구(28155)·서해구(28275)·검단구(28290) `존재`,
+    옛 중구(28110)·동구(28140)·서구(28260)는 `폐지`
+  - 화성시 일반구 4개 반영 — 만세구(41591)·효행구(41593)·병점구(41595)·동탄구(41597) `존재`
+  - 위 개편들의 공식 시행일이 2026-07-01이므로, 이 파일은 최소한 그 이후의 현행본이다
+- **한계**: 파일에 **시행 예정 코드와 현행 코드를 구분할 근거가 없다**(`폐지여부`가
+  `존재`/`폐지` 2종뿐, 날짜 컬럼 없음). 즉 이 파일은 **특정 시점의 스냅샷**이며
+  "2026-07-01 이후 어느 시점"까지만 말할 수 있다. `'20260701'`은 하한선이다.
+- **서울 25개 구에는 영향이 없다** — 개편 대상이 아니고, Kakao 교차검증에서
+  missing 0 / mismatch 0을 확인했다.
+- **재검토 조건**: **경기·인천 확장 시 이 vintage가 최신인지 반드시 재확인한다.**
+  인천은 이번 개편의 직접 대상이라 특히 그렇다. 재다운로드 시 이 항목의 근거 3개를
+  다시 대조해 `source_version`을 갱신할지 판단한다.
+- **관련 위치**: `scripts/seed-stations/config.mjs`(`sourceFiles.legalDongCode`),
+  `supabase/migration_024_districts.sql`(`source_version`)
 ---
 
 # ⚠ Known Bug — 중개사 가입이 이메일 확인 설정에서 막힌다
@@ -1808,6 +1912,15 @@ CSS 39개 중 `@media`를 가진 파일은 25개인데 **대부분 Landing/Landi
 ```
 ① 024~027 적용 + 시드 적재 (districts / lines / stations / station_lines /
    station_districts / station_aliases)
+   ★ 2026-08-09 확정 - ① 안의 순서는 아래 하나뿐이다:
+       024 → 025 → 026 → seed_stations.sql → seed_districts.sql → DB 검증 → 027
+     - 026을 seed 보다 먼저 적용한다. 026은 스키마만 만들어서 행이 없어도 적용되고,
+       반대로 seed_districts.sql 은 026이 만드는 station_districts 테이블이 있어야 실행된다.
+     - seed_districts.sql 은 stations 308행을 전제한다(SQL 자신이 guard로 검사)
+       -> seed_stations.sql 이 반드시 앞선다.
+     - 027은 station_districts 에 행이 있어야 트리거가 의미를 갖는다 -> 마지막.
+     - station_aliases(026 테이블)는 아직 시드 생성기가 없다. 이번 범위 밖이다.
+     ※ 이전에 논의됐던 "024 → 025 → station seed → districts → 026" 순서는 폐기됐다.
 ② 기존 요청서 백필 — station_id를 채워야 district_code가 파생된다
 ③ 028 적용
 ④ 사용자가 중개사별 담당 지역 지정 (admin, realtor_service_areas INSERT)

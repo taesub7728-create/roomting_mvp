@@ -54,6 +54,13 @@ import {
   TRANSFER_VALUES_TRUE,
 } from './sources/railway-standard.mjs'
 import { isSuspiciousReferenceText } from './lib/reference-text-quality.mjs'
+import {
+  districtCandidates,
+  isDirectChild,
+  isDistrictLevelCode,
+  resolveDistrictHierarchy,
+} from './lib/district-hierarchy.mjs'
+import { EXPECTED_HEADER, loadLegalDongCode } from './sources/legal-dong-code.mjs'
 
 let seq = 0
 
@@ -243,6 +250,103 @@ try {
   railwayFixture = await buildRailwayFixture()
 } catch (err) {
   railwayFixtureError = err
+}
+
+// ----------------------------------------
+// 법정동코드 픽스처
+//
+// 실물 '법정동코드 전체자료.txt' 에서 그대로 뽑은 EUC-KR raw byte(hex)다(2026-08-09).
+// 계층 규칙의 반례를 원본 파일 없이 회귀로 고정하는 것이 목적이다.
+//
+//   1100000000 서울특별시                존재  <- 시도. 1단계에서 배제되어야 함
+//   1111000000 서울특별시 종로구         존재  <- 평범한 자치구
+//   1111010100 서울특별시 종로구 청운동  존재  <- 읍면동. 1단계에서 배제되어야 함
+//   4113000000 경기도 성남시             존재  <- 부모(제외 대상)
+//   4113100000 경기도 성남시 수정구      존재  <- 자식(토큰 +1)
+//   4119000000 경기도 부천시             존재  <- 부모(제외 대상)
+//   4119200000 경기도 부천시 원미구      존재  <- ★ 원본 법정동명 끝에 공백이 하나 있다
+//   4119500000 경기도 부천시 원미구      폐지  <- ★ 현행 41192 와 이름이 같고 코드만 다르다
+//   4374000000 충청북도 영동군           존재  <- ★ 후보 B 반례. 앞4자리 4374 공유, 끝자리 0
+//   4374500000 충청북도 증평군           존재  <- ★ 후보 B 반례의 짝
+//   3611000000 세종특별자치시            존재  <- 1토큰(시도명 = 시군구명)
+// ----------------------------------------
+const LDC_HEX = Object.freeze({
+  header: 'b9fdc1a4b5bfc4dab5e509b9fdc1a4b5bfb8ed09c6f3c1f6bfa9bace',
+  seoul: '3131303030303030303009bcadbfefc6afbab0bdc309c1b8c0e7',
+  jongno: '3131313130303030303009bcadbfefc6afbab0bdc320c1beb7ceb1b809c1b8c0e7',
+  cheongun: '3131313130313031303009bcadbfefc6afbab0bdc320c1beb7ceb1b820c3bbbfeeb5bf09c1b8c0e7',
+  seongnam: '3431313330303030303009b0e6b1e2b5b520bcbab3b2bdc309c1b8c0e7',
+  sujeong: '3431313331303030303009b0e6b1e2b5b520bcbab3b2bdc320bcf6c1a4b1b809c1b8c0e7',
+  bucheon: '3431313930303030303009b0e6b1e2b5b520bacec3b5bdc309c1b8c0e7',
+  wonmiAlive: '3431313932303030303009b0e6b1e2b5b520bacec3b5bdc320bff8b9ccb1b82009c1b8c0e7',
+  wonmiDead: '3431313935303030303009b0e6b1e2b5b520bacec3b5bdc320bff8b9ccb1b809c6f3c1f6',
+  yeongdong: '3433373430303030303009c3e6c3bbbacfb5b520bfb5b5bfb1ba09c1b8c0e7',
+  jeungpyeong: '3433373435303030303009c3e6c3bbbacfb5b520c1f5c6f2b1ba09c1b8c0e7',
+  sejong: '3336313130303030303009bcbcc1bec6afbab0c0dac4a1bdc309c1b8c0e7',
+})
+
+const LDC_DEFAULT_ROWS = [
+  'seoul', 'jongno', 'cheongun', 'seongnam', 'sujeong',
+  'bucheon', 'wonmiAlive', 'wonmiDead', 'yeongdong', 'jeungpyeong', 'sejong',
+]
+
+// EUC-KR 인코더가 없으므로(Node TextEncoder 는 UTF-8 전용) 행을 hex 로 조립한다.
+// ASCII 구간은 그대로 hex 화하고, 한글은 위 실측 byte 조각을 붙여 쓴다.
+const ascii = (s) => Buffer.from(s, 'ascii').toString('hex')
+const TAB = '09'
+const EUCKR_ALIVE = 'c1b8c0e7' // '존재'
+// '폐지' 행은 LDC_HEX.wonmiDead 실측 byte 를 그대로 쓰므로 별도 상수를 두지 않는다.
+
+/**
+ * @param keys        LDC_HEX 키 목록
+ * @param extraHex    추가로 붙일 행의 hex 목록(잘못된 값 테스트용)
+ * @param headerHex   헤더 교체용
+ * @param pad         MIN_ROWS(5000) 하한을 넘기기 위한 padding 행 수
+ */
+async function buildLegalDongFixture({ keys = LDC_DEFAULT_ROWS, extraHex = [], headerHex = LDC_HEX.header, pad = 5200 } = {}) {
+  const hexes = [headerHex, ...keys.map((k) => LDC_HEX[k]), ...extraHex]
+  // padding 은 읍면동 레벨(뒤 5자리 ≠ 00000)이라 시군구 후보에 들어가지 않는다.
+  for (let i = 0; i < pad; i += 1) {
+    hexes.push(ascii(`11110${String(i + 1).padStart(5, '0')}`) + TAB + ascii('PAD') + TAB + EUCKR_ALIVE)
+  }
+  const bufs = hexes.map((h) => Buffer.from(h, 'hex'))
+  const buf = Buffer.concat(bufs.flatMap((b, i) => (i === 0 ? [b] : [Buffer.from('\r\n'), b])))
+  const tmpPath = path.join(os.tmpdir(), `seed-stations-ldc-fixture-${process.pid}-${Date.now()}-${seq++}.txt`)
+  await writeFile(tmpPath, buf)
+  try {
+    return await loadLegalDongCode(tmpPath)
+  } finally {
+    await unlink(tmpPath).catch(() => {})
+  }
+}
+
+let ldcFixture = null
+let ldcFixtureError = null
+try {
+  ldcFixture = await buildLegalDongFixture()
+} catch (err) {
+  ldcFixtureError = err
+}
+
+// 실패 경로는 run() 이 동기 함수라 여기서 미리 수집한다(성공하면 null - 그 자체가 실패다).
+const expectLdcFailure = async (opts) => {
+  try {
+    await buildLegalDongFixture(opts)
+    return null
+  } catch (err) {
+    return err.message
+  }
+}
+const ldcFailures = {
+  // '법정동코드' 뒤에 ASCII 'X'(0x58) 한 글자를 덧붙인 헤더
+  badHeader: await expectLdcFailure({ headerHex: LDC_HEX.header.replace(/^b9fdc1a4b5bfc4dab5e5/, 'b9fdc1a4b5bfc4dab5e558') }),
+  badStatus: await expectLdcFailure({ extraHex: [ascii('4374100000') + TAB + ascii('TEST') + TAB + ascii('DELETED')] }),
+  questionMark: await expectLdcFailure({ extraHex: [ascii('4374200000') + TAB + ascii('?TEST') + TAB + EUCKR_ALIVE] }),
+  replacementChar: await expectLdcFailure({ extraHex: [ascii('4374300000') + TAB + 'a1a1efbfbd' + TAB + EUCKR_ALIVE] }),
+  badCode: await expectLdcFailure({ extraHex: [ascii('437400000') + TAB + ascii('TEST') + TAB + EUCKR_ALIVE] }),
+  dupCode: await expectLdcFailure({ extraHex: [ascii('4374000000') + TAB + ascii('TEST') + TAB + EUCKR_ALIVE] }),
+  tooFewRows: await expectLdcFailure({ pad: 0 }),
+  badColumnCount: await expectLdcFailure({ extraHex: [ascii('4374400000') + TAB + ascii('TEST')] }),
 }
 
 // ----------------------------------------
@@ -1028,6 +1132,182 @@ function run() {
     assert.throws(() => assertNoSuspiciousReferenceFields(dirty), /손상된 값/)
     const dirtyFffd = [{ sourceRow: 2, mainName: '테스트역2', nameHanja: null, nameEn: '�' }]
     assert.throws(() => assertNoSuspiciousReferenceFields(dirtyFffd), /손상된 값/)
+  })
+
+  // ===== 법정동코드 파서 (sources/legal-dong-code.mjs) =====
+  const ldcRow = (code) => {
+    if (ldcFixtureError) throw new Error(`픽스처 생성 실패: ${ldcFixtureError.message}`)
+    return ldcFixture.rows.find((r) => r.code === code)
+  }
+
+  check('D1 실제 EUC-KR raw byte 픽스처가 헤더 완전 일치로 파싱된다', () => {
+    if (ldcFixtureError) throw new Error(`픽스처 생성 실패: ${ldcFixtureError.message}`)
+    assert.equal(ldcFixture.encoding, 'euc-kr')
+    assert.deepEqual(ldcFixture.header, [...EXPECTED_HEADER])
+    assert.equal(ldcRow('1111000000').name, '서울특별시 종로구')
+    assert.equal(ldcRow('3611000000').name, '세종특별자치시')
+  })
+  check('D2 법정동명 뒤 공백은 trim 되고 trimmedCount 로 보고된다 (부천형)', () => {
+    // 원본 4119200000 은 "경기도 부천시 원미구 " 처럼 끝에 공백이 하나 있다(실측).
+    assert.equal(ldcRow('4119200000').name, '경기도 부천시 원미구')
+    assert.equal(ldcFixture.trimmedCount, 1, 'trim 이 적용된 행 수가 픽스처와 다르다')
+  })
+  check('D3 현행/폐지 집계 - 같은 이름의 폐지 행이 별도로 남는다', () => {
+    assert.equal(ldcRow('4119500000').status, '폐지')
+    assert.equal(ldcRow('4119500000').name, '경기도 부천시 원미구')
+    assert.equal(ldcFixture.deadCount, 1)
+    assert.equal(ldcFixture.aliveCount, ldcFixture.rowCount - 1)
+  })
+  const ldcFailed = (key, pattern) => {
+    const msg = ldcFailures[key]
+    assert.ok(msg !== null, `중단되어야 하는데 통과했다 (${key})`)
+    assert.match(msg, pattern)
+  }
+
+  check('D4 헤더가 다르면 중단한다 (부분 일치를 허용하지 않는다)', () => {
+    ldcFailed('badHeader', /헤더가 예상과 다릅니다/)
+  })
+  check('D5 폐지여부에 등록되지 않은 값이 있으면 중단한다', () => {
+    ldcFailed('badStatus', /폐지여부에 등록되지 않은 값/)
+  })
+  check('D6 손상 의심 값은 null 정제가 아니라 중단이다 (name_ko 가 NOT NULL 이므로)', () => {
+    ldcFailed('questionMark', /손상 의심 값/)
+    // U+FFFD 는 EUC-KR 디코딩 단계에서 먼저 걸린다 - 어느 쪽이든 중단이면 된다.
+    ldcFailed('replacementChar', /손상 의심 값|U\+FFFD/)
+  })
+  check('D7 10자리 숫자가 아닌 code 는 중단한다', () => {
+    ldcFailed('badCode', /10자리 숫자가 아닌/)
+  })
+  check('D8 code 중복은 중단한다', () => {
+    ldcFailed('dupCode', /중복된 값/)
+  })
+  check('D9 행 수가 하한 미만이면 중단한다 (다운로드 실패본 방어)', () => {
+    ldcFailed('tooFewRows', /데이터 행이/)
+  })
+  check('D10 컬럼 수가 3개가 아니면 중단한다', () => {
+    ldcFailed('badColumnCount', /컬럼 수가/)
+  })
+  check('D11 픽스처가 현행만 담고 있지 않다 (D3/H4 의 전제)', () => {
+    if (ldcFixtureError) throw new Error(`픽스처 생성 실패: ${ldcFixtureError.message}`)
+    assert.ok(ldcFixture.deadCount > 0, '폐지 행이 없으면 D3/H4 가 의미를 잃는다')
+  })
+
+  // ===== district 계층 (lib/district-hierarchy.mjs) =====
+  const ldcCandidates = () => {
+    if (ldcFixtureError) throw new Error(`픽스처 생성 실패: ${ldcFixtureError.message}`)
+    return districtCandidates(ldcFixture.rows)
+  }
+  const dcode = (list) => list.map((d) => d.code5).sort()
+
+  check('H1 isDistrictLevelCode - 시도/읍면동/리 는 시군구 레벨이 아니다', () => {
+    assert.equal(isDistrictLevelCode('1100000000'), false, '시도 행이 통과했다')
+    assert.equal(isDistrictLevelCode('1111000000'), true)
+    assert.equal(isDistrictLevelCode('1111010100'), false, '읍면동 행이 통과했다')
+    assert.equal(isDistrictLevelCode('1213025021'), false, '리 행이 통과했다')
+    assert.equal(isDistrictLevelCode('11110'), false, '5자리는 원본 코드가 아니다')
+  })
+  check('H2 1단계 후보 - 현행 시군구 레벨만 남는다', () => {
+    const c = ldcCandidates()
+    // 종로구 / 성남시 / 수정구 / 부천시 / 원미구(현행) / 영동군 / 증평군 / 세종 = 8
+    assert.deepEqual(dcode(c), ['11110', '36110', '41130', '41131', '41190', '41192', '43740', '43745'])
+  })
+  check('H3 성남시형 부모-자식 - 토큰 +1 이면 부모로 판정해 제외한다', () => {
+    const { districts, excludedParents } = resolveDistrictHierarchy(ldcCandidates())
+    const excluded = dcode(excludedParents)
+    assert.ok(excluded.includes('41130'), '성남시가 제외되지 않았다')
+    assert.ok(dcode(districts).includes('41131'), '수정구가 사라졌다')
+  })
+  check('H4 폐지 행이 섞여 있어도 현행만 대상 (부천 원미구 41192/41195형)', () => {
+    const c = ldcCandidates()
+    assert.ok(dcode(c).includes('41192'), '현행 원미구가 후보에서 빠졌다')
+    assert.ok(!dcode(c).includes('41195'), '폐지된 원미구가 후보에 들어왔다')
+    const { districts, excludedParents } = resolveDistrictHierarchy(c)
+    assert.ok(dcode(excludedParents).includes('41190'), '부천시가 제외되지 않았다')
+    assert.ok(dcode(districts).includes('41192'), '뒤 공백 때문에 원미구 판정이 어긋났다')
+  })
+  check('H5 ★ 영동군/증평군 반례 - 후보 B(앞4자리+끝자리0)였다면 영동군이 사라진다', () => {
+    // 43740 영동군 / 43745 증평군 은 앞 4자리 '4374' 를 공유하지만 부모-자식이 아니다.
+    // 이 테스트가 깨지면 누군가 코드 기반 규칙으로 되돌린 것이다.
+    // 근거와 폐기 이력: lib/district-hierarchy.mjs [B]
+    const c = ldcCandidates()
+    const yeongdong = c.find((d) => d.code5 === '43740')
+    const jeungpyeong = c.find((d) => d.code5 === '43745')
+    assert.equal(isDirectChild(yeongdong, jeungpyeong), false, '증평군이 영동군의 자식으로 판정됐다')
+    assert.equal(isDirectChild(jeungpyeong, yeongdong), false)
+    const { districts } = resolveDistrictHierarchy(c)
+    assert.ok(dcode(districts).includes('43740'), '영동군이 상위 시로 오인되어 제외됐다 - 후보 B 회귀')
+    assert.ok(dcode(districts).includes('43745'))
+  })
+  check('H6 ★ 앞 3자리 그룹 반례 - 성남/부천이 같은 411 이어도 서로를 부모로 보지 않는다', () => {
+    const c = ldcCandidates()
+    const seongnam = c.find((d) => d.code5 === '41130')
+    const bucheon = c.find((d) => d.code5 === '41190')
+    assert.equal(seongnam.code5.slice(0, 3), bucheon.code5.slice(0, 3), '픽스처 전제(같은 411)가 깨졌다')
+    assert.equal(isDirectChild(seongnam, bucheon), false)
+    assert.equal(isDirectChild(bucheon, seongnam), false)
+  })
+  check('H7 토큰이 2단계 이상 차이나면 부모-자식이 아니다', () => {
+    const p = { code5: '41130', sidoCode: '41', fullName: '경기도 성남시', tokens: ['경기도', '성남시'] }
+    const grandchild = { code5: '41131', sidoCode: '41', fullName: '경기도 성남시 분당구 정자동', tokens: ['경기도', '성남시', '분당구', '정자동'] }
+    assert.equal(isDirectChild(p, grandchild), false, '2단계 아래를 직계 자식으로 판정했다')
+  })
+  check('H8 토큰 앞부분이 다르면 부모-자식이 아니다 (우연한 접두 일치 방어)', () => {
+    const p = { code5: '41130', sidoCode: '41', fullName: '경기도 성남', tokens: ['경기도', '성남'] }
+    const c = { code5: '41131', sidoCode: '41', fullName: '경기도 성남시 수정구', tokens: ['경기도', '성남시', '수정구'] }
+    // startsWith 였다면 "경기도 성남" 이 "경기도 성남시 수정구" 의 접두사라 부모로 잡혔을 수 있다.
+    assert.equal(isDirectChild(p, c), false, 'token 비교가 아니라 문자열 접두 비교를 하고 있다')
+  })
+  check('H9 시도가 다르면 부모-자식이 아니다', () => {
+    const p = { code5: '41130', sidoCode: '41', fullName: '경기도 성남시', tokens: ['경기도', '성남시'] }
+    const c = { code5: '48120', sidoCode: '48', fullName: '경기도 성남시 분당구', tokens: ['경기도', '성남시', '분당구'] }
+    assert.equal(isDirectChild(p, c), false)
+  })
+  check('H10 상위 후보가 2개면 issues 로 올린다 (숫자를 맞추려 임의 선택하지 않는다)', () => {
+    const mk = (code5, tokens) => ({ code5, sidoCode: code5.slice(0, 2), fullName: tokens.join(' '), tokens, nameKo: tokens.at(-1) })
+    const list = [
+      mk('41130', ['경기도', '성남시']),
+      mk('41140', ['경기도', '성남시']),
+      mk('41131', ['경기도', '성남시', '수정구']),
+    ]
+    const { issues } = resolveDistrictHierarchy(list)
+    assert.ok(issues.some((i) => i.includes('상위 후보가 2개')), '모호한 계층이 조용히 통과했다')
+  })
+  check('H11 세종형 1토큰 행 - 부모도 자식도 아니고 그대로 남는다', () => {
+    const { districts } = resolveDistrictHierarchy(ldcCandidates())
+    const sejong = districts.find((d) => d.code5 === '36110')
+    assert.ok(sejong, '세종이 사라졌다')
+    assert.equal(sejong.nameKo, '세종특별자치시', '1토큰 행의 name_ko 도출이 어긋났다')
+  })
+  check('H12 픽스처 contract - 후보 8 / 제외 2 / 최종 6', () => {
+    const c = ldcCandidates()
+    const { districts, excludedParents, issues } = resolveDistrictHierarchy(c)
+    assert.equal(issues.length, 0, issues.join(' / '))
+    assert.equal(c.length, 8)
+    assert.equal(excludedParents.length, 2)
+    assert.equal(districts.length, 6)
+    // 후보 B 였다면 영동군까지 빠져 5개가 된다.
+    assert.deepEqual(dcode(districts), ['11110', '36110', '41131', '41192', '43740', '43745'])
+  })
+  check('H13 name_ko 는 마지막 토큰이고 024 제약을 만족한다', () => {
+    const { districts } = resolveDistrictHierarchy(ldcCandidates())
+    for (const d of districts) {
+      assert.match(d.code5, /^[0-9]{5}$/, `code_format 위반: ${d.code5}`)
+      assert.equal(d.code5.slice(0, 2), d.sidoCode, `sido_prefix 위반: ${d.code5}`)
+      assert.ok(d.nameKo && d.nameKo.length > 0)
+      assert.ok(!/\s/.test(d.nameKo), `name_ko 에 공백이 남았다: ${JSON.stringify(d.nameKo)}`)
+    }
+    assert.equal(districts.find((d) => d.code5 === '41131').nameKo, '수정구')
+    assert.equal(districts.find((d) => d.code5 === '41192').nameKo, '원미구')
+  })
+
+  // ===== Kakao 이름 비교 규칙 =====
+  check('K10 Kakao 일반구 표기는 마지막 토큰으로 비교한다 (저장값은 바꾸지 않는다)', () => {
+    // 실측: Kakao region_2depth_name 이 일반구에서 "성남시 분당구" 처럼 상위 시를 포함한다(11건).
+    const forCompare = (name) => String(name ?? '').trim().split(/\s+/).at(-1)
+    assert.equal(forCompare('성남시 분당구'), '분당구')
+    assert.equal(forCompare('부천시 원미구'), '원미구')
+    assert.equal(forCompare('강남구'), '강남구', '서울 자치구는 원래 1토큰이라 그대로여야 한다')
+    assert.equal(forCompare(' 고양시 일산동구 '), '일산동구')
   })
 
   // ----------------------------------------

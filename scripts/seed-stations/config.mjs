@@ -38,6 +38,19 @@ export const sourceFiles = {
     match: /역명.*(다국어|외국어).*\.csv$/i,
     hint: '서울교통공사_역명다국어표기 (data.go.kr/data/15044232)',
   },
+  legalDongCode: {
+    // 행정안전부 행정표준코드 법정동코드 전체자료 (code.go.kr)
+    // districts 테이블(migration_024)의 유일한 source-of-truth.
+    //
+    // ★ Kakao coord2regioncode(lib/kakao.mjs)는 이 master 를 만들지 않는다.
+    //   역 좌표의 district 판정과, 여기서 만든 master 와의 교차검증에만 쓴다.
+    //   불일치가 나오면 Kakao 쪽을 신뢰해 master 를 고치지 않고 중단한다.
+    //
+    // 확장자를 txt|csv 둘 다 받는 이유: 이 자료는 배포 형식이 고정돼 있지 않다.
+    // 실제 파일을 받기 전에 하나로 좁히면 findSourceFile 이 "0개"로 중단한다.
+    match: /법정동코드.*\.(txt|csv)$/i,
+    hint: '행정안전부 행정표준코드 법정동코드 전체자료 (code.go.kr, 검색어: "법정동코드 전체자료")',
+  },
 }
 
 // ========================================
