@@ -973,6 +973,116 @@ migration 022~032 파일을 작성했고 **아직 하나도 적용하지 않았�
   다시 대조해 `source_version`을 갱신할지 판단한다.
 - **관련 위치**: `scripts/seed-stations/config.mjs`(`sourceFiles.legalDongCode`),
   `supabase/migration_024_districts.sql`(`source_version`)
+
+## 22. seed_districts.sql guard가 "테이블 부재"와 "데이터 있음"을 구분해 알려주지 않는다
+
+- **현재 상태**: guard는 `IF EXISTS (SELECT 1 FROM station_districts LIMIT 1)` 형태라,
+  테이블 자체가 없으면 Postgres 기본 오류 `42P01 relation "station_districts" does not
+  exist`가 난다. 커스텀 메시지("비어 있지 않습니다")와 문구가 달라 혼동되지는 않지만,
+  **어느 migration이 누락됐는지 바로 알 수 없다**(실제로 2026-08-09에 한 번 겪었다).
+- **개선안**: guard 맨 앞에 `to_regclass()` 기반 존재 확인을 넣는다. `to_regclass()`는
+  없는 객체에 예외 대신 NULL을 돌려줘서 PL/pgSQL 안에서 안전하다.
+  ```sql
+  IF to_regclass('public.station_districts') IS NULL THEN
+    RAISE EXCEPTION 'seed_districts.sql: station_districts 테이블이 없습니다. migration_026 을 먼저 적용하십시오. (순서: 024 → 025 → 026 → seed_stations → seed_districts)';
+  END IF;
+  ```
+  `districts`(024) / `stations`(025)도 같은 방식으로 앞에 둔다.
+- **재검토 조건**: 다음에 generator를 손댈 때 함께 반영한다. **이번 적용의 blocker가
+  아니다** — 026을 먼저 적용하면 이 경로를 타지 않는다.
+- **관련 위치**: `scripts/seed-stations/generate-districts-sql.mjs`(guard 생성부).
+  ★ 생성된 SQL을 직접 고치는 것이 아니라 생성기를 고치고 재생성해야 한다.
+
+## 23. station_aliases 시드 생성기가 없다
+
+- **현재 상태**: migration 026이 `station_aliases` 테이블과 `normalize_station_query()` /
+  `hangul_chosung()` 함수를 만들지만, **행을 채우는 생성기는 아직 만들지 않았다.**
+  빈 테이블이어도 깨지는 곳은 없다 — 이 테이블을 읽는 코드가 저장소 어디에도 없다
+  (migration 027~032 참조 0건, `src/` 참조 0건, 026의 두 함수는 이 테이블을 조회하지 않는
+  순수 문자열 함수다).
+- **남은 일**: 역 자동완성 검색을 붙이는 시점에 별도 작업이 필요하다.
+  초성(`kind='chosung'`) · 공식명(`official`) · 축약어(`short`) · 옛 표기(`legacy`) 생성 +
+  **`alias_normalized`는 반드시 DB 함수 `normalize_station_query()`를 통해 굽는다**
+  (026:56 — 저장 시점과 조회 시점이 같은 함수를 써야 한다. JS 포팅본으로 구우면
+  두 구현이 갈라지는 순간 검색이 조용히 깨진다).
+- **관련 위치**: `supabase/migration_026_station_mapping_search.sql`(56, 141-178),
+  `scripts/seed-stations/lib/normalize.mjs`(포팅본 - 굽는 용도로 쓰지 말 것)
+
+## 24. 026의 두 함수는 PUBLIC(anon 포함) EXECUTE 가능하다 (기록만)
+
+- **현재 상태**: `normalize_station_query()` / `hangul_chosung()`에 `REVOKE`/`GRANT`가
+  없어 Postgres 기본값대로 PUBLIC이 실행할 수 있다.
+- **판단**: 실제 위험 없음. 둘 다 `SECURITY DEFINER`가 아니고 `immutable strict`
+  순수 문자열 변환이며 데이터에 접근하지 않는다. 026:29가 이 의도를 명시하고 있다.
+- **대비되는 지점**: 028/029가 만든 함수는 `revoke ... from public, anon` 을 걸었는데,
+  그쪽은 `SECURITY DEFINER`라 성격이 다르다. 030의 "함수 권한 위생"도 기존 6개 함수만
+  대상이라 이 둘은 범위 밖이다.
+- **재검토 조건**: 함수 권한 정책을 일괄 정리할 때 함께 본다.
+
+## 25. 026 롤백 주석은 "적용 직후 빈 상태"에서만 안전하다
+
+- **현재 상태**: 026:229-236의 롤백 주석은 `drop table station_aliases` →
+  `drop table station_districts` → 함수 2개 drop 순서다. 순서 자체는 맞다(자식 먼저).
+- **★ 안전한 시점이 한정된다**:
+  - `seed_districts.sql` 실행 **후**에는 `drop table station_districts`가 **318행을 함께
+    지운다.**
+  - migration 027 적용 **후**에는 `fill_request_location()` 트리거가 그 테이블을 참조하므로
+    (027:145) 테이블을 지우면 **요청서 INSERT가 전부 실패한다.**
+- **재검토 조건**: 026을 되돌려야 하는 상황이 오면 위 두 가지를 먼저 확인한다.
+  seed 이후 되돌리기는 롤백이 아니라 데이터 삭제다.
+
+## 26. seed_districts.sql 실행 중 `_seed_station_ref does not exist` 관측 (2026-08-09, 원인 미확정)
+
+- **관측**: 2026-08-09 `seed_districts.sql`을 Supabase SQL Editor에서 실행하는 도중
+  `ERROR: 42P01: relation "_seed_station_ref" does not exist` 가 한 번 났다.
+  **데이터는 정상이다** — INSERT는 정상 COMMIT됐고 districts 256 / station_districts 318,
+  서울 25 / primary 308 / secondary 10 / 역당 분포 1→298·2→10, 경계역 10개 전부 기대값
+  일치를 확인했다.
+
+- **★ 원인은 "하단 verification 쿼리가 TEMP를 참조해서"가 아니다. 파일로 확인했다.**
+  `output/seed_districts.sql`(1,073줄) 기준:
+  - `COMMIT;` 은 **1028행**
+  - `_seed_station_ref` / `_seed_station_match` 참조는 **12곳 전부 343~1026행**, 즉 COMMIT 앞
+  - **COMMIT 이후 구문 16개는 전부 `districts` / `station_districts` / `stations` 만 조회한다
+    (temp 참조 0건, 기계 확인)**
+
+  따라서 "COMMIT 이후 TEMP가 사라져서 검증 쿼리가 실패했다"는 설명은 이 파일에 대해서는
+  성립하지 않는다. **이 항목을 근거로 하단 검증 쿼리를 고치면 안 된다** — 고칠 대상이 없다.
+
+- **남은 가설 (미확정)**:
+  1. 실행자가 스크립트 **일부 구간을 따로 선택 실행**했다. 668/682/685행(`DO $match$` 및
+     `_seed_station_match` INSERT)은 `_seed_station_ref` 를 참조하므로, 그 구간만 다시 돌리면
+     정확히 이 에러가 난다.
+  2. SQL Editor가 스크립트를 문장 단위로 쪼개 각각 별도 트랜잭션으로 보냈다.
+     그 경우 `ON COMMIT DROP` 때문에 temp 가 즉시 사라진다. 다만 이 가설이 맞다면
+     **최종 INSERT도 실패했어야 하는데 데이터는 정상**이라 단독으로는 설명되지 않는다.
+
+- **실질 개선 방향 (원인과 무관하게 유효)**: 이 SQL은 **TEMP 테이블을 아예 쓰지 않아도 된다.**
+  `_seed_station_ref` / `_seed_station_match` 는 CTE(`WITH ... AS (VALUES ...)`)로 바꿀 수 있고,
+  그러면 세션·트랜잭션 수명에 얽힌 이 실패 모드 자체가 사라진다. 부분 재실행에도 견딘다.
+  다만 `DO $match$` 의 사전 검사(expected/0-match/multi-match)를 CTE로 옮기려면 구조를
+  다시 설계해야 한다 - 단순 치환이 아니다.
+  대안으로 **one-shot 실행부와 verification 쿼리를 별도 파일로 분리**하면 부분 재실행
+  유인이 줄어든다.
+
+- **재검토 조건**: 다음에 generator를 손댈 때 22번(guard `to_regclass`)과 함께 처리한다.
+  **이미 실행이 끝났고 데이터가 정상이므로 지금 고치지 않는다.**
+- **관련 위치**: `scripts/seed-stations/generate-districts-sql.mjs`(TEMP 테이블 생성부,
+  `DO $match$`, verification 생성부)
+
+## 현재 DB 상태 (2026-08-09 기준)
+
+| 테이블 | 행 수 | 비고 |
+| --- | --- | --- |
+| `districts` | 256 | 026 이후 시드 완료 |
+| `lines` | 18 | |
+| `stations` | 308 | |
+| `station_lines` | 405 | |
+| `station_districts` | 318 | primary 308 / secondary 10 |
+| `station_aliases` | 0 | 시드 생성기 없음(23번) |
+
+적용된 migration: **024 / 025 / 026** (022 / 023 포함). **027 이후 미적용.**
+026 정규화 검증 t01~t21 전부 true(초성 통과 t15/t16 포함).
 ---
 
 # ⚠ Known Bug — 중개사 가입이 이메일 확인 설정에서 막힌다
