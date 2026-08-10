@@ -2287,3 +2287,174 @@ prebuild 가 이미 강제층이라 중복이다. 또한 **PowerShell 쓰기는 
 
 ★ exhaustive-deps 2건은 **기계적으로 deps 에 넣으면 안 된다.** 의존성이 추가되면 effect
 재실행 시점이 바뀌어 리다이렉트가 중복 발생할 수 있다. 각 건마다 의도를 확인하고 고친다.
+
+# migration 027 적용 완료 (2026-08-10) — requests 지역 구조화 컬럼 + 파생 트리거
+
+**적용됨.** 실행문 6개 그대로이며 migration 파일은 수정하지 않았다.
+**백필은 하지 않았다** — 027 파일의 백필 구간(171~201행)은 전부 주석이고
+실행되는 `UPDATE`/`INSERT`/`DELETE`는 **0건**이다.
+
+## 적용 방식 — 명시적 트랜잭션으로 감쌌다
+
+`BEGIN; … COMMIT;` 으로 감싸 실행했다. **027 파일 자체에는 트랜잭션 제어문이 없다**
+(128행의 `begin`은 plpgsql 함수 본문이고, 211~216행의 `begin;`/`rollback;`은 주석이다).
+
+이게 중요한 이유: 027은 `create type` / `add constraint` / `create trigger` /
+`create index` 에 `IF NOT EXISTS` 가 없어 **재실행이 불가능**하다(`add column` 만 idempotent).
+감싸지 않은 채 중간에 실패하면 부분 적용이 남고, 그 상태에서는 재실행도 롤백 주석 실행도
+안전하지 않다. 앞으로 IF NOT EXISTS 가 없는 migration 은 같은 방식으로 감싼다.
+
+## 적용 전 스냅샷 (원복 기준)
+
+- master: districts 256 / lines 18 / stations 308(active) / station_lines 405 /
+  station_districts 318 / station_aliases 0
+- 027 객체 5개(type / function / trigger / index / constraint) **전부 부재** 확인
+- 신규 컬럼 5개 **전부 부재** 확인 (PostgREST `42703` + `information_schema` 0행)
+- requests: total 8 / open 2 / closed 6 / distinct_region 5 / sum_response_count 1
+- `id_set_hash = dac192e14823928f992d50054efe2a82`
+
+## 적용 후 구조 검증 — 전부 통과
+
+| 항목 | 결과 |
+| --- | --- |
+| 신규 컬럼 5개 | `district_code` text NULL / `location_lat` float8 NULL / `location_lng` float8 NULL / `location_type` location_type **NOT NULL** default `'station'::location_type` / `station_id` uuid NULL |
+| 기존 8건 | `location_type='station'` 8행, 나머지 4개 컬럼 **전부 NULL** 8행 |
+| 데이터 불변 | `id_set_hash` 적용 전후 **동일**(`dac192e1…`). total 8 / open 2 / closed 6 / distinct_region 5 / sum_response_count 1 전부 동일 |
+| 객체 | 5개 전부 생성 확인 |
+| 트리거 | `UPDATE OF` 목록에 **`status` 미포함**(position=0) 확인 |
+
+트리거의 `status` 미포함은 단순 확인 항목이 아니다. 027:19-20 이 내건 **"작성 시점의 구를
+고정한다"** 는 설계 원칙이 실제로 성립하는지를 결정한다. `status` 가 포함됐다면
+`closeRequest()` 의 상태 변경만으로 과거 요청서의 `district_code` 가 현재
+`station_districts` 기준으로 재계산됐을 것이다.
+
+## 현재 DB 상태 (2026-08-10 기준)
+
+- 적용된 migration: **022 ~ 027** (028 이상 미적용)
+- master: districts 256 / lines 18 / stations 308 / station_lines 405 /
+  station_districts 318 / **station_aliases 0**
+- requests 8건: `location_type='station'` 8 / `station_id`·`district_code`·
+  `location_lat`·`location_lng` **전부 NULL 8**
+- 308역 전부 `station_districts` primary 를 정확히 1개씩 보유(누락 0 / 중복 0)
+
+## 앱 영향 — 없음
+
+- 요청 생성: `createRequest()` 가 신규 컬럼을 보내지 않고, 트리거가 `station_id is null`
+  분기로 통과시킨다. 신규 컬럼은 NULL 로 들어간다
+- 조회: `requests` 를 읽는 4개 함수가 전부 `select('*')` 이고 명시 컬럼 select·
+  runtime validator·`Object.keys` 열거·`{...request}` 전개가 **0건**이라 키가 늘어도 무해
+- UPDATE: 앱 전체에서 `requests` UPDATE 는 `closeRequest()`(`status` 만) 하나뿐 → 트리거 미발동
+- 중개사 화면: 030 미적용이라 기존 정책(`requests_select_own_or_realtor`)이 그대로 살아 있다
+- RLS: 027 은 policy/grant/revoke 문이 0건이다
+
+## ★ 028 이상으로 넘어가면 안 되는 이유
+
+`requests.district_code` 가 **8건 전부 NULL** 인 현재 상태에서 029/030 을 적용하면,
+라우팅 조건 `sa.district_code = r.district_code` 에서 전부 탈락해
+**open 2건이 어떤 중개사에게도 보이지 않는다.** 백필이 029 의 선행 조건이다.
+
+# 027 이후 후속 항목 (2026-08-10 기록)
+
+## 30. ★ F1 — 백필 SQL 의 "…역" 접미사 함정
+
+027 주석의 매핑 표는 대상을 **홍대입구역 / 이태원역 / 건대입구역 / 강남역** 으로 적었지만
+**마스터의 실제 `name_ko` 는 접미사가 없다**(`홍대입구` / `이태원` / `건대입구` / `강남`).
+반면 **`신촌역` 은 실재하며 그것이 경의중앙선 역**이다(2호선은 `신촌`).
+
+따라서 주석 표기를 그대로 `where name_ko = '…역'` 으로 옮기면:
+
+| 대상 | 결과 |
+| --- | --- |
+| 홍대입구역 / 이태원역 / 건대입구역 / 강남역 | **0행** — 백필 조용히 누락 |
+| 신촌역 | **1행 — 경의중앙선** ★ 027 이 정한 기본값(2호선)과 정반대 |
+
+0행은 눈에 띄지만 **신촌은 1행 매칭이라 성공한 것처럼 보인다.** 이게 가장 위험하다.
+
+`LIKE` 도 쓰면 안 된다 — `%강남%` 은 `강남` 과 `강남구청` 2행, `%신촌%` 은 2행을 잡는다.
+**등호 매칭만 쓴다.** 308역의 `name_ko` 는 중복이 0건이라 등호는 항상 0행 또는 1행이다.
+
+## 31. F2 — location_type CHECK 확장 시 트리거 early return 이 위조 경로가 된다
+
+`fill_request_location()` 129-131행의 `if new.location_type <> 'station' then return new;`
+는 파생을 건너뛰고 **클라이언트 값을 그대로 통과**시킨다. 지금은
+`requests_location_type_station_only` CHECK 가 막아 도달 불가다.
+
+그러나 027:14 가 예고한 대로 **"확장 시 이 CHECK 만 교체"** 하는 순간 이 분기가 살아있는
+위조 경로가 된다 — `location_type='district'` + 임의 `district_code` 가 검증 없이 저장된다.
+확장 migration 을 쓸 때 **이 분기를 함께 손봐야 한다.**
+
+## 32. F3 — 027 롤백 주석은 030/031 적용 후 실패한다
+
+030 의 `properties_insert_realtor` 정책과 031 의 재작성본이 `r.district_code` 를 참조하고
+**정책은 Postgres 가 의존성을 추적**한다. 따라서 030 이후에는
+`alter table requests drop column district_code` 가 **실패**한다.
+`CASCADE` 를 붙이면 정책이 함께 삭제되어 영업지역 밖 응답 삽입이 열린다.
+
+029 의 함수들은 `language sql` + 문자열 본문이라 의존성이 추적되지 않는다 →
+컬럼 DROP 은 성공하지만 **호출 시점에 깨진다**(중개사 목록·응답 화면 전면 장애).
+
+롤백 안전 경계: **백필 시점**과 **030 적용 시점** 두 곳이다.
+적용 직후(백필 전)에는 신규 컬럼에 정보가 없어 손실 없이 되돌릴 수 있다.
+
+## 33. F4 — 027:187 의 "약 400m" 는 오기
+
+마스터 좌표로 계산하면 2호선 `신촌`(37.555153, 126.93689)과 경의중앙선 `신촌역`
+(37.559768, 126.942308)은 **약 702m** 떨어져 있다(Δlat ≈ 514m, Δlng ≈ 478m).
+판단을 바꾸는 수치는 아니지만 "400m 라 사실상 같은 곳"이라는 인상으로 결정하면 근거가 틀어진다.
+migration 파일은 수정하지 않으므로 여기에만 기록한다.
+
+## 34. F5 — "위치 컬럼을 UPDATE SET 에 싣지 않는다" 는 호출 규약
+
+Postgres 의 `UPDATE OF` 는 **값이 바뀌었는지가 아니라 컬럼이 SET 목록에 등장했는지**로
+판정한다. 현재는 `closeRequest()` 가 `status` 만 SET 해서 트리거가 안 돈다.
+
+★ 요청서 수정 UI 를 만들 때 행 전체를 되돌려 보내는 방식
+(`.update({ ...request, ...changes })`)을 쓰면 `district_code` 가 SET 에 포함되어
+**재계산이 일어난다.** 스냅샷 불변성은 트리거가 아니라 이 호출 규약이 지키고 있다.
+
+## 35. F6 — 8건 실데이터 대조는 아직 하지 못했다
+
+로컬에 supabase CLI·psql 이 없고 `.env` 에는 anon key 만 있다(service_role 없음).
+anon 으로 `requests` 를 조회하면 RLS 가 차단해 0행이다. 따라서 request id / 생성일 /
+`region_text` 의 **실제 문자열**은 확인되지 않았고, 건수 분포는 027:173-175 에 기록된
+실측값을 인용한 것이다.
+
+★ 백필 SQL 은 `region_text` 등호 매칭에 의존하므로, **실행 전에 SQL Editor 에서
+`select region_text, count(*) from requests group by 1` 로 실제 문자열을 먼저 확인**해야 한다.
+
+## 36. ★ D1 — 신촌 2건은 2호선으로 결정 (2026-08-10, 추정값)
+
+**결정: 2호선 `신촌`(`6d6e0a4e-e88b-4ce6-8eca-b84c7291ab9c`)으로 백필한다.**
+경의중앙선 `신촌역`(`19a92d0f-d4bb-4afa-90f5-848a8580a489`)이 아니다.
+
+근거: 통칭 "신촌"이 일반적으로 가리키는 대상이 2호선이고, 두 역 모두 primary district 가
+**11410 서대문구로 동일**해 라우팅 결과에 차이가 없다. 차이는 `station_id` 와 지도 핀 좌표뿐이다.
+
+★★ **이것은 추정값이다** ★★
+
+> 신촌 2건의 `station_id` 는 2호선으로 추정 배정한 값이다.
+> 실제 고객이 경의중앙선 신촌역을 의도했을 가능성을 배제하지 못한다.
+> 이 값을 근거로 다른 판단(수요 분석, 통계 등)을 하지 말 것.
+> 라우팅에는 영향 없음 — 두 역의 primary district 가 11410 으로 동일하다.
+
+`line_code` 를 NULL 로 둔 것, `source_version` 을 추측하지 않은 것과 같은 원칙 아래,
+추정임을 표기해 두고 나중에 근거처럼 취급되지 않게 한다.
+
+## 37. D3 — station_aliases 시드가 자동완성 UI 의 실질적 선행 조건
+
+`station_aliases` 가 **0행**이라 별칭 기반 검색이 전부 죽어 있다.
+
+| 검색 입력 | alias 없이 가능한가 |
+| --- | --- |
+| 한글 정확 prefix (`홍대` → 홍대입구) | ✅ `stations.name_ko` 직접 prefix |
+| 초성 (`ㅎㄷ`) | ❌ 026:22 가 초성을 별칭 행(`kind='chosung'`)으로 설계 |
+| 영문 (`hongdae`) | ❌ 별칭 행 필요 |
+| 일본어 / 중국어 | ❌ 별칭 행 필요 (026:71) |
+
+외국인 대상 서비스에서 다국어·영문 검색이 안 되는 자동완성은 반쪽이다. 게다가 마스터에
+`홍대입구`(접미사 없음)와 `신촌역`(접미사 있음)이 섞여 있어 `name_ko` 직접 매칭만으로는
+사용자가 "신촌"을 쳤을 때 `신촌역`이 안 뜨는 불일치가 생긴다. TODO 23번과 같은 항목이다.
+
+★ DB migration dependency 와 frontend rollout dependency 는 다르다. 자동완성 UI 는
+025·026·027 만으로 구현 가능하며 028~032 가 필요 없다. 오히려 032 가 "LocationStep UI 가
+배포되어 있을 것"을 명시적 전제로 요구하므로 **UI 가 028~032 보다 먼저** 나와야 한다.
