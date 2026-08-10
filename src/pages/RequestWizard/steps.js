@@ -15,7 +15,14 @@ const headSteps = [
     headlineKey: 'locationHeadline',
     subKey: 'locationSub',
     isApplicable: () => true,
-    validate: (form) => form.station.trim().length > 0,
+    // ★ 자동완성 목록에서 실제로 고른 경우에만 통과한다(2026-08-10).
+    //   텍스트만 입력하면 검색은 되지만 다음 단계로 못 간다.
+    //
+    //   027 은 station_id 를 nullable 로 두지만 그건 legacy 호환과 rollout 안전을 위한
+    //   것이고, 프론트가 더 엄격한 것은 모순이 아니다. station_id 없이 저장된 요청서는
+    //   029 라우팅에서 에러가 아니라 조용히 탈락한다 - 발견이 가장 어려운 종류의 문제다.
+    //   308역 전부 별칭이 있어(커버 308/308) "검색 안 되는 역" 때문에 막힐 일은 없다.
+    validate: (form) => form.station.trim().length > 0 && form.stationId != null,
   },
   {
     id: 'transaction',

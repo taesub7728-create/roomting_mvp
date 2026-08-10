@@ -10,6 +10,14 @@ import { TRANSACTION_ISSUE_MESSAGE_KEY } from './translations'
 // "다음" 버튼을 막을 뿐 이유를 설명하지 않는다. 여기서는 draft 재개처럼 단계 validate()를
 // 다시 거치지 않고 review까지 우회한 경우까지 잡아내는 게 목적이라 에러 문구를 반환한다.
 export function validateRequest(form, t) {
+  // 역 선택은 자동완성 목록을 거쳐야만 성립한다. location 단계 validate() 가 이미 막지만,
+  // 그건 "다음" 버튼만 막을 뿐이다. 여기서 다시 보는 이유는 단계 validate() 를 거치지 않고
+  // review 까지 도달하는 경로 때문이다 - 구버전 draft 재개(stationId 가 아예 없다), 복원본
+  // 진입, 단계 점프. 그 경로로 들어온 요청서는 station_id 없이 저장되고 029 라우팅에서
+  // 조용히 탈락한다.
+  if (!form.station || !form.station.trim()) return t.stationRequiredError
+  if (form.stationId == null) return t.stationRequiredError
+
   if (!form.moveInDate) return t.moveInRequiredError
   if (!isValidLocalISODate(form.moveInDate)) return t.moveInRequiredError
   if (isPastLocalDate(form.moveInDate)) return t.moveInPastDateError

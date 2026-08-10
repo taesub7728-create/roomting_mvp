@@ -26,6 +26,46 @@
 .rw-input::placeholder, .rw-textarea::placeholder { color: var(--ink-soft); font-weight: 500; }
 .rw-textarea { resize: none; height: 86px; line-height: 1.6; }
 
+/* 역 자동완성 --------------------------------------------------------------
+   기존 rw-input 위에 드롭다운만 얹는다. 새 스타일 시스템을 만들지 않는다. */
+.station-ac { position: relative; }
+
+/* 역을 실제로 고른 상태. 테두리만 코랄로 바꿔 "선택됨"을 알린다.
+   --coral 은 표시용이다(흰 글씨가 올라가지 않으므로 --coral-action 이 아니다). */
+.rw-input.station-ac-selected { border-color: var(--coral); background: var(--white); }
+
+.station-ac-hint {
+  margin-top: 6px; font-size: 11.5px; font-weight: 700; color: var(--coral);
+}
+/* 텍스트만 있고 아직 고르지 않은 상태. 실패가 아니라 안내라 danger 색을 쓰지 않는다. */
+.station-ac-hint-pick { color: var(--muted); }
+
+.station-ac-panel {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: 13px; overflow: hidden;
+  box-shadow: 0 8px 20px rgba(var(--coral-rgb), 0.10);
+}
+
+.station-ac-msg {
+  padding: 13px 15px; font-size: 13px; font-weight: 600; color: var(--ink-soft);
+}
+.station-ac-msg-error { color: var(--danger); }
+
+.station-ac-list { list-style: none; margin: 0; padding: 4px; max-height: 264px; overflow-y: auto; }
+
+.station-ac-item {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 11px 12px; border-radius: 9px; cursor: pointer;
+  transition: background .12s;
+}
+.station-ac-item.active { background: var(--paper-soft); }
+.station-ac-name { font-size: 14px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
+.station-ac-lines {
+  font-size: 11.5px; font-weight: 600; color: var(--muted-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
 .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   padding: 8px 14px; border-radius: 50px;

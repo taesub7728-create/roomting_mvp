@@ -115,6 +115,21 @@ export default function SignUp({ mode = 'signup' }) {
 
     const { payload } = classification
 
+    // ★ 역을 고르지 않은 요청서는 자동 제출하지 않는다(2026-08-10).
+    //
+    //   자동완성 도입 이전에 저장된 pending payload 에는 stationId 키가 아예 없다.
+    //   그대로 제출하면 station_id 없는 요청서가 되어 029 라우팅에서 조용히 탈락한다.
+    //
+    //   ★ regionText 문자열로 station 을 추정하지 않는다. "신촌" 하나만 봐도 2호선과
+    //     경의중앙선 두 역이 있고, 어느 쪽을 의도했는지는 사용자만 안다.
+    //
+    //   editable 로 돌려보내면 기존 "요청서 수정" 흐름이 그대로 재사용된다 - 복원본을
+    //   저장하고 마법사로 보내 사용자가 직접 고르게 한다. pending key 는 유지된다.
+    if (!payload?.stationId) {
+      console.warn('[pending-submit] station not selected, routing to edit instead of submitting')
+      return { status: 'editable', requestId: null }
+    }
+
     try {
       console.log('[pending-submit] starting', {
         dealType: payload?.dealType,
@@ -260,11 +275,15 @@ export default function SignUp({ mode = 'signup' }) {
 
     const { form, rentFallbackApplied } = restoreRequestForm(classification.payload)
 
-    // 복귀 단계: editable로 분류되는 constraint는 둘 다 거래조건 단계 항목이다.
+    // 복귀 단계: 사용자가 실제로 고쳐야 하는 단계로 보낸다.
     // review로 직행시키지 않는다 - 단계 validate()를 건너뛰어 검증 공백이 재현된다.
+    //
+    // 역 미선택으로 돌아온 경우는 location 단계다(자동완성에서 다시 고르면 된다).
+    // 그 외 editable로 분류되는 constraint는 둘 다 거래조건 단계 항목이라 transaction이다.
+    const returnStep = form.stationId == null ? 'location' : 'transaction'
     const saved = saveRestoredDraft({
       form,
-      currentStep: getStepIndex('residential', 'transaction'),
+      currentStep: getStepIndex('residential', returnStep),
       sourceSavedAt: classification.savedAt,
       rentFallbackApplied,
     })

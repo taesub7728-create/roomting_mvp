@@ -8,6 +8,11 @@ export function buildRequestPayload(form) {
 
   return {
     regionText: form.station.trim(),
+    // 자동완성에서 실제로 고른 경우에만 값이 있다. 자유 입력이면 null 이다(032 전까지 허용).
+    // ★ district_code / location_lat / location_lng 는 보내지 않는다.
+    //   027 의 fill_request_location() 트리거가 station_id 로 DB master 에서 파생한다.
+    //   클라이언트가 보내도 덮어써지지만, 보내는 것 자체가 "이 값을 신뢰한다"는 잘못된 신호다.
+    stationId: form.stationId ?? null,
     propertyCategory: 'residential',
     dealType: form.dealType,
     rentMax: isJeonse ? null : form.rent,

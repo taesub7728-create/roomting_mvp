@@ -9,6 +9,7 @@ export const SESSION_REQUIRED_ERROR = '로그인이 필요합니다.'
 // (에이전트가 다른 고객을 대신 작성하는 기능은 이후 단계에서 customer_id를 선택하는 UI와 함께 추가 예정)
 export async function createRequest({
   regionText,
+  stationId,
   propertyCategory,
   dealType,
   rentMax,
@@ -34,6 +35,13 @@ export async function createRequest({
       customer_id: user.id,
       created_by: user.id,
       region_text: regionText,
+      // 자동완성에서 고른 경우에만 채운다. 구버전 pending payload 에는 이 키가 없어
+      // undefined 로 들어오므로 null 로 정규화한다.
+      //
+      // ★ district_code / location_lat / location_lng 는 여기서 보내지 않는다.
+      //   migration_027 의 trg_fill_request_location 트리거가 station_id 를 근거로
+      //   stations / station_districts 에서 파생한다. station_id 가 null 이면 셋 다 null 이 된다.
+      station_id: stationId ?? null,
       property_category: propertyCategory ?? 'residential',
       deal_type: dealType ?? 'rent',
       rent_max: rentMax,

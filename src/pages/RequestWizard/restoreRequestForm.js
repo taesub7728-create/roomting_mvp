@@ -52,6 +52,10 @@ export function restoreRequestForm(payload) {
 
   const form = {
     station: toText(safe.regionText),
+    // 자동완성 도입(2026-08-10) 이전에 저장된 payload 에는 이 키가 없다 - null 로 떨어진다.
+    // 타입이 깨졌을 때도 null 이다(원칙 2). 값이 없으면 사용자가 다시 고르면 되고,
+    // 032 전까지는 없는 채로도 제출된다.
+    stationId: typeof safe.stationId === 'string' && safe.stationId ? safe.stationId : null,
     dealType,
 
     // 월세 슬라이더: 월세로 제출됐을 때만 원값이 있다. 전세였다면 기본값(원칙 3).

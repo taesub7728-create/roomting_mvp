@@ -97,7 +97,12 @@ function readEntry(key, maxStepIndex) {
 
   if (parsed.version === DRAFT_VERSION) {
     return {
-      form: parsed.draft,
+      // ★ DEFAULT_FORM 을 깔고 덮어쓴다. v2 draft 라도 저장 시점에 없던 필드가 있을 수 있다
+      //   (stationId 는 2026-08-10 자동완성 도입 때 추가됐다). 없는 채로 form 에 넣으면
+      //   해당 입력이 uncontrolled 로 바뀌거나 undefined 가 payload 로 새어 나간다.
+      //   버전을 올려 강제 마이그레이션하지 않는 이유: 값 의미가 바뀐 게 아니라 늘어나기만
+      //   해서, 기본값으로 채우면 사용자가 쓰던 draft 를 그대로 이어쓸 수 있다.
+      form: { ...DEFAULT_FORM, ...parsed.draft },
       currentStep: clamp(parsed.currentStep ?? 0, 0, maxStepIndex),
       savedAt: parsed.savedAt,
       // 복원본에만 있는 필드들(일반 draft에는 없어서 undefined로 남는다)
