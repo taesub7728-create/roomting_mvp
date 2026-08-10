@@ -2509,3 +2509,38 @@ closed 6건 전부 만료, open 2건 중 1건도 만료.
 전부 만료·테스트 데이터라 피해가 없다. 032 적용 시 이 판단을 기록할 것.
 (대안: 032 직전에 8건을 삭제하면 VALIDATE 가 가능해진다 — 운영 데이터 삭제이므로
 별도 승인 사안이다. 지금 결정하지 않는다.)
+
+# station_aliases 시드 완료 (2026-08-10)
+
+**적재됨.** `npm run seed:stations:generate-alias-sql` 로 만든
+`output/seed_station_aliases.sql` 을 SQL Editor 에서 실행했다.
+
+## 실측 결과
+
+| 항목 | 값 |
+| --- | --- |
+| station_aliases | **1,364** |
+| official | 936 (ko 308 / en 308 / **ja 222** / **zh 98**) |
+| chosung | 308 |
+| legacy | 120 |
+| station coverage | **308 / 308** (orphan 0) |
+
+검색 검증: `홍대` → 홍대입구 / `ㅎㄷ` → 학동·행당·홍대입구 /
+`gang` → 강남·강동 등 / 신촌 2역 각각 alias 6개.
+
+★ **중국어 coverage 는 `name_zh` 98/308 = 31.8%** 다. `name_hanja` 는 한국식 한자
+역명이지 중국어 역명이 아니므로 합쳐서 93.5% 라고 말하지 않는다. 한자는 품질 정제 후
+별도 보조 검색 계층으로 다룬다(후속 증분 시드).
+
+## 39. seed SQL 의 verification 쿼리가 TEMP 테이블에 의존한다
+
+**seed SQL 의 TEMP 테이블은 Supabase SQL Editor 에서 COMMIT 이후 참조할 수 없다.**
+`seed_districts.sql` 과 `seed_station_aliases.sql` 양쪽에서 재현됐다.
+INSERT 는 정상 완료되므로 실행에 영향은 없으나 **실행자가 실패로 오인한다.**
+다음에 generator 를 손댈 때 verification 쿼리를 TEMP 비의존 형태로 바꿀 것.
+
+원인: TEMP 테이블을 `ON COMMIT DROP` 으로 만들기 때문에 COMMIT 시점에 사라진다.
+`seed_station_aliases.sql` 은 COMMIT 이후 구간이 이미 TEMP 를 참조하지 않도록 작성했지만
+(생성 시 검증함), 실행자가 파일 전체를 한 번에 돌리면 SQL Editor 가 마지막 문장의 결과만
+보여주는 것과 맞물려 혼동이 남는다. 근본 해결은 verification 을 **별도 파일로 분리**하거나
+TEMP 대신 `VALUES` 인라인으로 기대값을 적는 것이다.

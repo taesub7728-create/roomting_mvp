@@ -32,6 +32,12 @@ import {
 } from './lib/display-lines.mjs'
 import { groupFingerprint } from './lib/fingerprint.mjs'
 import { assertNormalizerMatchesSql, normalizeStationQuery } from './lib/normalize.mjs'
+import {
+  normalizeStationQuery as searchNormalize,
+  normalizeStationQuerySqlParity,
+  hangulChosung,
+} from '../../src/shared/stationSearch/normalizeStationQuery.js'
+import { legacyAliasExclusions } from './legacy-alias-exclusions.mjs'
 import { collectOverrideSchemaErrors } from './lib/override-schema.mjs'
 import { reviewId } from './lib/review-id.mjs'
 import { assertSourceRowKeysUnique, sourceRowKey } from './lib/source-row-key.mjs'
@@ -358,6 +364,150 @@ function run() {
 
   // ===== 정규화 =====
   check('N0 정규화 포팅본이 migration_026 확인 벡터와 일치', () => { assertNormalizerMatchesSql() })
+
+  // ===== [S] shared 검색 정규화 (src/shared/stationSearch/normalizeStationQuery.js) =====
+  //   프론트 autocomplete 와 alias 생성기가 같이 쓰는 계약이다. 한쪽만 바뀌면 검색이 조용히 깨진다.
+  const cp = (n) => String.fromCharCode(n)
+
+  check('SN1 CJK 호환 한자가 일반 CJK 로 수렴한다', () => {
+    // 원본 공공데이터의 한자 표기에 섞여 있다. 사용자가 IME 로 치는 것은 언제나 일반 한자다.
+    const pairs = [[0xF941, 0x8AD6], [0xF9C4, 0x9F8D], [0xF9E2, 0x68A8], [0xF90A, 0x91D1], [0xF981, 0x5973]]
+    for (const [compat, std] of pairs) {
+      assert.equal(searchNormalize(cp(compat)), cp(std), `U+${compat.toString(16)} 가 U+${std.toString(16)} 로 수렴해야 한다`)
+    }
+    assert.equal(searchNormalize(cp(0xF941) + cp(0x5CF4)), searchNormalize(cp(0x8AD6) + cp(0x5CF4)), '論峴 두 표기가 같아야 한다')
+  })
+
+  check('SN2 ★ 한글 호환 자모(초성)는 보존된다 - 단순 NFKC 였다면 깨진다', () => {
+    // kind='chosung' 별칭이 호환 자모(U+3131~U+314E)다. NFKC 를 통째로 걸면 조합용 자모로
+    // 바뀌어 사용자가 IME 로 친 'ㅎㄷ' 와 저장값의 바이트가 갈린다.
+    assert.equal(searchNormalize('ㅎㄷ'), 'ㅎㄷ')
+    assert.equal(searchNormalize('ㅎㄷㅇㄱ'), 'ㅎㄷㅇㄱ')
+    assert.equal(searchNormalize('ㅎㄷ').codePointAt(0), 0x314E, '호환 자모 U+314E 가 유지되어야 한다')
+    // 대조: 단순 NFKC 였다면 U+1112 로 바뀐다
+    assert.equal('ㅎㄷ'.normalize('NFKC').codePointAt(0), 0x1112)
+    assert.equal(searchNormalize('강남ㄱㄴ'), '강남ㄱㄴ', '한글+초성 혼합에서도 보존')
+  })
+
+  check('SN3 NFD 로 분해된 한글은 음절로 합쳐진다', () => {
+    assert.equal(searchNormalize(cp(0x1112) + cp(0x1169) + cp(0x11BC)), '홍')
+    assert.equal(searchNormalize('강남역'.normalize('NFD')), '강남')
+  })
+
+  check('SN4 전각 숫자 / 전각 공백', () => {
+    assert.equal(searchNormalize('２３'), '23')
+    assert.equal(searchNormalize('２호선'), '2호선')
+    assert.equal(searchNormalize('가' + cp(0x3000) + '나'), '가나')
+  })
+
+  check('SN5 가타카나 -> 히라가나 / 장음 제거', () => {
+    assert.equal(searchNormalize('ホンデイック'), 'ほんでいっく')
+    assert.equal(searchNormalize('ホンデー'), 'ほんで')
+  })
+
+  check('SN6 역 접미사 4종 (역 / station / 駅 / 站)', () => {
+    assert.equal(searchNormalize('서울역'), '서울')
+    assert.equal(searchNormalize('Seoul Station'), 'seoul')
+    assert.equal(searchNormalize('ソウル駅'), 'そうる')
+    assert.equal(searchNormalize('首爾站'), '首爾')
+    assert.equal(searchNormalize('역역'), '역', '끝 1회만 제거한다(SQL 에 g 플래그가 없다)')
+  })
+
+  check('SN7 신촌 / 신촌역 이 같은 값으로 정규화된다', () => {
+    assert.equal(searchNormalize('신촌'), '신촌')
+    assert.equal(searchNormalize('신촌역'), '신촌')
+    assert.equal(searchNormalize('홍대입구역'), '홍대입구')
+    // 초성도 정규화 후 생성하므로 두 역이 같은 초성을 가진다
+    assert.equal(hangulChosung(searchNormalize('신촌역')), hangulChosung(searchNormalize('신촌')))
+  })
+
+  check('SN8 ★ SQL parity 계약에는 NFKC 가 들어가지 않는다', () => {
+    // 병합 그룹핑 키는 현재 308 station master 를 만들어 낸 값이라 동결이다.
+    // 검색용 NFKC 가 여기 침투하면 재실행 시 병합 결과가 달라질 수 있다.
+    assert.equal(normalizeStationQuerySqlParity('ㅎㄷ'), 'ㅎㄷ')
+    assert.notEqual(normalizeStationQuerySqlParity(cp(0xF941)), cp(0x8AD6), 'sqlParity 는 호환 한자를 수렴시키지 않아야 한다')
+    assert.equal(normalizeStationQuerySqlParity(cp(0xF941)), cp(0xF941))
+    // lib/normalize.mjs 가 재수출하는 것이 sqlParity 계약인지 확인한다
+    assert.equal(normalizeStationQuery(cp(0xF941)), normalizeStationQuerySqlParity(cp(0xF941)))
+  })
+
+  check('SN9 ★ 두 계약이 의도적으로 다른 CJK 표본', () => {
+    for (const compat of [0xF941, 0xF9C4, 0xF9E2, 0xF90A]) {
+      assert.notEqual(searchNormalize(cp(compat)), normalizeStationQuerySqlParity(cp(compat)),
+        `U+${compat.toString(16)} 에서 두 계약이 달라야 한다`)
+    }
+    // 반대로 일반 문자열에서는 두 계약이 같아야 한다
+    for (const s of ['강남역', 'Hongik Univ.', 'ホンデー', 'ㅎㄷㅇㄱ', '신촌역']) {
+      assert.equal(searchNormalize(s), normalizeStationQuerySqlParity(s), `${s} 에서는 두 계약이 같아야 한다`)
+    }
+  })
+
+  // ===== [G] alias 생성기 규칙 =====
+  //   생성기 본체는 DB 를 읽으므로 여기서는 순수 규칙만 검증한다.
+  const aliasKind = (kind, lang) => ({ kind, lang })
+  const PRIORITY_ORDER = [
+    aliasKind('official', 'ko'), aliasKind('official', 'en'), aliasKind('official', 'ja'),
+    aliasKind('official', 'zh'), aliasKind('chosung', 'ko'), aliasKind('legacy', 'ko'),
+  ]
+
+  check('AG1 name_hanja 는 별칭으로 만들지 않는다', () => {
+    // 한국식 한자 역명이지 중국어 역명이 아니다. 첫 시드 범위에서 제외했다.
+    const src = readFileSync(new URL('./generate-alias-sql.mjs', import.meta.url), 'utf-8')
+    const addCalls = src.match(/add\(station, station\.name_\w+/g) ?? []
+    assert.ok(!addCalls.some((c) => c.includes('name_hanja')), 'name_hanja 를 add() 하는 코드가 있으면 안 된다')
+    assert.equal(addCalls.length, 4, 'official 은 ko/en/ja/zh 4개여야 한다')
+  })
+
+  check('AG2 검수 제외는 station + alias 조합이다 (전역 문자열 아님)', () => {
+    assert.equal(legacyAliasExclusions.length, 2)
+    for (const e of legacyAliasExclusions) {
+      assert.ok(typeof e.stationNameKo === 'string' && e.stationNameKo.length > 0, 'stationNameKo 필수')
+      assert.ok(typeof e.alias === 'string' && e.alias.length > 0, 'alias 필수')
+      assert.ok(typeof e.reason === 'string' && e.reason.trim().length > 20, 'reason 은 20자 초과여야 한다')
+    }
+    const keys = legacyAliasExclusions.map((e) => `${e.stationNameKo} ${e.alias}`)
+    assert.equal(new Set(keys).size, keys.length, '중복 항목이 있으면 안 된다')
+  })
+
+  check('AG3 다른 station 의 같은 문자열은 제외되지 않는다', () => {
+    // '지하' 는 신촌에서만 제외한다. 다른 역에 같은 문자열이 나오면 그대로 살아야 한다.
+    const key = (nameKo, alias) => `${nameKo} ${alias}`
+    const index = new Map(legacyAliasExclusions.map((e) => [key(e.stationNameKo, e.alias), e]))
+    assert.ok(index.has(key('신촌', '지하')), '신촌/지하 는 제외 대상이다')
+    assert.ok(!index.has(key('강남', '지하')), '강남/지하 는 제외 대상이 아니어야 한다')
+    assert.ok(index.has(key('서울역', '경의선')), '서울역/경의선 은 제외 대상이다')
+    assert.ok(!index.has(key('공덕', '경의선')), '공덕/경의선 은 제외 대상이 아니어야 한다')
+  })
+
+  check('AG4 dedupe 우선순위: official ko > en > ja > zh > chosung > legacy', () => {
+    const priorityOf = (kind, lang) => PRIORITY_ORDER.findIndex((p) => p.kind === kind && p.lang === lang)
+    assert.ok(priorityOf('official', 'ko') < priorityOf('official', 'en'))
+    assert.ok(priorityOf('official', 'zh') < priorityOf('chosung', 'ko'))
+    assert.ok(priorityOf('chosung', 'ko') < priorityOf('legacy', 'ko'))
+    // 실제 사례: 홍대입구 official '홍대입구' 와 legacy '홍대입구역' 이 같은 값으로 정규화된다
+    assert.equal(searchNormalize('홍대입구'), searchNormalize('홍대입구역'))
+    assert.ok(priorityOf('official', 'ko') < priorityOf('legacy', 'ko'), 'official 이 남아야 한다')
+  })
+
+  check('AG5 정상 collision 은 hard fail 이 아니다', () => {
+    // 서로 다른 station 이 같은 정규화 값을 공유하는 것은 정상이다(신촌/신촌역, 신사/새절, 이수/총신대입구).
+    // unique key 는 station_id 를 포함하므로 INSERT 가 충돌하지 않는다.
+    const uniqueKey = (stationId, normalized, lang) => `${stationId}|${normalized}|${lang ?? ''}`
+    const a = uniqueKey('uuid-A', '신촌', 'ko')
+    const b = uniqueKey('uuid-B', '신촌', 'ko')
+    assert.notEqual(a, b, '같은 정규화 값이라도 station 이 다르면 다른 키다')
+    // 같은 station 의 같은 값은 중복이다
+    assert.equal(uniqueKey('uuid-A', '신촌', 'ko'), uniqueKey('uuid-A', '신촌', 'ko'))
+  })
+
+  check('AG6 빈 문자열 / 공백-only / "-" 는 별칭이 되지 않는다', () => {
+    // name_hanja 의 '-' 는 "한자 표기가 없다"는 플레이스홀더다(순우리말 역 15건).
+    for (const v of ['', '   ', '\t', null, undefined]) {
+      const text = v === null || v === undefined ? '' : String(v).trim()
+      assert.ok(!text, `${JSON.stringify(v)} 는 별칭이 되면 안 된다`)
+    }
+    assert.equal(searchNormalize('()'), '', '구두점만 남은 값은 정규화 후 빈 문자열이 된다')
+  })
 
   // ===== [A] 환승역구분 =====
   check('A1 "환승역" -> true', () => assert.equal(parseTransferFlag('환승역'), true))

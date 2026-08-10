@@ -15,7 +15,8 @@
     "seed:stations:inventory": "node scripts/seed-stations/manual-review-inventory.mjs",
     "seed:stations:display-review": "node scripts/seed-stations/review-display-lines.mjs",
     "seed:stations:generate-sql": "node scripts/seed-stations/generate-seed-sql.mjs",
-    "seed:stations:generate-districts-sql": "node scripts/seed-stations/generate-districts-sql.mjs"
+    "seed:stations:generate-districts-sql": "node scripts/seed-stations/generate-districts-sql.mjs",
+    "seed:stations:generate-alias-sql": "node scripts/seed-stations/generate-alias-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",
