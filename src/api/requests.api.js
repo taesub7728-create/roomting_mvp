@@ -65,18 +65,14 @@ export async function createRequest({
   return { data, error: null }
 }
 
-// 공인중개사가 보는 "열려있는 요청서" 목록 (RLS가 realtor 역할에게 전체 requests를 허용해줌)
-export async function listOpenRequests() {
-  const { data, error } = await supabase
-    .from('requests')
-    .select('*')
-    .eq('status', 'open')
-    .order('created_at', { ascending: false })
+// ★ listOpenRequests() 는 2026-08-10 에 삭제했다.
+//   중개사가 requests 를 직접 읽던 경로이고, migration_030 이 `requests_select_own_or_realtor`
+//   를 제거하면 0행이 된다. 대체는 realtorRequests.api.js 의 listOpenRequestsForRealtor()
+//   (migration_029 의 RPC)다. 죽은 함수를 남겨 두면 나중에 누군가 다시 호출한다.
 
-  if (error) return { data: null, error: toFriendlyError(error) }
-  return { data, error: null }
-}
-
+// 고객이 자기 요청서를 보는 경로. 중개사용이 아니다.
+// migration_030 이후에도 `created_by = auth.uid() or customer_id = auth.uid()` 로 통과한다.
+// 중개사의 요청서 상세는 029 의 get_open_request_for_realtor() 를 쓴다.
 export async function getRequestById(requestId) {
   const { data, error } = await supabase
     .from('requests')

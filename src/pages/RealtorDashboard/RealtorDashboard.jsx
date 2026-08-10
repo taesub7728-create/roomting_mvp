@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Home } from 'lucide-react'
 import { signOut } from '../../api/auth.api'
-import { listOpenRequests } from '../../api/requests.api'
+import { listOpenRequestsForRealtor, listMyResponsesForRealtor } from '../../api/realtorRequests.api'
+import { stationLabel, stationSearchText } from '../../shared/format/stationLabel'
 import {
-  listMyPropertyResponses,
   listMyPublicListings,
   createPublicProperty,
   updatePublicProperty,
@@ -82,8 +82,8 @@ export default function RealtorDashboard() {
   useEffect(() => {
     async function load() {
       const [openResult, mineResult, listingsResult] = await Promise.all([
-        listOpenRequests(),
-        listMyPropertyResponses(),
+        listOpenRequestsForRealtor(),
+        listMyResponsesForRealtor(),
         listMyPublicListings(),
       ])
       if (openResult.error) setError(openResult.error)
@@ -115,21 +115,31 @@ export default function RealtorDashboard() {
     return () => clearTimeout(timer)
   }, [addressQuery])
 
-  // 이미 내가 응답을 보낸 요청서는 "받을 수 있는 요청" 목록에서 제외 (같은 고객에게 중복 응답 방지)
-  const respondedRequestIds = useMemo(() => new Set(myResponses.map((p) => p.request_id)), [myResponses])
-
+  // 이미 내가 응답을 보낸 요청서는 "받을 수 있는 요청" 목록에서 제외한다.
+  //
+  // ★ 별도 조회로 세지 않고 RPC 가 함께 주는 my_response_count 를 쓴다.
+  //   예전에는 myResponses 를 훑어 request_id 집합을 만들었는데, 두 목록의 로딩 순서에
+  //   따라 필터가 흔들릴 수 있었다.
+  //
+  // ★ 이 제외는 migration_007 의 properties_request_realtor_unique(request_id, realtor_id)
+  //   가 아직 살아 있기 때문이다 - 두 번째 응답은 23505 로 거부된다. migration_031 이 그
+  //   제약을 제거하면(031:91) 요청서 하나에 매물을 5개까지 보낼 수 있게 되고, 그때는
+  //   숨기는 대신 "내가 N개 제안함" 배지로 바꿔야 한다(029:117-120 이 그 설계다).
+  //   031 적용 시 이 한 줄만 지우면 된다.
   const filteredRequests = useMemo(() => {
+    const keyword = searchText.trim().toLowerCase()
     return requests.filter((r) => {
-      if (respondedRequestIds.has(r.id)) return false
-      const matchesSearch = !searchText.trim() || r.region_text.toLowerCase().includes(searchText.trim().toLowerCase())
+      if (r.my_response_count > 0) return false
+      const matchesSearch = !keyword || stationSearchText(r).toLowerCase().includes(keyword)
       const matchesRoomType = !roomTypeFilter || (r.room_types || []).includes(roomTypeFilter)
       return matchesSearch && matchesRoomType
     })
-  }, [requests, searchText, roomTypeFilter, respondedRequestIds])
+  }, [requests, searchText, roomTypeFilter])
 
   const filteredMyResponses = useMemo(() => {
-    if (!searchText.trim()) return myResponses
-    return myResponses.filter((p) => (p.requests?.region_text || p.address || '').toLowerCase().includes(searchText.trim().toLowerCase()))
+    const keyword = searchText.trim().toLowerCase()
+    if (!keyword) return myResponses
+    return myResponses.filter((p) => `${stationSearchText(p)} ${p.address ?? ''}`.toLowerCase().includes(keyword))
   }, [myResponses, searchText])
 
   async function handleLogout() {
@@ -293,7 +303,7 @@ export default function RealtorDashboard() {
                 {filteredRequests.map((r) => (
                   <tr key={r.id} className="rd-row-clickable" onClick={() => navigate(`/realtor/respond/${r.id}`)}>
                     <td className="rd-td-region">
-                      {r.region_text}
+                      {stationLabel(r)}
                       {r.registration_required && <span className="rd-tag neutral">전입신고 필요</span>}
                       {r.move_in_date && <span className="rd-tag neutral">입주 {r.move_in_date}</span>}
                     </td>
@@ -319,7 +329,7 @@ export default function RealtorDashboard() {
             {filteredRequests.map((r) => (
               <div key={r.id} className="rd-card" onClick={() => navigate(`/realtor/respond/${r.id}`)}>
                 <div className="rd-card-top">
-                  <span className="rd-region">{r.region_text}</span>
+                  <span className="rd-region">{stationLabel(r)}</span>
                   <span className="rd-time">{timeAgo(r.created_at)}</span>
                 </div>
                 <div className="rd-budget">{dealSummaryText(r)}</div>
@@ -360,19 +370,19 @@ export default function RealtorDashboard() {
               </thead>
               <tbody>
                 {filteredMyResponses.map((p) => (
-                  <tr key={p.id}>
+                  <tr key={p.property_id}>
                     <td>
                       <div className="rd-thumb">
                         {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : <Home size={18} strokeWidth={1.75} />}
                       </div>
                     </td>
-                    <td className="rd-td-region">{p.requests?.region_text || p.address}</td>
+                    <td className="rd-td-region">{stationLabel(p, { fallback: p.address })}</td>
                     <td>{p.title}</td>
                     <td><span className="rd-tag neutral">{roomTypeLabels[p.room_type] || p.room_type}</span></td>
                     <td>보증금 {Number(p.deposit ?? 0).toLocaleString()}만원 / 월세 {p.monthly_rent ?? 0}만원</td>
                     <td>{timeAgo(p.created_at)}</td>
                     <td>
-                      <Link to={`/chat/${p.id}`} className="rt-btn-primary" style={{ padding: '6px 14px', fontSize: 12.5, textDecoration: 'none', width: 'auto', display: 'inline-block' }}>채팅하기</Link>
+                      <Link to={`/chat/${p.property_id}`} className="rt-btn-primary" style={{ padding: '6px 14px', fontSize: 12.5, textDecoration: 'none', width: 'auto', display: 'inline-block' }}>채팅하기</Link>
                     </td>
                   </tr>
                 ))}
@@ -382,13 +392,13 @@ export default function RealtorDashboard() {
         ) : (
           <div className="rd-list">
             {filteredMyResponses.map((p) => (
-              <div key={p.id} className="rd-card rd-card-mine">
+              <div key={p.property_id} className="rd-card rd-card-mine">
                 <div className="rd-thumb rd-thumb-card">
                   {thumbnailUrl(p) ? <img src={thumbnailUrl(p)} alt={p.title} /> : <Home size={22} strokeWidth={1.75} />}
                 </div>
                 <div className="rd-card-mine-body">
                   <div className="rd-card-top">
-                    <span className="rd-region">{p.requests?.region_text || p.address}</span>
+                    <span className="rd-region">{stationLabel(p, { fallback: p.address })}</span>
                     <span className="rd-time">{timeAgo(p.created_at)}</span>
                   </div>
                   <div className="rd-budget">{p.title}</div>
@@ -397,7 +407,7 @@ export default function RealtorDashboard() {
                     <span className="rd-tag neutral">보증금 {Number(p.deposit ?? 0).toLocaleString()}만원 / 월세 {p.monthly_rent ?? 0}만원</span>
                   </div>
                   <div className="rd-footer">
-                    <Link to={`/chat/${p.id}`} className="rt-btn-primary" style={{ padding: '8px 16px', fontSize: 13, textDecoration: 'none', width: 'auto' }}>채팅하기</Link>
+                    <Link to={`/chat/${p.property_id}`} className="rt-btn-primary" style={{ padding: '8px 16px', fontSize: 13, textDecoration: 'none', width: 'auto' }}>채팅하기</Link>
                   </div>
                 </div>
               </div>

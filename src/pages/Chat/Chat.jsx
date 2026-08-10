@@ -5,6 +5,7 @@ import { useLanguage } from '../../context/LanguageContext'
 import { getCurrentProfile } from '../../api/auth.api'
 import { getPropertyById } from '../../api/properties.api'
 import {
+  CHAT_CUSTOMER_UNRESOLVED_ERROR,
   getOrCreatePropertyChatRoom,
   getChatParticipants,
   listMessages,
@@ -45,7 +46,14 @@ export default function Chat() {
       setMyProfile(profile)
 
       const { data: room, error: roomError } = await getOrCreatePropertyChatRoom(propertyId)
-      if (roomError) { setError(roomError); setLoading(false); return }
+      if (roomError) {
+        // 서버가 채팅 당사자를 확인하지 못한 경우는 시스템 오류가 아니라 접근 거부다.
+        // api 레이어는 한국어 문자열만 다루므로 고정 문자열과 대조해 화면 언어로 바꾼다
+        // (requests.api.js 의 SESSION_REQUIRED_ERROR 와 같은 패턴).
+        setError(roomError === CHAT_CUSTOMER_UNRESOLVED_ERROR ? t.chatPartnerUnresolved : roomError)
+        setLoading(false)
+        return
+      }
       setChatRoom(room)
       const isCustomer = room.customer_id === profile.id
       isCustomerRef.current = isCustomer

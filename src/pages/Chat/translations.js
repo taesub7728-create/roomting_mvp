@@ -1,6 +1,7 @@
 export const chatText = {
   ko: {
     needLogin: '로그인이 필요합니다.',
+    chatPartnerUnresolved: '이 매물의 채팅 상대를 확인할 수 없어요. 접근 권한이 없는 매물일 수 있습니다.',
     loading: '불러오는 중...',
     defaultTitle: '채팅',
     emptyState: '첫 메시지를 보내보세요',
@@ -15,6 +16,7 @@ export const chatText = {
   },
   ja: {
     needLogin: 'ログインが必要です。',
+    chatPartnerUnresolved: 'この物件のチャット相手を確認できません。アクセス権限のない物件の可能性があります。',
     loading: '読み込み中...',
     defaultTitle: 'チャット',
     emptyState: '最初のメッセージを送ってみましょう',
@@ -29,6 +31,7 @@ export const chatText = {
   },
   zh: {
     needLogin: '需要登录。',
+    chatPartnerUnresolved: '无法确认该房源的聊天对象。可能是您没有访问权限的房源。',
     loading: '加载中...',
     defaultTitle: '聊天',
     emptyState: '发送第一条消息吧',
@@ -43,6 +46,7 @@ export const chatText = {
   },
   en: {
     needLogin: 'Please log in.',
+    chatPartnerUnresolved: 'We can’t identify the chat partner for this listing. You may not have access to it.',
     loading: 'Loading...',
     defaultTitle: 'Chat',
     emptyState: 'Send your first message',

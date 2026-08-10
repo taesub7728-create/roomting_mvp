@@ -2597,10 +2597,107 @@ TEMP 대신 `VALUES` 인라인으로 기대값을 적는 것이다.
 | `b28f1e03-db3f-4faa-be52-eba2f7d50294` | aaa | 11410 서대문구 |
 | `e17d5f3d-39c8-43ed-a518-07b9b9b3fdf0` | test2 | 11680 강남구 |
 
-★ RPC 가 아니라 직접 INSERT 를 쓴 이유: SQL Editor 는 `auth.uid()` 가 NULL 이라
-`current_user_role()` 이 NULL 이 되고, `approve_realtor_application()` 의 admin 검사
-(`<> 'admin'`)를 통과하지 못해 `42501` 로 거부된다. SQL Editor 는 RLS 를 우회하므로
-직접 INSERT 는 정상 동작한다.
+★ RPC 가 아니라 직접 INSERT 를 쓴 이유: SQL Editor 는 RLS 를 우회하므로 직접 INSERT 가
+정상 동작하고, 우회한다는 사실이 코드에 명시적으로 드러난다.
+
+⚠️ 여기 처음 적었던 근거(*"SQL Editor 는 auth.uid() 가 NULL 이라 admin 검사를 통과하지 못해
+42501 로 거부된다"*)는 **틀렸다.** 실제로는 통과했다 — 48번 참고.
+
+# migration 029 적용 완료 (2026-08-10) — 중개사용 요청서 접근 RPC
+
+**적용됨.** 함수 6개 생성 확인:
+`list_open_requests_for_realtor` / `get_open_request_for_realtor` /
+`get_responded_request_for_realtor` / `list_my_responses_for_realtor` /
+`resolve_chat_customer_id` / `realtor_response_count`
+
+- **정책 불변** — `requests_select_own_or_realtor` 아직 유지(제거는 030)
+- **029 는 인덱스를 만들지 않는다.** 라우팅 인덱스는 027 의 `idx_requests_routing`
+  (`on requests(district_code, created_at desc) where status = 'open'`) 이다
+- 현재 DB: **022~029 적용**, 030+ 미적용
+
+## 46. ✅ 해결 — 028 `approve_realtor_application` 의 admin 가드 NULL-safe 전환 (033 적용 완료)
+
+**migration 033 적용 완료 (2026-08-10).** `supabase/migration_033_fix_approve_admin_guard.sql`
+
+```
+-  if public.current_user_role() <> 'admin' then
++  if coalesce(public.current_user_role()::text, '') <> 'admin' then
+```
+
+적용 후 실측:
+
+| 확인 | 결과 |
+| --- | --- |
+| definition | 가드 줄 교체 확인. 나머지 함수 계약(시그니처/returns/language/security definer/search_path/23514/23503/ON CONFLICT)은 적용 전과 동일 |
+| truth table | `admin` → false → 통과 / `customer`·`realtor`·`care_agent`·**NULL** → true → **42501** |
+| privilege | PUBLIC ❌ / anon ❌ / authenticated ✅ EXECUTE |
+
+★ **028 파일은 수정하지 않았다.** 033 이 함수를 다시 `CREATE OR REPLACE` 하는 방식이며,
+017 이 016 의 같은 성격 버그를 고친 방식과 동일하다.
+
+★ **적용 순서 ≠ 번호 순서.** 033 은 030~032 보다 번호가 뒤지만 **029 이후 / 030 이전**에
+적용했다. 030/031/032 어느 것도 `approve_realtor_application` 을 재정의하지 않고,
+030 의 함수 권한 재고정 대상 4개에도 이 함수가 없어(029:108-109) 덮어쓰기가 발생하지 않는다.
+
+### 원인 (수정 전 상태 기록)
+
+```sql
+-- migration_028:128
+if public.current_user_role() <> 'admin' then
+  raise exception 'admin only' using errcode = '42501';
+end if;
+```
+
+`current_user_role()` 은 `select role from profiles where id = auth.uid()` 라서 **행이 없으면
+NULL** 을 돌려준다. SQL 3값 논리에서 `NULL <> 'admin'` 은 TRUE 가 아니라 **NULL** 이고,
+PL/pgSQL 의 `IF` 는 **NULL 을 false 로 취급**한다. 즉 **가드가 발동하지 않고 그대로 통과한다.**
+
+### 이 저장소에 이미 안전한 선례가 있다
+
+| 위치 | 형태 | 판정 |
+| --- | --- | --- |
+| `migration_016:49` | `coalesce(public.current_user_role(), '') <> 'admin'` | ✅ NULL 방어 |
+| `migration_017:27` | `coalesce(public.current_user_role()::text, '') <> 'admin'` | ✅ 016 의 캐스트 버그까지 수정 |
+| **`migration_028:128`** | **`public.current_user_role() <> 'admin'`** | ❌ **coalesce 없음** |
+
+부정형 가드는 016·017 이 `coalesce` 로 감싼 이유가 정확히 이것이다. 028 만 빠졌다.
+
+★ **긍정형은 안전하다.** RLS 정책과 029 RPC 들은 `where … current_user_role() = 'realtor'`
+형태라 NULL 이면 매칭되지 않아 **fail-closed** 다. 위험한 것은 부정형 `IF … <> … THEN raise`
+하나뿐이다.
+
+### 도달 경로
+
+`grant execute … to authenticated` 이므로 **로그인한 사용자 중 `profiles` 행이 없는 상태**
+(CLAUDE.md 「로그인 페이지 profile null 처리」가 다루는 그 비정상 상태)면 admin 이 아니어도
+호출이 통과한다. 통과하면 임의 `p_profile_id` 를 realtor 로 승격시키고 영업지역까지 부여할 수 있다.
+anon 은 `revoke` 로 막혀 있다.
+
+
+## 47. `approve_realtor_application` 에 `service_role` EXECUTE 가 남아 있다
+
+privilege 확인에서 `authenticated` / `postgres`(owner) 외에 **`service_role` EXECUTE** 가
+관측됐다. **033 이 만든 것이 아니라 028 부터 존재하던 상태다** — 028 의 revoke 대상이
+`public, anon` 뿐이라 `service_role` 은 회수되지 않았다.
+
+**030 blocker 로 취급하지 않는다.** 근거: 현재 service_role key 를 frontend/Vercel 에서
+사용하지 않고, `service_role` 자체가 RLS 를 우회하는 특권 role 이라 이 함수의 EXECUTE 를
+회수해도 같은 작업을 다른 경로로 할 수 있다.
+
+→ 향후 **function privilege hygiene audit** 에서 정리 여부를 판단한다. 그때 022/028/029 가
+만든 함수 전체의 grantee 를 한 번에 훑는 편이 낫다(030:176-187 이 기존 6개 함수에 대해
+같은 일을 한다).
+
+## 48. 정정 기록 — "SQL Editor 에서 42501 로 막힌다"는 틀렸다
+
+이 문서와 대화에서 *"SQL Editor 는 `auth.uid()` 가 NULL 이라 `approve_realtor_application` 의
+admin 검사를 통과하지 못해 42501 로 거부된다"* 고 적은 적이 있는데 **사실이 아니다.**
+
+실제로는 `NULL <> 'admin'` → **NULL** → PL/pgSQL 의 `IF` 가 NULL 을 false 로 취급 →
+**가드가 발동하지 않고 통과**(fail-open)했다. 46번이 고친 것이 바로 이 동작이다.
+
+SQL Editor 에서 직접 INSERT 로 영업지역을 넣은 선택 자체는 여전히 타당하다(RLS 우회가
+명시적이고 의도가 드러난다). 다만 그 근거로 든 설명이 틀렸다.
 
 ## 41. 영업지역 상한 3개는 프론트 UI 제한이다
 

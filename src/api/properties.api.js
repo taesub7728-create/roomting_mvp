@@ -43,23 +43,11 @@ export async function getPropertyById(propertyId) {
   return { data, error: null }
 }
 
-// 공인중개사 본인이 지금까지 보낸 매물 응답 목록 (어떤 요청서에 보냈는지도 함께 표시)
-export async function listMyPropertyResponses() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { data: null, error: '로그인이 필요합니다.' }
-
-  const { data, error } = await supabase
-    .from('properties')
-    .select('*, requests(region_text), property_images(image_url, sort_order)')
-    .eq('realtor_id', user.id)
-    .not('request_id', 'is', null) // 공개 매물은 "요청서에 보낸 응답" 목록에서 제외
-    .order('created_at', { ascending: false })
-
-  if (error) return { data: null, error: toFriendlyError(error) }
-  return { data, error: null }
-}
+// ★ listMyPropertyResponses() 는 2026-08-10 에 삭제했다.
+//   properties 에 requests(region_text) 를 embedded join 하던 함수인데, migration_030 이
+//   중개사의 requests SELECT 를 없애면 그 조인이 에러 없이 null 이 되어 지역명이 조용히
+//   사라진다(PostgREST 의 embedded join 은 RLS 로 걸리면 에러가 아니라 null 이다).
+//   대체는 realtorRequests.api.js 의 listMyResponsesForRealtor() (migration_029 의 RPC)다.
 
 // 지도에 표시할 공개 매물 목록 (좌표가 있고 노출 중인 것만)
 // DB 함수(get_public_listings)를 통해 조회 - 상세주소 비공개 매물은 여기서 이미 동 단위 주소/근사 좌표로 바뀐 값만 내려옴

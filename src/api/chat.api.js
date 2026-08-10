@@ -8,6 +8,13 @@ import { translateText } from './translate.api'
 // 참여자 프로필(닉네임/선호 언어)만 022 RPC로 분리했다 - 아래 getChatParticipants() 참고.
 const ROOM_COLUMNS = '*'
 
+// resolve_chat_customer_id() 가 null 을 돌려준 상태를 호출부가 구분할 수 있게 하는 고정 문자열.
+// requests.api.js 의 SESSION_REQUIRED_ERROR 와 같은 패턴이다 - api 레이어는 한국어 문자열만
+// 다루므로, 다국어가 필요한 화면은 이 값과 일치하는지 보고 자기 translations 로 바꾼다.
+//
+// 이 상태는 시스템 오류가 아니라 "이 매물의 채팅 당사자가 아니다"라는 정상적인 접근 거부다.
+export const CHAT_CUSTOMER_UNRESOLVED_ERROR = '채팅 상대를 확인할 수 없어요.'
+
 // 매물(property) 하나당, 문의하는 고객별로 채팅방 1개.
 // 요청서에 대한 응답 매물은 그 요청서 주인이 곧 고객이고, 공개 매물(지도)은 지금 로그인한 사람이 고객이 됨
 export async function getOrCreatePropertyChatRoom(propertyId) {
@@ -16,33 +23,31 @@ export async function getOrCreatePropertyChatRoom(propertyId) {
   } = await supabase.auth.getUser()
   if (!user) return { data: null, error: '로그인이 필요합니다.' }
 
+  // 채팅방 생성에 realtor_id 가 필요하다. requests 조인은 더 이상 하지 않는다.
   const { data: property, error: propertyError } = await supabase
     .from('properties')
-    .select('realtor_id, request_id, requests(customer_id)')
+    .select('realtor_id, request_id')
     .eq('id', propertyId)
     .single()
   if (propertyError) return { data: null, error: toFriendlyError(propertyError) }
 
-  // 예전에는 `property.requests?.customer_id ?? user.id` 한 줄이었다. 두 가지 서로 다른
-  // 상황("공개 매물이라 요청서가 없다" / "요청서는 있는데 조인이 비어 돌아왔다")이 같은
-  // 폴백으로 흘러, 후자에서 호출자 본인을 고객으로 삼은 엉뚱한 채팅방이 만들어진다.
+  // 고객이 누구인지는 서버가 판단한다(migration_029 resolve_chat_customer_id).
   //
-  // migration_030이 적용되면 중개사는 requests를 더 이상 직접 읽지 못한다. PostgREST의
-  // embedded join은 RLS로 걸리면 에러가 아니라 null을 주므로, 중개사가 응답 매물의 채팅에
-  // 들어가는 순간 customer_id=중개사 본인인 방이 조용히 생긴다.
-  // 그래서 두 상황을 request_id로 명시적으로 갈라놓는다.
+  // 이전 코드는 properties 에 requests(customer_id) 를 embedded join 해서 읽었다.
+  // migration_030 이 적용되면 중개사는 requests 를 직접 읽지 못하고, PostgREST 의
+  // embedded join 은 RLS 로 걸리면 에러가 아니라 null 을 준다. 그래서 프론트 A 가
+  // request_id 로 두 상황을 갈라 명시적 에러를 내도록 임시 조치를 해 뒀었다.
+  // 이제 판단 자체를 서버로 옮겨 그 임시 조치를 걷어낸다.
   //
-  // ★ 이건 임시 조치다. 최종 해법은 029의 resolve_chat_customer_id()로 판단 자체를
-  //   서버로 옮기는 것이고, 029 적용과 함께 전환한다(TODO_PHASE2.md 프론트 B 항목).
-  let customerId
-  if (property.request_id === null) {
-    customerId = user.id // 공개 매물(지도): 문의한 본인이 고객
-  } else {
-    customerId = property.requests?.customer_id
-    if (!customerId) {
-      return { data: null, error: '채팅 상대를 확인할 수 없어요. 잠시 후 다시 시도해 주세요.' }
-    }
-  }
+  // 함수는 명시적 RAISE 가 없다(029 파일 전체에 RAISE 0건). 따라서:
+  //   error 있음  -> 권한/전송 오류
+  //   error 없고 data = null -> 무관한 사용자이거나 매물을 찾을 수 없는 경우.
+  //                             정상적인 접근 거부이지 시스템 오류가 아니다.
+  const { data: customerId, error: resolveError } = await supabase.rpc('resolve_chat_customer_id', {
+    p_property_id: propertyId,
+  })
+  if (resolveError) return { data: null, error: toFriendlyError(resolveError) }
+  if (!customerId) return { data: null, error: CHAT_CUSTOMER_UNRESOLVED_ERROR }
 
   const { data: existing, error: existingError } = await supabase
     .from('chat_rooms')

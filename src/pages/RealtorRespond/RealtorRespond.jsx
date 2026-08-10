@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getRequestById } from '../../api/requests.api'
+import { getOpenRequestForRealtor } from '../../api/realtorRequests.api'
+import { stationLabel } from '../../shared/format/stationLabel'
 import { createPropertyResponse, uploadPropertyImages } from '../../api/properties.api'
 import { roomTypeLabels } from '../RealtorDashboard/roomTypeLabels'
 import { formatKrwAmount } from '../../shared/format/krwAmount'
@@ -47,8 +48,12 @@ export default function RealtorRespond() {
 
   useEffect(() => {
     async function load() {
-      const { data, error: err } = await getRequestById(requestId)
+      // 내 영업지역의 open 요청서만 열린다. 조건에 맞지 않으면 에러가 아니라 0행이므로
+      // data 가 null 로 온다 - 그 경우를 "권한 없음"으로 명시해 화면에 알린다.
+      // (029 함수에는 RAISE 가 없어 조건 불일치가 예외로 오지 않는다)
+      const { data, error: err } = await getOpenRequestForRealtor(requestId)
       if (err) setLoadError(err)
+      else if (!data) setLoadError('이 요청서에 접근할 수 없어요. 담당 지역이 아니거나 이미 마감된 요청서일 수 있습니다.')
       else setRequest(data)
     }
     load()
@@ -115,7 +120,7 @@ export default function RealtorRespond() {
 
       {request && (
         <div className="rr-summary">
-          <b>{request.region_text}</b> · {dealSummaryText(request)}
+          <b>{stationLabel(request)}</b> · {dealSummaryText(request)}
           {request.move_in_date && <> · 입주 희망일 {request.move_in_date}</>}
         </div>
       )}
