@@ -1,4 +1,4 @@
-﻿# ROOMTING Phase 2 TODO
+# ROOMTING Phase 2 TODO
 
 ## Role 정리
 
@@ -2213,3 +2213,77 @@ source-data mismatch 하나라면 adapter 한 줄을 더 넣는 편이 낫다.
 `config.mjs` 의 `lineDisplayOrder`(표시 순서)는 **더 이상 대표 좌표를 고르지 않는다.**
 좌표는 `line-identity.mjs` 의 `coordinatePriority` 가 정한다. 두 책임이 붙어 있으면
 나중에 표시 모델을 손대는 순간 이미 `requests` 에 백필된 좌표가 조용히 이동한다.
+
+# 빌드·툴링 (2026-08-10)
+
+## 27. UTF-8 BOM 재발 방지 — prebuild 검사 도입 완료
+
+`666b860` 에서 `package.json` 앞에 BOM(`EF BB BF`)이 삽입돼 **Vercel 프로덕션 배포가
+5개 커밋 연속 실패**했다(`666b860` / `b41602a` / `dd54503` / `c2476ca` / `2c0775c`).
+
+원인 경로: postcss-load-config 는 `postcss.config.*` 가 없으면 fallback 으로
+`package.json` 을 `JSON.parse` 하는데, `JSON.parse` 는 BOM 을 벗기지 않아 SyntaxError 가
+난다 → CSS 39개 transform 실패 → 빌드 중단. **npm 은 BOM 을 벗기므로 install 은 통과하고
+build 만 죽는다** — 이것이 원인 파악을 늦춘 부분이다.
+
+근본 원인은 Windows PowerShell 5.1 의 `Out-File` / `>` / `Set-Content` 가 UTF-8
+**"with BOM"** 으로 저장하는 기본 동작이다. 같은 환경에서 계속 작업하는 한 재발한다.
+
+도입한 방지책: `scripts/check-bom.mjs` + `package.json` 의 `"prebuild"`.
+tracked 파일 전체를 스캔하고 BOM 발견 시 non-zero exit 한다.
+
+**hook(pre-commit)을 쓰지 않은 이유**: `.git/` 아래라 clone 마다 수동 설치가 필요하고,
+`core.hooksPath` 로 우회해도 머신당 `git config` 1회가 남는다. 사무실·집·노트북 3대를
+쓰는 환경에서 "설치를 잊으면 조용히 무방비"가 되는데, 그게 정확히 이번 실패 양상이다.
+npm script 는 clone 에 딸려오므로 그 구멍이 없다.
+
+**`.gitattributes` 와 oxlint 규칙은 후보에서 탈락**했다. git 에는 UTF-8 BOM 을 제거하는
+attribute 가 없고(`working-tree-encoding` 은 인코딩 변환용이지 BOM 을 벗기지 않는다),
+oxlint 은 JS/JSX 를 파싱할 뿐 파일 인코딩을 보지 않는다.
+
+### allowlist 는 `merge_report.csv` 하나뿐이다
+
+`lib/csv.mjs:124-125` 에 적힌 대로 이 파일의 BOM 은 **의도된 것**이다 — "BOM이 없으면
+Windows Excel이 CP949로 읽어 한글 역명이 전부 깨진다". 사람이 Excel 로 여는 검수
+리포트이므로 제거하면 안 된다.
+
+★ allowlist 는 늘리지 않는 것이 기본이다. 추가할 때는 반드시 `check-bom.mjs` 주석에
+이유를 남긴다. 이유 없는 예외는 나중에 "왜 여기만 예외인가"를 아무도 판단할 수 없다.
+
+### 알려진 한계 2가지
+
+- **git 이 없는 환경에서는 검사를 건너뛴다(exit 0).** 일부 CI 는 git clone 대신 tarball 로
+  소스를 받아 `git ls-files` 가 실패한다. 거기서 빌드를 세우면 정작 막으려던 것(배포 실패)을
+  직접 만드는 꼴이라 graceful skip 을 택했다. 이 검사는 **로컬 방어층**이고, BOM 이 실제로
+  들어가면 CI 는 어차피 postcss 에러로 실패한다.
+- **아직 `git add` 하지 않은 파일은 잡히지 않는다.** `git ls-files` 기준이기 때문이다.
+  커밋 대상이 되는 순간부터는 잡힌다.
+
+## 28. `.vscode/settings.json`(`files.encoding: utf8`)은 도입하지 않았다
+
+에디터로 저장하는 파일에는 효과가 있고 저장소에 담기므로 3대에 자동 적용된다는 장점이 있다.
+다만 현재 `.gitignore` 가 `.vscode/*` 를 막고 있어 `!settings.json` 예외 처리가 선행돼야 하고,
+prebuild 가 이미 강제층이라 중복이다. 또한 **PowerShell 쓰기는 막지 못한다** — 이번 사고의
+실제 경로가 그쪽이었다.
+
+필요해지면(예: 에디터 저장으로 인한 BOM 이 실제로 재발하면) 그때 도입한다.
+
+## 29. oxlint warning 7건 미해결
+
+`--deny-warnings` 게이트를 도입하려면 **선행 정리가 필요하다.** 현재 oxlint 은 warning 만
+있을 때 exit 0 이라 게이트로 쓸 수 없는 상태다.
+
+`2c0775c` 시점에도 동일한 7건이 있었음을 확인했다(BOM 수정과 무관한 기존 항목):
+
+| 파일 | 규칙 |
+| --- | --- |
+| `src/shared/routes/useCustomerGuardChecks.js:15` | react-hooks(exhaustive-deps) — `profile.role` 누락 |
+| `src/pages/MyPage/MyPage.jsx:32` | react-hooks(exhaustive-deps) — `navigate` 누락 |
+| `src/pages/RealtorRespond/RealtorRespond.jsx:25` | no-unused-vars — `navigate` 미사용 |
+| `src/shared/auth/AuthProvider.jsx:13` | react(only-export-components) |
+| `src/context/LanguageContext.jsx:149` | react(only-export-components) |
+| `src/pages/MapExplore/MapExplore.jsx:75` | no-unused-expressions |
+| `src/pages/MapExplore/MapExplore.jsx:83` | no-unused-expressions |
+
+★ exhaustive-deps 2건은 **기계적으로 deps 에 넣으면 안 된다.** 의존성이 추가되면 effect
+재실행 시점이 바뀌어 리다이렉트가 중복 발생할 수 있다. 각 건마다 의도를 확인하고 고친다.

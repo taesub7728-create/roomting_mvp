@@ -1,4 +1,4 @@
-﻿// line identity — 병합 판정과 대표 좌표 선택의 단일 기준.
+// line identity — 병합 판정과 대표 좌표 선택의 단일 기준.
 //
 // 채택 모델:  raw source data → line identity → (향후) display line
 //   이번 단계는 line identity 까지만 구현한다. 사용자에게 보여줄 노선명(1호선/공항철도 등)은
