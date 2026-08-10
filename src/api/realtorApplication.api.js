@@ -101,15 +101,46 @@ export async function getApplicationDocumentUrl(path) {
   return { data: data.signedUrl, error: null }
 }
 
-// 지원서를 승인해서 role을 realtor로 바꿈
-export async function approveRealtorApplication(profileId) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({ role: 'realtor' })
-    .eq('id', profileId)
-    .select()
-    .single()
+// 승인 실패를 운영자가 읽을 수 있는 문장으로 바꾼다.
+//
+// ★ migration_028 의 approve_realtor_application() 이 실제로 던지는 코드만 다룬다.
+//   42501 admin 아님 / 23514 영업지역 비어 있음 / 23503 프로필 없음 또는 district_code FK 위반
+//   함수 본문에 없는 코드를 미리 넣어 두면 "처리한 것처럼 보이는" 죽은 분기가 된다.
+function toApproveError(error) {
+  if (!error) return null
 
-  if (error) return { data: null, error: toFriendlyError(error) }
-  return { data, error: null }
+  if (error.code === '42501') {
+    return '승인 권한이 없습니다. 관리자 계정으로 다시 로그인해주세요.'
+  }
+  if (error.code === '23514') {
+    return '영업지역을 최소 1개 선택해야 승인할 수 있습니다.'
+  }
+  if (error.code === '23503') {
+    // 함수가 두 곳에서 이 코드를 쓴다 - 프로필을 못 찾은 경우와 district_code FK 위반.
+    // 메시지 문자열로 갈라 짚어준다(둘 다 admin 이 확인해야 하는 항목이라 구분이 의미 있다).
+    if (error.message?.includes('profile not found')) {
+      return '해당 계정을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 시도해주세요.'
+    }
+    return '선택한 영업지역 코드가 올바르지 않습니다. 다시 선택해주세요.'
+  }
+
+  return toFriendlyError(error)
+}
+
+// 지원서를 승인한다. role 변경과 영업지역 부여가 한 트랜잭션으로 처리된다.
+//
+// ★ profiles.role 을 직접 UPDATE 하던 구경로는 삭제했다(2026-08-10).
+//   migration_030:11-14 가 "구경로는 코드에서 삭제되어 있어야 한다"를 적용 전제로 요구한다.
+//   구경로로 승인하면 realtor_service_areas 에 행이 없는 중개사가 만들어지고, 029/030 적용
+//   후 그 중개사는 에러 없이 요청서 0건을 보게 된다 - 발견이 가장 어려운 형태의 고장이다.
+//
+// districtCodes: 시군구 코드 배열. 빈 배열이면 RPC 가 23514 로 거부한다.
+export async function approveRealtorApplication(profileId, districtCodes) {
+  const { error } = await supabase.rpc('approve_realtor_application', {
+    p_profile_id: profileId,
+    p_district_codes: districtCodes,
+  })
+
+  if (error) return { error: toApproveError(error) }
+  return { error: null }
 }

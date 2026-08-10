@@ -1205,8 +1205,13 @@ Supabase Auth 탭 → User Signups 섹션)
    - 없으면 **신규 요청서가 계속 `station_id=null`로 생성돼 라우팅 밖으로 샌다.**
      백필로 과거만 메워도 새는 구멍이 남는다
 7. **028 적용** → `realtor_service_areas` 생성
-   - 적용 직후 `select count(*) from realtor_service_areas` = 0 상태에서 **R7(지역 미배정
-     중개사 → 0행)을 먼저 찍어둔다.** 기본 동작의 기준선이 된다
+   - 적용 직후 `select count(*) from realtor_service_areas` = **0** 을 기록한다.
+   - ★ **이것을 "R7 기준선"이라고 부르지 않는다(2026-08-10 정정).** 0행은 R7 의
+     *전제 조건*일 뿐 R7 자체가 아니다. R7 은 `list_open_requests_for_realtor()` 로
+     "영업지역 없는 중개사가 0행을 본다"를 검증하는 것이고, 그 함수는 **029 가 만든다.**
+   - 028 직후에는 migration_010 의 `requests_select_own_or_realtor` 가 살아 있어
+     **지역과 무관하게 모든 open 요청서가 보이는 것이 정상 동작**이다. R7 이 검증하려는
+     명제 자체가 이 시점에는 성립할 수 없다. **R7 판정은 029 적용 후로 미룬다.**
 8. **영업지역 지정** (사용자가 admin으로) — `aaa`=서대문구, `test2`=강남구.
    코드값은 시드 적재 후 `districts` 테이블과 대조해 실물 확인
 9. **029 적용 + 프론트 B 배포** — 라우팅 RPC 전환 + `resolve_chat_customer_id` 전환.
@@ -2095,13 +2100,23 @@ CSS 39개 중 `@media`를 가진 파일은 25개인데 **대부분 Landing/Landi
 R5·R6은 목록에서 감추는 것과 실제 접근 차단이 다르다는 점을 확인한다 — 목록만 필터링하고
 직접 접근이 열려 있으면 라우팅은 UI 장식일 뿐이다.
 
-### 배정 전 기준선 (④ 직전에 찍어둘 것)
+### 배정 전 전제 조건 (④ 직전에 기록해 둘 것)
 
 ```sql
 -- 028 적용 직후, 아직 아무 영업지역도 넣지 않은 상태에서
 select count(*) from realtor_service_areas;   -- 기대: 0
--- 이 상태로 R7을 먼저 확인하면 "지역 없으면 0행"이 기본 동작임을 증명할 수 있다
 ```
+
+★ **이 0행은 "R7 기준선"이 아니다(2026-08-10 정정).** R7 은
+`list_open_requests_for_realtor()` 를 호출해 "영업지역 없는 중개사가 0행을 본다"를
+검증하는 것이고, **그 함수는 029 가 만든다.** 028 직후에는 존재하지 않아 호출할 수 없다.
+
+게다가 028 직후에는 migration_010 의 `requests_select_own_or_realtor` 가 살아 있어
+`role='realtor'` 이기만 하면 **모든 open 요청서가 보인다.** 즉 이 시점의 정상 동작은
+"지역 없으면 0행"이 아니라 "지역과 무관하게 전부 보임"이다.
+
+**R7 판정은 029 적용 후에 한다.** 여기서 기록하는 것은 배정 전 출발점이 0이었다는
+사실 하나뿐이다.
 
 ---
 
@@ -2566,3 +2581,74 @@ TEMP 대신 `VALUES` 인라인으로 기대값을 적는 것이다.
 없는 요청서가 계속 쌓여 029 적용 시점에 **에러가 아니라 조용히 라우팅에서 탈락**한다.
 027 의 nullable 설계는 그대로 둔다 - DB 가 nullable 인 이유는 legacy 호환과 rollout 안전이고,
 프론트가 더 엄격한 것은 모순이 아니다.
+
+# migration 028 적용 완료 (2026-08-10) — 중개사 영업지역 + 승인 흐름
+
+**적용됨.** `realtor_service_areas` 테이블 / `service_area_type` enum /
+`approve_realtor_application(uuid, text[])` / `realtor_applications.desired_district_codes`
+전부 생성 확인. master 7개 테이블 건수 불변.
+
+## 영업지역 배정 (SQL Editor 직접 INSERT)
+
+`realtor_service_areas` **2행**:
+
+| profile_id | 계정 | district |
+| --- | --- | --- |
+| `b28f1e03-db3f-4faa-be52-eba2f7d50294` | aaa | 11410 서대문구 |
+| `e17d5f3d-39c8-43ed-a518-07b9b9b3fdf0` | test2 | 11680 강남구 |
+
+★ RPC 가 아니라 직접 INSERT 를 쓴 이유: SQL Editor 는 `auth.uid()` 가 NULL 이라
+`current_user_role()` 이 NULL 이 되고, `approve_realtor_application()` 의 admin 검사
+(`<> 'admin'`)를 통과하지 못해 `42501` 로 거부된다. SQL Editor 는 RLS 를 우회하므로
+직접 INSERT 는 정상 동작한다.
+
+## 41. 영업지역 상한 3개는 프론트 UI 제한이다
+
+`ApproveRealtorModal.jsx` 의 `MAX_SERVICE_AREAS = 3` 이 유일한 제한 지점이다.
+
+★ **RPC 도 DB CHECK 도 개수를 검사하지 않는다.** SQL Editor 나 RPC 직접 호출로는
+3개를 넘길 수 있고 **그것은 의도된 상태다** — 운영자가 예외를 만들 수 있어야 한다.
+
+DB 에 상한을 박지 않은 이유: 구독 등급별 차등(무료 1개 / 유료 3개)이나 사무실 단위
+예외가 필요해지는 순간 migration 이 필요해진다. 지금은 상수 하나만 고치면 된다.
+서버측 강제가 실제로 필요해지면 그때 새 migration 으로 CHECK 를 추가한다.
+**기존 migration 은 수정하지 않는다.**
+
+## 42. `approve_realtor_application` 의 실제 동작 2가지 (본문 확인)
+
+**(1) 빈 배열은 RPC 가 거부한다.** `array_length('{}', 1)` 이 NULL 을 반환하므로
+`p_district_codes is null or array_length(p_district_codes, 1) is null` 조건이 `{}` 를
+잡아내 `23514` 를 던진다. → **프론트의 "최소 1개" 가드는 UX 용이지 유일한 방어선이 아니다.**
+
+**(2) 재호출은 추가만 하고 교체하지 않는다.** 본문의 INSERT 가
+`on conflict (realtor_id, area_type, district_code) do nothing` 이고 **DELETE 가 없다.**
+`{11410}` 로 승인한 뒤 `{11680}` 으로 다시 호출하면 **두 구를 모두 갖게 된다.**
+
+## 43. 미구현 항목 (승인 흐름 관련)
+
+- **영업지역 교체(DELETE) 흐름** — 42(2) 때문에 "이 중개사를 강남구에서 마포구로 옮긴다"를
+  화면에서 할 수 없다. 현재는 SQL Editor 에서 DELETE 후 재승인해야 한다
+- **중개사 신청 화면의 희망 지역 입력** — `desired_district_codes` 컬럼은 있으나 입력 UI 가
+  없어 현재 전부 NULL 이다. 승인 모달의 프리필 로직은 값이 들어오면 바로 동작하도록 이미
+  작성해 뒀다(실재하는 코드만 남기고, 상한 초과분은 앞 3개만 선택 + 안내)
+- **승인 화면에 현재 영업지역 표시** — 이미 승인된 중개사의 영업지역을 admin 이 볼 수 없다.
+  42(2) 때문에 재승인 시 무엇이 추가되는지 모르는 상태로 누르게 된다
+
+## 44. AdminDashboard 정렬이 `created_at` 기준이다
+
+`listRealtorApplications()` 가 `order('created_at', desc)` 만 쓴다. 승인/반려 시각을
+갱신하는 컬럼(`approved_at` / `rejected_at`)을 다루지 않아 **처리 순서가 목록에 반영되지
+않는다.** 신청 건수가 적어 지금은 문제가 되지 않지만, 목록이 길어지면 "방금 처리한 건"을
+찾기 어려워진다.
+
+## 45. ★ admin 화면은 한국어 전용이다 (i18n 미적용)
+
+`AdminDashboard.jsx` 는 모든 문자열이 한국어 하드코딩이다 —
+`useLanguage` / `translations` 를 쓰지 않는다(`AdminLogin` 도 동일).
+
+이번 승인 모달도 **화면 관례를 따라 한국어로만 작성했다.** 고객·중개사 화면과 달리 admin 은
+내부 운영 도구라 다국어 요구가 없었고, 모달 하나만 4개 언어로 만들면 나머지가 한국어인
+화면 안에서 오히려 어색해진다.
+
+★ admin 다국어가 실제로 필요해지면 **화면 전체를 한 번에** 전환해야 한다. 부분 도입은
+같은 화면에 두 체계가 공존하게 만든다.

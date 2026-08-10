@@ -47,3 +47,55 @@
 .ad-app-grid span { display: block; font-size: 11px; font-weight: 700; color: var(--ink-soft); margin-bottom: 2px; }
 
 .ad-app-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* 승인 모달 --------------------------------------------------------------
+   RequestWizard 의 draft-resume-overlay 와 같은 형태를 쓴다. 새 스타일 시스템을 만들지 않는다. */
+.ad-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; z-index: 200;
+}
+.ad-modal {
+  width: 100%; max-width: 420px; background: var(--white);
+  border-radius: 16px; padding: 22px 20px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: calc(100vh - 48px);
+}
+.ad-modal-title { font-size: 15px; font-weight: 800; color: var(--ink); }
+.ad-modal-desc { font-size: 12.5px; font-weight: 500; color: var(--muted); line-height: 1.6; }
+
+.ad-modal-section-head { display: flex; align-items: baseline; justify-content: space-between; margin-top: 6px; }
+.ad-modal-label { font-size: 13px; font-weight: 800; color: var(--ink); }
+.ad-modal-count { font-size: 12px; font-weight: 800; color: var(--ink-soft); }
+/* 상한에 닿았음을 알리는 표시. 흰 글씨가 올라가지 않는 텍스트라 --coral 을 쓴다. */
+.ad-modal-count.at-limit { color: var(--coral); }
+
+.ad-modal-hint { font-size: 11.5px; font-weight: 500; color: var(--muted-soft); }
+.ad-modal-hint-warn { color: var(--coral); font-weight: 700; }
+
+.ad-modal-selected { display: flex; flex-wrap: wrap; gap: 6px; }
+.ad-modal-search { font-size: 13px; padding: 10px 12px; }
+
+.ad-modal-list {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  overflow-y: auto; min-height: 96px; max-height: 210px;
+  padding: 4px 2px;
+}
+.ad-modal-empty { font-size: 12.5px; color: var(--ink-soft); padding: 12px 2px; }
+
+.ad-modal-chip {
+  padding: 7px 12px; border-radius: 50px;
+  border: 1.5px solid var(--line); background: var(--line);
+  font-size: 12.5px; font-weight: 700; color: var(--ink-soft);
+  cursor: pointer; transition: all .15s;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+/* 선택된 칩에는 흰 글씨가 올라가므로 --coral-action 을 쓴다(--coral 은 흰 글씨 대비 미달). */
+.ad-modal-chip.selected { background: var(--coral-action); border-color: var(--coral-action); color: var(--white); }
+.ad-modal-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+.ad-modal-chip:not(:disabled):active { transform: scale(0.96); }
+
+.ad-modal-error { margin-top: 2px; }
+.ad-modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+.ad-modal-actions button { flex: 1; }

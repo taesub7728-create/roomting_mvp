@@ -5,6 +5,7 @@ import { signOut } from '../../api/auth.api'
 import { listAllPublicListings, updateListingStatus } from '../../api/properties.api'
 import { listAllRequests, closeRequest } from '../../api/requests.api'
 import { listRealtorApplications, getApplicationDocumentUrl, approveRealtorApplication } from '../../api/realtorApplication.api'
+import ApproveRealtorModal from './ApproveRealtorModal'
 import './AdminDashboard.css'
 
 const LISTING_STATUS_LABELS = { active: '판매중', completed: '거래완료', hidden: '미노출' }
@@ -34,7 +35,8 @@ export default function AdminDashboard() {
   const [requests, setRequests] = useState([])
   const [applications, setApplications] = useState([])
   const [error, setError] = useState(null)
-  const [approvingId, setApprovingId] = useState(null)
+  // 승인 모달을 띄운 지원서. null 이면 모달이 닫힌 상태다.
+  const [approveTarget, setApproveTarget] = useState(null)
   const [loading, setLoading] = useState(true)
 
   // role 확인은 AdminRoute가 이미 끝냈으므로 여기서는 이 페이지 자체의 데이터 로딩만 처리
@@ -80,15 +82,20 @@ export default function AdminDashboard() {
     navigate('/admin/login', { replace: true })
   }
 
-  async function handleApprove(application) {
-    if (!window.confirm(`${application.company_name}을(를) 승인할까요? 승인하면 파트너 로그인이 가능해져요.`)) return
-    setApprovingId(application.id)
-    const { error: approveError } = await approveRealtorApplication(application.profile_id)
-    setApprovingId(null)
-    if (approveError) { setError(approveError); return }
+  // 승인은 영업지역 선택을 거쳐야 한다. window.confirm 으로는 지역을 받을 수 없어 모달로 바꿨다.
+  //
+  // 실패 메시지를 페이지 상단이 아니라 모달 안에 띄운다 - 모달을 닫아 버리면 운영자가
+  // 고른 지역이 사라져서 처음부터 다시 골라야 한다.
+  async function handleApproveConfirm(districtCodes) {
+    const application = approveTarget
+    const { error: approveError } = await approveRealtorApplication(application.profile_id, districtCodes)
+    if (approveError) return approveError
+
     setApplications((prev) => prev.map((a) => (
       a.id === application.id ? { ...a, profile: { ...a.profile, role: 'realtor' } } : a
     )))
+    setApproveTarget(null)
+    return null
   }
 
   if (loading) {
@@ -199,15 +206,23 @@ export default function AdminDashboard() {
                     <button
                       className="rt-btn-primary"
                       style={{ width: 'auto', padding: '8px 16px', fontSize: 12.5, marginLeft: 'auto' }}
-                      disabled={a.profile?.role === 'realtor' || approvingId === a.id}
-                      onClick={() => handleApprove(a)}
-                    >{a.profile?.role === 'realtor' ? '승인 완료' : approvingId === a.id ? '승인하는 중...' : '승인하기'}</button>
+                      disabled={a.profile?.role === 'realtor'}
+                      onClick={() => setApproveTarget(a)}
+                    >{a.profile?.role === 'realtor' ? '승인 완료' : '승인하기'}</button>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+      )}
+
+      {approveTarget && (
+        <ApproveRealtorModal
+          application={approveTarget}
+          onCancel={() => setApproveTarget(null)}
+          onConfirm={handleApproveConfirm}
+        />
       )}
     </div>
   )
