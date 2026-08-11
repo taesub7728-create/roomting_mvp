@@ -2567,10 +2567,14 @@ TEMP 대신 `VALUES` 인라인으로 기대값을 적는 것이다.
 | # | 전제 | 상태 |
 | --- | --- | --- |
 | ① | LocationStep 자동완성 UI — `station_id` 를 실제로 저장할 것 | ✅ **완료** (2026-08-10) |
-| ② | `extra_note` maxLength=300 + 글자 수 카운터 | ❌ **미구현** |
+| ② | `extra_note` maxLength=300 + 글자 수 카운터 | ✅ **완료** (2026-08-11) |
 
-②는 `src/pages/RequestWizard/steps/ExtraStep.jsx:40-41` 에 `maxLength` 가 없다.
-**032 적용 직전에 ②를 처리할 것.**
+**②는 2026-08-11 에 구현·배포했다.** 032 를 기다리지 않고 먼저 넣었다 — 032:11-14 가
+말한 순서 문제 때문이다(UI 가 먼저 제한해야 사용자가 입력 중에 안다). 미리 배포해서
+잃는 것이 없고, 그 사이 300자 초과 요청서가 더 쌓이지 않아 나중에 `VALIDATE` 가
+가능해질 여지도 생긴다.
+
+구현 범위는 아래 「extra_note 300자 제한」 섹션 참고. **032 자체는 여전히 미적용이다.**
 
 ★ 032:11-14 가 명시하듯 CHECK 는 `NOT VALID` 라서 기존 행만 건너뛰고 신규 INSERT/UPDATE 는
 그대로 막는다. UI 가 먼저 길이를 제한해야 사용자가 입력 중에 알 수 있다. 순서를 뒤집으면
@@ -2974,3 +2978,76 @@ alter function public.increment_response_count()       set search_path = pg_cata
 
 2026년 11월 신규 중개사 승인 플로우 검증 때 034 를 적용한다. 그 흐름에서 어차피 계정을
 만들게 되므로 T16-a 가 추가 비용 없이 소화되고, **49번의 R7 도 같은 계정으로 함께 판정**된다.
+
+# extra_note 300자 제한 (2026-08-11 구현·배포) — 032 전제 ② 충족
+
+`migration_032` 가 걸 `requests_extra_note_length` CHECK 보다 **프론트 제한을 먼저 배포**했다.
+032 는 여전히 미적용이다.
+
+## 구현 범위
+
+| # | 내용 | 파일 |
+| --- | --- | --- |
+| 1 | 길이 규칙 단일 정의 지점 신설 | `RequestWizard/validateExtraNote.js` (신규) |
+| 2 | `maxLength={300}` + 실시간 카운터 + 초과 표시 | `RequestWizard/steps/ExtraStep.jsx` |
+| 3 | 단계 게이트 (extra 단계 "다음" 차단) | `RequestWizard/steps.js` |
+| 4 | 제출 게이트 (review → 제출 차단) | `RequestWizard/validateRequest.js` |
+| 5 | 카운터·초과 문구 ko/ja/zh/en | `RequestWizard/translations.js` |
+| 6 | 카운터 스타일 | `RequestWizard/RequestWizard.css` |
+
+`validateExtraNote.js` 를 따로 만든 이유는 `validateTransaction.js` 와 같다 — 규칙을
+세 곳(입력칸·단계·제출)이 쓰는데 각자 `300` 을 하드코딩하면 한 곳만 고쳤을 때 조용히 어긋난다.
+
+## 판단 3건
+
+**(1) 복원본은 자르지 않는다.** `maxLength` 는 사용자 입력만 막고 state 로 주입된 값은
+자르지 않는다. 초과 값이 생기는 경로는 `restoreRequestForm()` 복원본과 이 제한 배포 이전
+draft 재개 둘뿐이다. **잘라내지 않고 초과 상태를 보여주고 막는다** — Phase 3 가
+`restoreRequestForm` 에서 세운 원칙 그대로다(조용히 정상값으로 바꾸면 사용자는 무엇이
+잘못됐는지 영영 모른다). 문구는 "N자를 지워주세요"로 **지울 양을 알려준다.**
+
+**(2) extra 단계에서 "다음"을 막는다 — 전세 대출과 반대로 판단했다.** 대출 여부는
+transaction 단계에서 막지 않고 review 로 미뤘는데, 그건 "사용자가 아직 답한 적 없는 빈
+항목"이라 그 자리에서 막히면 이유를 알 수 없기 때문이었다. 길이 초과는 다르다 — 초과한
+본문과 카운터가 바로 위에 보이고 몇 자를 지울지도 화면에 있다. 통과시키면 textarea 가
+없는 review 에서 막혀 되돌아와야 한다.
+
+**(3) 글자 수 세는 기준이 DB 와 다르다 (의도).** Postgres `char_length()` 는 코드포인트를,
+JS `String.length` 와 HTML `maxLength` 는 UTF-16 코드유닛을 센다. 이모지는 JS 에서 2 로 잡힌다.
+
+- 방향은 안전하다: **항상 JS 카운트 ≥ DB 카운트**이므로 DB 가 거부할 값을 UI 가
+  통과시키는 일은 없다. 반대로 이모지가 많으면 UI 가 먼저 막는다(이모지 151개 = JS 302).
+- 코드포인트로 세면 DB 와 정확히 일치하지만, 그러면 카운터(코드포인트)와 입력칸
+  `maxLength`(코드유닛)가 다른 기준이 되어 **"카운터는 280인데 더 입력이 안 되는"** 상태가
+  생긴다. 그쪽이 훨씬 혼란스럽다.
+- → 카운터와 입력 제한이 같은 기준을 쓰는 쪽을 택했다. 프론트가 DB 보다 엄격한 것은
+  40번 ★(LocationStep station 필수화)과 같은 방향이다.
+
+## ★ 032 적용 직후 실측 항목 — `classifySubmitFailure` 화이트리스트
+
+`src/api/classifySubmitFailure.js` 의 `EDITABLE_CONSTRAINTS` 에
+**`requests_extra_note_length` 를 아직 추가하지 않았다.**
+
+- 성격상 editable 이 맞다(사용자가 스스로 고칠 수 있는 값). 그러나 이 파일의 분류는
+  **실측으로만 확정한다**는 것이 2026-08-04 에 세운 원칙이다. 032 가 미적용이라 이
+  constraint 가 실제로 `code '23514'` 로 오는지, `message` 가 기존 정규식
+  (`violates check constraint "이름"`)과 같은 형태인지 확인된 바 없다.
+- **추정으로 넣지 않는다.** 미확인 상태로 등록하면 "editable 로 분류된다"고 믿게 되는데
+  실제로는 매치 실패로 unknown 에 떨어지면서 아무도 눈치채지 못한다. 등록하지 않은 지금은
+  unknown 폴백이 그대로 동작하고, 그것이 안전한 방향이다.
+- **→ 032 적용 직후 위반을 1회 재현해 `error.code` / `error.message` 원문을 확인하고,
+  기존 2개와 같은 형태이면 Set 에 이름 한 줄을 추가한다.**
+- 그때까지 사용자가 이 CHECK 에 걸릴 일은 없다 — 위 게이트 3중이 먼저 막는다.
+  화이트리스트는 그 게이트를 우회하는 경로(구버전 클라이언트가 만든 pending payload 재생)를
+  위한 **2차 방어**다.
+
+## 이번 범위에서 뺀 것
+
+- **`detectContactInfo.js` 연락처 패턴 경고** — 032:78-88 이 설계까지 적어둔 항목
+  (휴대폰/유선/이메일/카카오/LINE/WeChat). **차단이 아니라 경고**이고 032 의 CHECK 와
+  무관해서 전제 ② 에 포함되지 않는다. **Later 로 분리** (2026-08-11 결정).
+  안내 문구("연락처는 채팅에서 안전하게 주고받을 수 있어요")도 같은 묶음이다.
+  ★ 5번 항목이 이미 적었듯 **300자 제한은 경감 조치이지 개인정보 보호의 해결이 아니다.**
+  이번 구현으로 "보호 완료"가 되지 않았다.
+- **`jeonse_loan_detail` 카운터** — 같은 자유 입력 필드인데 현재 길이 제한이 전혀 없다.
+  032 도 이 컬럼에는 CHECK 를 걸지 않는다. 제안 단계로만 기록한다.

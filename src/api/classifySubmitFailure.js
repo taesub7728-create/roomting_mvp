@@ -19,6 +19,26 @@
 // editable로 잘못 분류하지 않고 반드시 unknown으로 떨어지도록 아래에서 구현했다(오분류로
 // editable이 되면 사용자가 고칠 수 없는 것을 고치라고 안내하게 되므로, 실패 방향을 unknown
 // 쪽으로 고정한다).
+//
+// ★ 등록 대기: requests_extra_note_length (migration_032, 미적용)
+//   032 가 걸 CHECK 는 extra_note 300자 제한이고, 사용자가 스스로 고칠 수 있는 값이므로
+//   성격상 editable 이 맞다. 그런데 이 파일의 분류는 **실측으로만 확정한다**는 것이
+//   2026-08-04 에 세운 원칙이다(위 "분류 근거" 참고). 032 가 아직 적용되지 않아
+//   이 constraint 가 실제로 code '23514' 로 오는지, message 가 위 정규식과 같은 형태인지
+//   확인된 바 없다.
+//
+//   지금 추가하지 않는다. 미확인 상태로 넣으면 "등록했으니 editable 로 분류된다"고
+//   믿게 되는데, 실제로는 매치 실패로 unknown 에 떨어지면서 아무도 눈치채지 못한다.
+//   등록하지 않은 지금은 unknown 폴백이 그대로 동작하며, 그것이 안전한 방향이다.
+//
+//   -> 032 적용 직후 위반을 1회 재현해 error.code / error.message 원문을 확인하고,
+//      기존 2개와 같은 형태이면 아래 Set 에 이름 한 줄을 추가한다.
+//      TODO_PHASE2.md 「032 적용 직후 실측 항목」 참고.
+//
+//   ※ 그때까지 사용자가 이 CHECK 에 걸리는 일은 없어야 한다 - RequestWizard 의
+//     validateExtraNote.js 가 입력·단계·제출 3중으로 먼저 막는다. 이 화이트리스트는
+//     그 게이트를 우회하는 경로(구버전 클라이언트가 만든 pending payload 재생 등)를
+//     위한 2차 방어다.
 const EDITABLE_CONSTRAINTS = new Set([
   'requests_deposit_range_consistency',
   'requests_jeonse_loan_consistency',

@@ -102,6 +102,8 @@ export const requestText = {
       { code: 'full_option', label: '풀옵션' },
     ],
     textareaPlaceholder: '예) 여성 전용 건물, 보안 카메라 있으면 좋겠어요',
+    extraNoteCounter: (current, max) => `${current} / ${max}`,
+    extraNoteOverLimitError: (over) => `${over}자를 지워주세요. 추가 요청사항은 300자까지 쓸 수 있어요.`,
 
     reviewHeadline: '요청 내용을 확인해주세요',
     reviewSub: '수정이 필요한 항목은 [수정]을 눌러 변경할 수 있어요',
@@ -207,6 +209,8 @@ export const requestText = {
       { code: 'full_option', label: 'フルオプション' },
     ],
     textareaPlaceholder: '例）女性専用建物、防犯カメラがあると嬉しいです',
+    extraNoteCounter: (current, max) => `${current} / ${max}`,
+    extraNoteOverLimitError: (over) => `${over}文字削除してください。追加のご要望は300文字までです。`,
 
     reviewHeadline: 'リクエスト内容をご確認ください',
     reviewSub: '修正が必要な項目は「修正」から変更できます',
@@ -312,6 +316,8 @@ export const requestText = {
       { code: 'full_option', label: '全配置' },
     ],
     textareaPlaceholder: '例）女性专用楼，希望有安全摄像头',
+    extraNoteCounter: (current, max) => `${current} / ${max}`,
+    extraNoteOverLimitError: (over) => `请删除 ${over} 个字。其他需求最多可填 300 字。`,
 
     reviewHeadline: '请确认请求内容',
     reviewSub: '需要修改的项目可以点击"修改"进行变更',
@@ -417,6 +423,9 @@ export const requestText = {
       { code: 'full_option', label: 'Full Option' },
     ],
     textareaPlaceholder: 'e.g. Women-only building, CCTV preferred',
+    extraNoteCounter: (current, max) => `${current} / ${max}`,
+    extraNoteOverLimitError: (over) =>
+      `Please remove ${over} character${over === 1 ? '' : 's'}. Extra requests are limited to 300 characters.`,
 
     reviewHeadline: 'Review your request',
     reviewSub: 'Tap "Edit" on any item to make changes',

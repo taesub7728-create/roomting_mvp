@@ -26,6 +26,28 @@
 .rw-input::placeholder, .rw-textarea::placeholder { color: var(--ink-soft); font-weight: 500; }
 .rw-textarea { resize: none; height: 86px; line-height: 1.6; }
 
+/* extra_note 글자 수 카운터 ---------------------------------------------------
+   평상시에는 화면에서 가장 낮은 위계다. 300자는 짧지 않아서 대부분의 사용자는 이 숫자를
+   의식할 일이 없어야 한다 - var(--muted-soft)는 theme.css가 "더 낮은 위계의 메타 정보"로
+   정의한 토큰이고 이 용도에 정확히 맞는다.
+
+   초과 상태에서만 var(--danger)로 올라온다. 이때 입력칸 테두리도 함께 바뀌어서, 카운터
+   숫자와 문제가 있는 본문이 같은 신호를 공유하게 한다(둘을 따로 찾지 않아도 되게).
+   초과는 사용자가 타이핑해서 만들 수 없고 복원본·구버전 draft 재개에서만 나타난다. */
+.rw-counter {
+  margin-top: 6px;
+  text-align: right;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted-soft);
+  font-variant-numeric: tabular-nums;
+  transition: color .15s;
+}
+.rw-counter-over { color: var(--danger); }
+
+.rw-textarea-over { border-color: var(--danger); }
+.rw-textarea-over:focus { border-color: var(--danger); }
+
 /* 역 자동완성 --------------------------------------------------------------
    기존 rw-input 위에 드롭다운만 얹는다. 새 스타일 시스템을 만들지 않는다. */
 .station-ac { position: relative; }

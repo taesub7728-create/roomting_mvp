@@ -1,5 +1,6 @@
 import { isValidLocalISODate, isPastLocalDate } from '../../shared/format/moveInDate'
 import { checkJeonseAmounts, checkJeonseLoanPlan } from './validateTransaction'
+import { extraNoteOverBy } from './validateExtraNote'
 import { TRANSACTION_ISSUE_MESSAGE_KEY } from './translations'
 
 // 제출 직전 마지막 방어선. buildRequestPayload()는 순수 정규화 함수로 유지하고(예외를
@@ -32,6 +33,17 @@ export function validateRequest(form, t) {
   // 않지만(TransactionStep 참고), 제출 시점까지 비어 있다면 이유 없이 막히면 안 된다.
   const transactionIssue = checkJeonseAmounts(form) ?? checkJeonseLoanPlan(form)
   if (transactionIssue) return t[TRANSACTION_ISSUE_MESSAGE_KEY[transactionIssue]]
+
+  // extra_note 길이. extra 단계 validate()가 이미 "다음"을 막지만, station 검사와 같은
+  // 이유로 여기서 다시 본다 - 단계 validate()를 거치지 않고 review 까지 도달하는 경로가
+  // 있다(복원본 진입, 이 제한 배포 이전 draft 재개, 단계 점프).
+  //
+  // ★ 이 게이트가 없으면 migration_032 적용 후 requests_extra_note_length CHECK 가
+  //   그대로 올라온다. classifySubmitFailure()의 editable 화이트리스트에 아직 그 이름이
+  //   없어 unknown 으로 분류되고, 사용자는 원인을 모른 채 "재시도"만 반복하게 된다.
+  //   (화이트리스트 등록은 032 적용 후 message 원문 실측이 선행 조건 - 해당 파일 주석 참고)
+  const extraNoteOver = extraNoteOverBy(form.extraNote)
+  if (extraNoteOver > 0) return t.extraNoteOverLimitError(extraNoteOver)
 
   return null
 }

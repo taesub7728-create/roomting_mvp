@@ -6,6 +6,7 @@ import ExtraStep from './steps/ExtraStep'
 import ReviewStep from './steps/ReviewStep'
 import { isValidLocalISODate, isPastLocalDate } from '../../shared/format/moveInDate'
 import { checkJeonseAmounts } from './validateTransaction'
+import { isExtraNoteWithinLimit } from './validateExtraNote'
 
 // 모든 카테고리 공유 - 앞쪽(지역/거래조건)
 const headSteps = [
@@ -73,7 +74,14 @@ const tailSteps = [
     headlineKey: 'extraHeadline',
     subKey: 'extraSub',
     isApplicable: () => true,
-    validate: () => true, // 전부 선택 항목 - 빈 값으로도 다음 이동 가능
+    // 전부 선택 항목이라 빈 값으로도 다음 이동 가능하다. 유일한 예외가 길이 초과다.
+    //
+    // ★ 전세 대출 여부(checkJeonseLoanPlan)를 transaction 단계에서 막지 않은 것과 반대로
+    //   판단했다. 그쪽은 "사용자가 아직 답한 적 없는 빈 항목"이라 그 자리에서 막으면 이유를
+    //   알 수 없어 review 로 미뤘다. 여기는 다르다 - 초과한 본문과 카운터가 바로 위에 보이고
+    //   몇 자를 지워야 하는지도 화면에 있다. 통과시키면 textarea 가 없는 review 에서 막혀
+    //   되돌아와야 한다.
+    validate: (form) => isExtraNoteWithinLimit(form),
   },
   {
     id: 'review',
