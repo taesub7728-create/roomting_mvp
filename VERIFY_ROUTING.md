@@ -642,6 +642,61 @@ FAIL 이면 `response_count` 원복까지 함께 판단한다.
 
 남은 것은 "이 술어가 실제 INSERT 경로에서 RLS 로 집행되는가" 하나이며, 그것이 8-2 다.
 
+### ✅ 8-2 실행 결과 (2026-08-11) — R6 PASS
+
+**fixture (실측 재확보, 추정 아님)**
+
+| 대상 | UUID | 구 | 상태 |
+| --- | --- | --- | --- |
+| 베스트공인중개사사무소 | `b28f1e03-db3f-4faa-be52-eba2f7d50294` | `11410` 서대문구 | realtor |
+| 대박공인중개사 | `e17d5f3d-39c8-43ed-a518-07b9b9b3fdf0` | `11680` 강남구 | realtor |
+| 요청서 A `routing-verify-A-ahyeon` | `23c776e4-aa8b-4679-8956-39e0ef1ee9a2` | `11410` | open, `response_count` 0 |
+| 요청서 B `routing-verify-B-gangnam` | `72f9a170-6092-4edb-80e5-568ec6ea6740` | `11680` | open, `response_count` 0 |
+
+**사전 조건**: C0 collision **0행** (`properties_request_realtor_unique` 와 섞이지 않음).
+C1 캡처 — 강남 `response_count` = **0**.
+
+**시험**: 베스트(11410) 세션 → 강남 요청서(11680)에 `POST /rest/v1/properties` **1회**.
+payload 는 `properties.api.js:14-23` 의 `createPropertyResponse()` 와 키 8개가 동일하다.
+
+**실제 응답 (문자열 고정 없이 그대로 기록)**
+
+```
+status 403
+body   { code: '42501', details: null, hint: null,
+         message: 'new row violates row-level security policy for table "properties"' }
+```
+
+**무변경 확인 — 판정의 실질 근거**
+
+| 확인 | 결과 |
+| --- | --- |
+| `properties` where realtor=베스트 and request=강남 | **0행** |
+| `properties` where title='r6-should-be-rejected' | **0행** |
+| 강남 `response_count` | **0** — C1 과 동일 |
+| Q0-C | 대박 0/0/0 · 베스트 2/1/1 — **변화 없음** |
+
+★ **`response_count` 불변이 단순 중복 확인이 아니다.** `trg_increment_response_count` 는
+`after insert on properties` 다(schema.sql:117-119). 카운터가 움직이지 않았다는 것은
+**INSERT 가 아예 성립하지 않았다**는 뜻이며, "행이 생겼다가 정리됐다"와 구분된다.
+
+**cleanup 불필요** — 행 미생성, 카운터 불변. 8-2 의 cleanup 초안은 실행하지 않았다.
+
+**★ positive dynamic INSERT 는 실행하지 않았다.** 아현에 실제 응답을 넣지 않았고
+Q0-C baseline 을 보존했다. 정책이 과도하게 조여 정상 응답까지 막는 경우는
+**R6-pre 진리표의 `would_pass = true` 2건**(정적 술어 평가)으로만 배제했다.
+**실제 성공 INSERT 검증은 migration_034 의 T16-b 소관이다(2026-11).**
+
+**판정 한계**: SQL Editor 는 `auth.uid()` 컨텍스트가 없어 정책을 런타임 그대로 재현하지
+못한다. 특히 `realtor_id = auth.uid()` 절은 SQL 로 평가할 수 없다. R6 판정은 아래 5개의
+**조합**으로 성립한다 — 어느 하나 단독으로는 성립하지 않는다.
+
+1. 실제 브라우저 세션(`auth.uid()` 유효)에서 INSERT 가 거부됨 — c1 포함 전 조건 통과
+2. 행 수 0 + `response_count` 불변 — "에러가 났다"가 아니라 "반영되지 않았다"
+3. R6-pre 술어 진리표 4행 대각선 — **양성 2건 포함**, 과도 차단 배제
+4. T2/R1 — 베스트의 아현 scoped 접근 성공(정책·RPC 배선이 살아 있음)
+5. policy expression 정적 분석
+
 ### 8-3. R8 재확인 — 030 후 고객 화면 회귀
 
 API 레벨(9행)은 이미 확인됐다. **화면 회귀만 남았다.** write 없음.
@@ -689,9 +744,10 @@ API 레벨(9행)은 이미 확인됐다. **화면 회귀만 남았다.** write �
 
 **write 없는 항목은 2026-08-11 로 전부 닫혔다.**
 
+**2026-08-11: R6 본 시험까지 완료됐다.** 아래는 그 이후로 남은 것이다.
+
 | # | 내용 | 왜 남았나 |
 | --- | --- | --- |
-| **R6 본 시험** | 영업지역 밖 properties INSERT 거부 | INSERT 시도라 승인 필요. 절차는 8-2 |
 | **031** | 다중 매물 응답 (`properties_request_realtor_unique` 제거) | ⚠ **실질적으로 되돌릴 수 없다.** 적용 전 `properties`/`property_images`/`chat_rooms`/`chat_messages` **4개 테이블 백업이 선행 조건**(TODO 4번) |
 | **032** | requests CHECK 제약 | 전제 ② `extra_note` maxLength=300 + 카운터가 **미구현**(TODO 40번). `ExtraStep.jsx` 에 `maxLength` 없음. **032 직전에 처리할 것** |
 | **034** | 030 4-2 이월분 | 11월 신규 중개사 승인 플로우 때. T16-a/T16-b 동반 (TODO 50번) |

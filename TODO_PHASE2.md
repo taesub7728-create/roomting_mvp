@@ -2876,10 +2876,38 @@ baseline 없이 0행만 보면 "차단됐다"인지 "원래 없었다"인지 구
 
 | # | 내용 | 상태 |
 | --- | --- | --- |
-| R6 | 영업지역 밖 요청서에 properties INSERT 거부 | **미실행** — INSERT 시도라 승인 필요. `VERIFY_ROUTING.md` 8절 |
-| R8 재확인 | 고객 화면 회귀(030 후) | **미실행** — API 레벨 9행은 확인됨, UI 미확인 |
+| R6 | 영업지역 밖 요청서에 properties INSERT 거부 | ✅ **PASS** (2026-08-11) — 아래 참고 |
+| R8 재확인 | 고객 화면 회귀(030 후) | ✅ **PASS** (2026-08-11) |
 | T16 | 회원가입 / 매물 응답 | 034 로 이월 (11월) |
 | R7 | 영업지역 없는 중개사 0행 | 미검증 — 대상 부재 (49번) |
+
+## R6 결과 (2026-08-11) — PASS
+
+베스트(영업지역 `11410`) 세션에서 강남 요청서(`11680`)에 `POST /rest/v1/properties` **1회** 시도.
+
+```
+status 403
+body   { code: '42501', details: null, hint: null,
+         message: 'new row violates row-level security policy for table "properties"' }
+```
+
+무변경 확인: 해당 조합 `properties` **0행** / 강남 `response_count` **0**(시도 전과 동일) /
+Q0-C **대박 0/0/0 · 베스트 2/1/1 변화 없음**. **행이 생기지 않아 cleanup 불필요.**
+
+★ **`response_count` 불변이 핵심 근거다.** `trg_increment_response_count` 는
+`after insert on properties`(schema.sql:117-119)이므로, 카운터가 움직이지 않았다는 것은
+**INSERT 가 아예 성립하지 않았다**는 뜻이다. "행이 생겼다가 정리됐다"와 구분된다.
+에러 메시지가 떴다는 사실만으로 판정하지 않았다.
+
+★ **positive dynamic INSERT 는 실행하지 않았다.** 아현에 실제 응답을 넣지 않아 Q0-C
+baseline 을 보존했다. 정책이 과도하게 조여 **정상 응답까지 막는 경우**는 R6-pre 진리표의
+`would_pass = true` 2건(정적 술어 평가)으로만 배제했다 —
+**실제 성공 INSERT 검증은 migration_034 의 T16-b 소관이다(2026-11).**
+"positive 까지 동적으로 검증했다"고 읽지 말 것.
+
+판정 한계와 근거 5개 조합(브라우저 세션 실거부 / 행 0 + 카운터 불변 / R6-pre 진리표 /
+T2·R1 scoped 접근 성공 / policy 정적 분석)은 `VERIFY_ROUTING.md` 8-2 에 기록했다.
+SQL Editor 는 `auth.uid()` 컨텍스트가 없어 `realtor_id = auth.uid()` 절을 평가할 수 없다.
 
 ---
 
