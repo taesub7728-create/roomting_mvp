@@ -1,0 +1,144 @@
+-- 마이그레이션 034: 트리거 전용 함수 2개의 EXECUTE 회수 (migration_030 4-2 이월분)
+-- 실행 방법: Supabase 대시보드 > SQL Editor > New query 에 전체 붙여넣고 Run
+-- 전제: migration_030 이 먼저 적용되어 있어야 함
+--
+-- ★★ 상태: 초안 · 미적용 (2026-08-11 작성) ★★
+--    적용 시점: 2026년 11월 신규 중개사 승인 플로우 검증 때.
+--    그때 새 계정을 만들게 되므로 아래 T16-a 를 추가 비용 없이 돌릴 수 있다.
+--
+-- ============================================================================
+-- 이 파일이 존재하는 이유
+-- ============================================================================
+--   migration_030 의 4-2 구간(030:185-187)은 아래 2줄을 실행하도록 작성돼 있었다.
+--
+--     revoke all on function public.handle_new_user()          from public, anon, authenticated;
+--     revoke all on function public.increment_response_count() from public, anon, authenticated;
+--
+--   2026-08-11 의 030 적용에서 **이 2줄만 제외하고 나머지 14문을 적용**했다.
+--   제외 근거:
+--     - 030 자신이 이 구간을 "returns trigger 라 직접 호출이 불가능하다(에러). 위험 0.
+--       위생 차원에서 회수한다"(030:161-162)고 평가했다. 얻는 보안 이득이 없다.
+--     - 반면 030 자신이 "틀리면 회원가입이 통째로 죽는다. 반드시 T16 으로 확인할 것.
+--       실패하면 이 두 줄만 되돌린다"(030:162-164)고 경고했다. 실패 대가가 크다.
+--     - T16(회원가입 1회 + 매물 응답 1회)은 새 계정 생성을 요구하고, 계정 생성은
+--       CLAUDE.md 11번에 따라 별도 승인 대상이다. 그날 승인 범위 밖이었다.
+--
+--   즉 **빠뜨린 것이 아니라 검증 비용이 붙는 구간을 분리한 것**이다.
+--
+-- ★ migration_030 파일은 수정하지 않았다. 016 의 버그를 017 이, 028 의 버그를 033 이
+--   고친 것과 같은 방식으로, 뒤 번호 파일이 앞 파일의 미실행분을 이어받는다.
+--
+-- ============================================================================
+-- 적용 전 반드시 읽을 것 — 이 변경이 안전하다고 보는 근거와 그 한계
+-- ============================================================================
+--   [근거] PostgreSQL 은 트리거 함수의 EXECUTE 권한을 **CREATE TRIGGER 시점에** 검사하고,
+--          트리거 발동 시점에는 재검사하지 않는다. 따라서 이미 만들어진 트리거는
+--          함수 EXECUTE 를 회수해도 계속 동작하는 것이 문서상 정상 동작이다.
+--
+--   [한계] 위는 문서 근거이지 이 DB 에서의 실측이 아니다. 그리고 대상이 회원가입
+--          경로(handle_new_user)라 틀렸을 때 서비스 진입점이 통째로 막힌다.
+--          **근거가 있다는 이유로 검증을 생략하지 않는다.** 아래 T16-a/T16-b 를 반드시 돈다.
+--
+-- ============================================================================
+-- 영향 범위
+-- ============================================================================
+--   변경 대상: 함수 2개의 EXECUTE 권한 (public, anon, authenticated 에서 회수)
+--   영향 받는 기능: 이론상 없음. 실제 확인 대상은 회원가입 / 매물 응답 2가지
+--   영향 없음: 정책·스키마·데이터 전부 무변경. 이 파일에 policy/DDL/DML 문이 0건이다
+--   개인정보: 신규 저장 없음. 노출 범위 변화 없음
+--   migration 필요: 이 파일 자체
+--   rollback: 파일 하단. 회수 전 상태(PUBLIC EXECUTE 보유)로 되돌린다
+--
+-- ============================================================================
+-- 보안 시나리오
+-- ============================================================================
+--   [1] 공격 가능 시나리오
+--     A1 anon 이 handle_new_user() 를 직접 호출해 임의 profiles 행 생성
+--        -> returns trigger 라 직접 호출 시 에러(0A000). 회수 전에도 불가능했다
+--     A2 authenticated 가 increment_response_count() 를 호출해 response_count 조작
+--        -> 동일. returns trigger 는 SQL 에서 직접 호출할 수 없다
+--     즉 이 회수는 **실재 공격 경로를 닫는 것이 아니라 표면적을 줄이는 위생 조치**다.
+--     030 의 평가("위험 0")를 뒤집지 않는다.
+--
+--   [2] 정상 사용자 흐름
+--     신규 가입 -> auth.users INSERT -> handle_new_user 트리거 -> profiles 행 생성
+--     중개사 응답 -> properties INSERT -> increment_response_count 트리거 -> requests.response_count +1
+--
+--   [3] 차단되어야 하는 요청
+--     anon / authenticated 의 두 함수 직접 호출  (이 파일)
+--
+--   [4] 허용되어야 하는 요청
+--     위 [2] 두 흐름 전부. 트리거 경유 실행은 계속 동작해야 한다
+--
+--   [5] 테스트 방법: 파일 하단 T16-a / T16-b
+
+
+-- ========================================
+-- 1. 트리거 전용 함수 EXECUTE 회수 (migration_030 4-2 원문 그대로)
+-- ========================================
+revoke all on function public.handle_new_user()                from public, anon, authenticated;
+revoke all on function public.increment_response_count()       from public, anon, authenticated;
+
+
+-- ========================================
+-- 적용 후 확인
+-- ========================================
+-- V1. 권한 실측
+--   select p.proname, p.proacl::text as acl, p.proconfig::text as config
+--   from pg_proc p
+--   join pg_namespace n on n.oid = p.pronamespace and n.nspname = 'public'
+--   where p.proname in ('handle_new_user','increment_response_count');
+--
+--   기대: acl 에서 '=X/postgres'(PUBLIC), 'anon=X', 'authenticated=X' 가 사라짐.
+--         owner(postgres) 항목은 남는다.
+--         config 는 030 4-4 에서 이미 {search_path=pg_catalog, public} 로 설정됨 — 변화 없음
+--
+-- V2. 트리거 2개가 여전히 활성인지 (권한 회수가 트리거를 끄지 않는다는 확인)
+--   select t.tgname, t.tgenabled, c.relname, p.proname
+--   from pg_trigger t
+--   join pg_class c on c.oid = t.tgrelid
+--   join pg_proc  p on p.oid = t.tgfoid
+--   where p.proname in ('handle_new_user','increment_response_count')
+--     and not t.tgisinternal;
+--
+--   기대: 2행, tgenabled = 'O'
+--
+-- ★ V1/V2 는 구조 확인일 뿐이다. 실제 판정은 아래 T16-a/T16-b 다.
+--
+-- ========================================
+-- T16-a ★ 회원가입 1회 (handle_new_user)
+-- ========================================
+--   절차: `<주소>+test<번호>@<도메인>` 형식으로 신규 가입 1회
+--         (CLAUDE.md 11번 — 계정 생성은 사용자 승인 대상)
+--   PASS: 가입 완료 + profiles 에 role='customer' 행이 생성됨
+--   FAIL: 가입 중 오류 / auth.users 는 생겼는데 profiles 행이 없음
+--   ★ FAIL 이면 즉시 아래 롤백의 handle_new_user 줄만 실행한다.
+--     profiles 행이 없는 계정이 남으면 CLAUDE.md 「로그인 페이지 profile null 처리」가
+--     다루는 비정상 상태가 되므로 그 계정도 함께 정리한다.
+--   검증 후: 만든 계정을 바로 삭제한다(TODO_PHASE2.md 「테스트 계정 원칙」).
+--
+--   ※ 11월 신규 중개사 승인 플로우 검증과 묶으면 그 흐름에서 어차피 계정을 만들게 되므로
+--     T16-a 는 추가 비용 없이 소화된다. 그때 TODO 49번의 R7 도 같은 계정으로 판정한다.
+--
+-- ========================================
+-- T16-b ★ 매물 응답 1회 (increment_response_count)
+-- ========================================
+--   절차: 중개사 세션에서 자기 영업지역의 open 요청서에 매물 응답 1건 등록
+--   PASS: properties 행 생성 + 해당 requests.response_count 가 정확히 +1
+--   FAIL: INSERT 는 됐는데 response_count 가 그대로
+--   ★ response_count 를 응답 전후로 직접 조회해 비교한다. 화면 표시만 보지 않는다.
+--
+--   ※ 이 응답은 030 이후의 R6(영업지역 밖 INSERT 거부)과 짝이 되는 양성 대조이기도 하다.
+--     R6 이 "거부"를 보고, T16-b 가 "허용 + 부수효과 정상"을 본다.
+
+
+-- ========================================
+-- 롤백
+-- ========================================
+-- grant execute on function public.handle_new_user()            to public, anon, authenticated;
+-- grant execute on function public.increment_response_count()   to public, anon, authenticated;
+--
+-- ★ 되돌려도 보안이 나빠지지 않는다 — 회수 전 상태가 곧 030 적용 시점의 상태이고,
+--   030 자신이 그 상태를 "위험 0"으로 평가했다. 두 함수 모두 returns trigger 라
+--   직접 호출이 불가능하다.
+-- ★ search_path 는 되돌리지 않는다. 030 4-4 가 설정한 것이며 이 파일의 소관이 아니다.

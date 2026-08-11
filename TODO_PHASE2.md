@@ -2749,3 +2749,200 @@ DB 에 상한을 박지 않은 이유: 구독 등급별 차등(무료 1개 / 유
 
 ★ admin 다국어가 실제로 필요해지면 **화면 전체를 한 번에** 전환해야 한다. 부분 도입은
 같은 화면에 두 체계가 공존하게 만든다.
+
+## 49. R7(영업지역 없는 중개사 = 0행)은 미검증으로 남긴다 — 2026년 11월 승인 플로우로 이월
+
+**상태: 미검증 — 대상 부재 (2026-08-11 결정)**
+
+지역 라우팅 검증(R1~R10) 준비 중 확인했다. preflight 실측이
+`realtor 2 / covered 2 / **uncovered 0**` 이라 **영업지역이 없는 중개사가 존재하지 않는다.**
+R7 은 "그런 중개사가 `list_open_requests_for_realtor()` 에서 0행을 본다"를 보는 항목이라
+돌릴 대상 자체가 없다.
+
+**★ `realtor_service_areas` 를 임시로 DELETE 하지 않는다.** 검증 하나를 위해 운영 데이터를
+지웠다 되돌리는 방식은 채택하지 않았다. 근거: 복구가 실패하면 같은 세션의 R3/R4 까지 무효가
+되고, DB write 라 CLAUDE.md 11번 승인 대상이 되며, 얻는 정보량이 비용에 못 미친다.
+(41번이 영업지역 상한을 DB 에 박지 않은 것과 같은 성격의 판단 — 되돌리기 어려운 조작보다
+관측 시점을 옮기는 쪽을 택한다.)
+
+### R2/R4 로 갈음하되 "대체"라고 적지 않는다
+
+R7 과 R2/R4 는 `migration_029:169-174` 의 **같은 `exists(...)` 절**을 탄다.
+R7 은 서브쿼리가 0행이라, R2/R4 는 `sa.district_code = r.district_code` 매칭 실패라
+걸러진다 — SQL 실행 경로는 동일하다.
+
+★ 그래도 **"R2/R4 가 R7 을 대체했다"고 기록하지 않는다.** 두 경우의 코드 경로가 같다는
+것과, "영업지역 미배정"이라는 **운영 상태**가 실제로 관측됐다는 것은 다른 사실이다.
+전자를 후자로 적으면 나중에 이 항목이 검증된 것처럼 읽힌다.
+
+### 후속 실행 시점 — 2026년 11월 신규 중개사 승인 플로우 검증
+
+신규 pending 계정을 승인할 때 **`approve_realtor_application()` 호출 직전**에
+"role 은 아직 customer, 또는 role=realtor 인데 `realtor_service_areas` 0행"인 구간이
+자연 발생한다. 그 시점에 해당 세션으로 `list_open_requests_for_realtor()` 를 한 번
+호출하면 **DB write 없이** R7 이 판정된다.
+
+- 관련 미결: 「T26 실제 승인 / T34 승인 트랜잭션」(`test3@naver.com` 은 1회용)
+- 함께 볼 것: 43번의 미구현 3건(영업지역 교체 DELETE 흐름 / 희망 지역 입력 UI /
+  승인 화면에 현재 영업지역 표시)
+- 판정 기준과 절차: `VERIFY_ROUTING.md` 6번 섹션
+
+### R6 도 같은 이유로 이월 (030 이후)
+
+`properties` INSERT 의 영업지역 검사는 **030 이 만드는 정책**이다. 현재
+`properties_insert_realtor` 는 `realtor_id = auth.uid() and current_user_role() = 'realtor'`
+뿐이라(030:236 롤백 주석이 현재 정책 원문) **영업지역을 전혀 보지 않는다.**
+
+★ 030 적용 전에 R6 을 시도하면 **INSERT 가 성공한다.** 잘못된 `properties` 행과 후속
+`chat_rooms` 가 생겨 정리 대상이 된다. 030 이 닫으려는 구멍이 정확히 이것이므로,
+"지금 막히는지" 확인하는 행위 자체가 데이터를 만든다. **030 적용 후에 한다.**
+
+또한 R6 은 UI 로 판정할 수 없다 — `RealtorRespond.jsx:89-96` 이 응답 폼을 렌더하기 전에
+early return 하므로 제출 버튼에 도달하지 못한다. API 레이어에서 직접 호출해야 한다.
+
+# migration 030 적용 완료 (2026-08-11) — requests 열람 잠금 + properties 영업지역 조건
+
+**적용됨.** 실행문 **14문**(정본 16문에서 4-2 두 줄 제외 — 아래 50번).
+`begin; … commit;` 으로 감쌌다. 정본 `migration_030_secure_requests_access.sql` 은 수정하지 않았다.
+
+실행본은 `apply_030.sql` 로 저장소 루트에 임시 생성했다가 **적용 후 삭제**했다.
+재현이 필요하면 정본에서 4-2 두 줄을 빼고 `begin;`/`commit;` 을 감싸면 된다.
+
+## 적용 전 스냅샷 (원복 기준)
+
+| 항목 | 값 |
+| --- | --- |
+| S1 정책 | `requests` / `properties` 합계 **6행** |
+| S2 함수 6개 | acl 전부 `=X/postgres`(PUBLIC EXECUTE) 보유 / `config` 미설정 |
+| S3 데이터 | total **10** / open **4** / closed **6** / expired **0** |
+| S3 해시 | `id_set_hash = 68dba2f3a202205ed102a71082b09ae0` |
+
+★ 이 해시는 027 때 기록한 `dac192e1…` 과 다르다. 그때는 requests 8건이었고, 2026-08-11
+라우팅 검증에서 2건을 추가해 10건이 됐다. **027 기록과 대조하지 말 것.**
+
+## 적용 후 구조 검증 — 전부 통과
+
+| 항목 | 결과 |
+| --- | --- |
+| V1 정책 | **6행 유지**(1:1 교체). `requests_select_own_or_realtor` 제거 / `requests_select_own_or_admin` 생성 / `properties_insert_realtor` 의 `with_check` 에 `join realtor_service_areas` 확인 |
+| V2 config | 6개 함수 전부 `search_path = pg_catalog, public` |
+| V2 acl | `current_user_role`·`is_pending_realtor_applicant` → PUBLIC·anon 회수, **`authenticated=X` 보존 확인** |
+| V2 acl (4-2 제외분) | `handle_new_user`·`increment_response_count` → `=X/postgres` **잔존**. 제외했으므로 정상 |
+| V2 acl (4-3 의도) | `get_public_listings`·`check_landline_duplicate` → `=X/postgres` **잔존**. 의도된 anon 접근 |
+| V3 데이터 | **S3 와 완전 동일** (10/4/6/0, 해시 일치). 030 은 DML 0건이므로 기대대로 |
+
+★ `authenticated=X` 보존 확인은 형식 점검이 아니다. `current_user_role()` 은 새 정책
+`requests_select_own_or_admin` 과 `properties_insert_realtor` 의 **표현식 안에서 직접
+호출**되고, 정책 표현식은 질의하는 사용자 권한으로 평가된다. 이 grant 가 빠졌다면
+로그인 사용자의 requests·properties 질의가 전부 권한 오류로 떨어졌을 것이다.
+
+## 동작 검증 — T1 / T2 통과
+
+| # | 확인 | 결과 |
+| --- | --- | --- |
+| **T1** | 중개사 세션 `GET /rest/v1/requests?select=*` | `200`, rows **0** |
+| **T2** | 중개사 세션 `rpc/list_open_requests_for_realtor` | **1행**, 대시보드에 아현 카드 정상 표시 |
+
+★ **T1 의 0행은 R11 baseline 이 있어야만 의미가 있다.** 같은 호출이 030 직전에
+`200 / rows 10 / keys 26 / customer_id 포함` 이었다(`VERIFY_ROUTING.md` R11).
+baseline 없이 0행만 보면 "차단됐다"인지 "원래 없었다"인지 구분되지 않는다.
+
+## 고객 경로 무영향 — 9행이 정답인 이유
+
+고객 세션 `GET /rest/v1/requests?select=*` → **9행**. requests 총계는 10건이다.
+
+이 1건 차이가 **고객 쪽 음성 대조**다:
+
+| 소유자 | 건수 |
+| --- | --- |
+| `user@naver.com` legacy | 7 |
+| `user@naver.com` 라우팅 검증 신규(아현·강남) | 2 |
+| **소계 — 이 고객이 보는 것** | **9** |
+| `ts930728@naver.com`(미사용 계정) 요청서 | 1 |
+| **총계** | **10** |
+
+새 정책 `created_by = auth.uid() or customer_id = auth.uid()` 가 **과하지도(남의 요청서
+안 보임) 부족하지도(본인 것 전부 보임) 않다**는 것이 숫자로 확인된다. 10행이 나왔다면
+정책이 헐거운 것이고, 7행이었다면 신규 2건이 누락된 것이다.
+
+## 현재 DB 상태 (2026-08-11 기준)
+
+- 적용된 migration: **022 ~ 030 + 033**. 031/032 미적용, **034 미적용(초안)**
+- 030 의 4-2 두 줄은 **미적용** — 34번 파일로 이월
+- requests 10건 (open 4 / closed 6). 그중 라우팅 유효(`district_code` 채워짐)는 **2건**
+- `realtor_service_areas` 2행 (베스트=11410 / 대박=11680)
+
+## 남은 검증
+
+| # | 내용 | 상태 |
+| --- | --- | --- |
+| R6 | 영업지역 밖 요청서에 properties INSERT 거부 | **미실행** — INSERT 시도라 승인 필요. `VERIFY_ROUTING.md` 8절 |
+| R8 재확인 | 고객 화면 회귀(030 후) | **미실행** — API 레벨 9행은 확인됨, UI 미확인 |
+| T16 | 회원가입 / 매물 응답 | 034 로 이월 (11월) |
+| R7 | 영업지역 없는 중개사 0행 | 미검증 — 대상 부재 (49번) |
+
+---
+
+## 50. ★ migration 030 은 4-2 두 줄을 제외하고 적용한다 → 034 로 이월 (2026-08-11 결정)
+
+**030 실행본에서 아래 2줄만 빼고 나머지 14문을 적용한다.** 정본
+`migration_030_secure_requests_access.sql` **은 수정하지 않았다.**
+
+```
+-- migration_030:186-187  (제외)
+revoke all on function public.handle_new_user()          from public, anon, authenticated;
+revoke all on function public.increment_response_count() from public, anon, authenticated;
+```
+
+| 파일 | 역할 |
+| --- | --- |
+| `apply_030.sql` (저장소 루트) | 실행본. `begin; … commit;` 으로 감쌌다. 적용 후 삭제한다 |
+| `supabase/migration_034_trigger_function_privilege.sql` | 제외분 이월. **초안·미적용** |
+
+### 왜 뺐는가
+
+030 자신이 이 구간을 양쪽 방향으로 평가해 뒀다:
+
+- **이득**: "returns trigger 라 직접 호출이 불가능하다(에러). **위험 0.** 위생 차원에서
+  회수한다"(030:161-162) — 닫히는 실재 공격 경로가 없다
+- **비용**: "★ 틀리면 **회원가입이 통째로 죽는다.** 아래 T16 으로 반드시 확인할 것.
+  실패하면 이 두 줄만 되돌린다"(030:162-164)
+
+그리고 T16 은 **새 계정 생성**(CLAUDE.md 11번 승인 대상) + **properties INSERT** 를 요구한다.
+이득 0 · 검증 비용 있음 · 실패 대가 큼 → 분리가 맞다. 41번에서 영업지역 상한을 DB 에 박지
+않은 것, 49번에서 R7 을 위해 `realtor_service_areas` 를 지우지 않은 것과 같은 판단 방향이다.
+
+★ **"위험 0" 이니까 검증 없이 적용해도 된다는 뜻이 아니다.** 위험 0 은 *회수해서 얻는
+보안 이득*에 대한 평가이고, *회수가 트리거를 깨뜨릴 위험*은 별개다. 후자는 T16 이 본다.
+
+### 참고: 문서상으로는 안전하다 (그래도 T16 을 생략하지 않는다)
+
+PostgreSQL 은 트리거 함수의 EXECUTE 권한을 **`CREATE TRIGGER` 시점에** 검사하고 발동
+시점에는 재검사하지 않는다. 따라서 이미 만들어진 트리거는 EXECUTE 를 회수해도 계속
+동작하는 것이 정상 동작이다. **다만 이건 문서 근거이지 이 DB 의 실측이 아니고**, 대상이
+회원가입 경로라 틀렸을 때 서비스 진입점이 막힌다. 근거가 있다는 이유로 검증을 건너뛰지
+않는다 — 034 의 T16-a/T16-b 를 반드시 돈다.
+
+### 4-4 는 제외 대상이 아니다 (혼동 주의)
+
+030 의 4-4 에도 같은 함수 2개가 등장한다:
+
+```
+alter function public.handle_new_user()                set search_path = pg_catalog, public;
+alter function public.increment_response_count()       set search_path = pg_catalog, public;
+```
+
+**이 2줄은 그대로 적용했다.** 권한이 아니라 search_path 메타데이터만 바꾸고, `pg_catalog`
+는 명시하지 않아도 항상 먼저 검색되므로 기능 변화가 없다(030:168-173).
+제외 대상은 **EXECUTE 회수 2줄뿐**이다.
+
+### 롤백문도 정본을 그대로 복사하면 안 된다
+
+정본 롤백(030:240-241)에는 두 함수에 대한 `grant … to public, anon, authenticated` 가 있다.
+**4-2 를 적용하지 않았으므로 되돌릴 것이 없고**, 그대로 복사하면 회수한 적 없는 권한을
+새로 부여하게 된다. `apply_030.sql` 하단 롤백문에서 그 2줄을 뺐다.
+
+### 적용 시점
+
+2026년 11월 신규 중개사 승인 플로우 검증 때 034 를 적용한다. 그 흐름에서 어차피 계정을
+만들게 되므로 T16-a 가 추가 비용 없이 소화되고, **49번의 R7 도 같은 계정으로 함께 판정**된다.
