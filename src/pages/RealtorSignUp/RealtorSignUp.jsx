@@ -64,7 +64,24 @@ export default function RealtorSignUp({ initialMode = 'apply' }) {
     if (signUpError) { setLoading(false); setError(signUpError); return }
 
     if (!data?.session) {
-      // Supabase 프로젝트의 "이메일 확인" 설정이 켜져 있으면 세션 없이 가입만 됨 - 서류는 로그인 후 다시 제출해야 함
+      // ★ fail-safe 분기. 정상 운영에서는 도달하지 않는다.
+      //
+      // Supabase 프로젝트의 "Confirm email" 설정이 켜져 있으면 signUp()이 세션 없이
+      // 반환한다. 그러면 아래 submitRealtorApplication() 이 실행되지 않아
+      // realtor_applications 행도, 서류 업로드도 일어나지 않는다.
+      // 즉 **계정만 만들어지고 지원서는 접수되지 않는다.**
+      //
+      // ★ 이 상태에서 사용자가 할 수 있는 복구 방법이 코드에 없다.
+      //   submitRealtorApplication() 의 호출부는 아래 한 곳뿐이고 그 앞에 signUpWithEmail()
+      //   이 있어서, 인증을 마친 뒤 같은 폼을 다시 제출해도 이미 가입된 이메일이라
+      //   여기로 되돌아온다. 그래서 "로그인하면 이어서 제출할 수 있다"고 안내하지 않는다
+      //   (2026-08-11 이전 문구가 그렇게 안내하고 있었고, 존재하지 않는 흐름이었다).
+      //
+      // 운영 계약: Confirm email = OFF 유지. ON 으로 바꾸려면 가입/지원 분리 구조 개편이
+      // 선행되어야 한다. 자세한 내용은 TODO_PHASE2.md 「Auth 운영 계약」 참고.
+      //
+      // ★ 분기를 지우지 않는 이유: 설정이 실수로 ON 이 되면 이 화면이 "지원서가 접수되지
+      //   않았다"는 사실을 알리는 유일한 장치다. 지우면 사용자는 접수된 줄 알고 기다린다.
       setLoading(false)
       setAwaitingEmailConfirm(true)
       return
@@ -165,13 +182,19 @@ export default function RealtorSignUp({ initialMode = 'apply' }) {
     )
   }
 
+  // ★ fail-safe 화면. Confirm email = OFF 인 정상 운영에서는 도달하지 않는다(handleSubmit 주석 참고).
+  //   문구가 지켜야 하는 것 4가지:
+  //     - 접수됐다고 오해시키지 않는다 (위 submitted 화면과 확실히 달라야 한다)
+  //     - 서류가 올라갔다고 오해시키지 않는다
+  //     - 존재하지 않는 재개 경로를 안내하지 않는다
+  //     - 같은 폼을 다시 제출하도록 유도하지 않는다 (다시 제출해도 여기로 돌아온다)
   if (awaitingEmailConfirm) {
     return (
       <div className="frame">
         <div className="rsu-done">
           <div className="rsu-done-icon-wrap"><img src={logo} alt="roomting" /></div>
-          <div className="rsu-done-title">이메일 인증이 필요해요</div>
-          <div className="rsu-done-sub">받으신 메일의 링크로 인증 후, 파트너 로그인으로 다시 로그인하면 서류 제출을 이어갈 수 있어요.</div>
+          <div className="rsu-done-title">지원서가 접수되지 않았어요</div>
+          <div className="rsu-done-sub">계정은 만들어졌지만, 이메일 인증이 필요한 설정이라 지원서와 서류는 저장되지 않았어요.{'\n'}같은 내용으로 다시 제출해도 접수되지 않으니 고객센터로 문의해주세요.</div>
           <button className="rt-btn-primary" onClick={() => navigate('/')}>홈으로 돌아가기</button>
         </div>
       </div>
