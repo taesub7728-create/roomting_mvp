@@ -2,9 +2,44 @@
 -- 실행 방법: Supabase 대시보드 > SQL Editor > New query 에 전체 붙여넣고 Run
 -- 전제: migration_030 이 먼저 적용되어 있어야 함
 --
--- ★★ 상태: 초안 · 미적용 (2026-08-11 작성) ★★
+-- ★★ 상태: 초안 · 미적용 (2026-08-11 작성, 같은 날 범위 갱신) ★★
 --    적용 시점: 2026년 11월 신규 중개사 승인 플로우 검증 때.
 --    그때 새 계정을 만들게 되므로 아래 T16-a 를 추가 비용 없이 돌릴 수 있다.
+--
+-- ============================================================================
+-- ★★ 범위 갱신 (2026-08-11) — 실질 신규 작업은 handle_new_user() 하나다 ★★
+-- ============================================================================
+--   migration_031:172 가 아래와 똑같은 문장을 먼저 실행한다:
+--
+--     revoke all on function public.increment_response_count()
+--       from public, anon, authenticated;
+--
+--   즉 migration_030 4-2 에서 deferred 한 두 줄 중 increment_response_count 쪽은
+--   **031 적용 시점에 실행된다.** 031 은 이 파일보다 먼저 적용될 예정이므로, 이 파일이
+--   적용될 때 그 권한은 이미 회수돼 있을 가능성이 높다.
+--
+--   [1] REVOKE 는 idempotent 하다.
+--       이미 회수된 권한을 다시 회수해도 오류가 아니고 상태도 바뀌지 않는다.
+--       따라서 아래 1번의 두 줄을 그대로 실행해도 기능상 무해하다.
+--
+--   [2] ★ 그래서 문장을 지우지 않았다.
+--       031 이 선행해 no-op 이 되더라도 문장을 제거하면 "034 가 원래 무엇을 하려던
+--       것인지" 추적이 어려워진다. 남겨 두고 상태를 여기 기록하는 쪽이 provenance 가
+--       깔끔하다. 적용 시 acl 을 보고 "왜 이미 회수돼 있지?" 라고 놀라지 말 것 -
+--       031 이 한 것이다.
+--
+--   [3] ★ T16-b 는 031 의 C1/C3 테스트에 흡수된다.
+--       031 의 C1(매물 1->5개 순차 제출)과 C3(response_count 가 부동산 수로 갱신)이
+--       정확히 "EXECUTE 회수 후에도 트리거가 도는가"를 확인한다.
+--       -> 031 적용 후 C1/C3 가 PASS 면 increment_response_count 쪽 T16-b 는 완료다.
+--          이 파일 적용 시 T16-b 를 다시 돌릴 필요가 없다.
+--
+--   [4] 따라서 이 파일에 남는 실질 신규 작업은 **handle_new_user() 회수 하나**이고,
+--       실질 검증 대상도 **T16-a(회원가입) 하나**다.
+--
+--   ※ 031 이 적용되지 않은 채로 이 파일이 먼저 적용되는 경우에는 두 줄 다 실제로
+--     동작한다. 그 경우 T16-b 도 함께 돌려야 한다(아래 T16-b 참고).
+--     적용 시점에 031 적용 여부를 먼저 확인할 것.
 --
 -- ============================================================================
 -- 이 파일이 존재하는 이유
@@ -75,9 +110,13 @@
 
 -- ========================================
 -- 1. 트리거 전용 함수 EXECUTE 회수 (migration_030 4-2 원문 그대로)
+--
+--    ★ 아래 두 줄 중 increment_response_count 는 migration_031:172 가 선행 실행한다.
+--      031 이 먼저 적용됐다면 이 줄은 no-op 이다(REVOKE 는 idempotent).
+--      기록·추적을 위해 문장을 남겨 둔다 - 위 「범위 갱신」 참고.
 -- ========================================
 revoke all on function public.handle_new_user()                from public, anon, authenticated;
-revoke all on function public.increment_response_count()       from public, anon, authenticated;
+revoke all on function public.increment_response_count()       from public, anon, authenticated;   -- 031:172 선행 가능
 
 
 -- ========================================
@@ -92,6 +131,10 @@ revoke all on function public.increment_response_count()       from public, anon
 --   기대: acl 에서 '=X/postgres'(PUBLIC), 'anon=X', 'authenticated=X' 가 사라짐.
 --         owner(postgres) 항목은 남는다.
 --         config 는 030 4-4 에서 이미 {search_path=pg_catalog, public} 로 설정됨 — 변화 없음
+--
+--   ★ increment_response_count 는 **적용 전부터 이미 회수돼 있을 수 있다**(031:172 선행).
+--     그 경우 이 파일이 바꾸는 것은 handle_new_user 하나뿐이다. 적용 전후 acl 을 비교해
+--     "increment 쪽은 변화 없음"이 정상임을 확인할 것.
 --
 -- V2. 트리거 2개가 여전히 활성인지 (권한 회수가 트리거를 끄지 않는다는 확인)
 --   select t.tgname, t.tgenabled, c.relname, p.proname
@@ -121,22 +164,42 @@ revoke all on function public.increment_response_count()       from public, anon
 --     T16-a 는 추가 비용 없이 소화된다. 그때 TODO 49번의 R7 도 같은 계정으로 판정한다.
 --
 -- ========================================
--- T16-b ★ 매물 응답 1회 (increment_response_count)
--- ========================================
---   절차: 중개사 세션에서 자기 영업지역의 open 요청서에 매물 응답 1건 등록
---   PASS: properties 행 생성 + 해당 requests.response_count 가 정확히 +1
---   FAIL: INSERT 는 됐는데 response_count 가 그대로
---   ★ response_count 를 응답 전후로 직접 조회해 비교한다. 화면 표시만 보지 않는다.
+-- T16-b — 매물 응답 1회 (increment_response_count)
+--
+-- ★★ 031 이 먼저 적용됐다면 이 항목은 **이미 끝난 것으로 본다.** ★★
+--    031 의 C1(매물 1->5개 순차 제출)과 C3(response_count 가 부동산 수로 갱신)이
+--    정확히 같은 명제 - "EXECUTE 회수 후에도 트리거가 도는가" - 를 확인한다.
+--    031 적용 후 C1/C3 가 PASS 였다면 여기서 다시 돌리지 않는다.
+--    (031:172 가 이미 회수를 실행했으므로, C1/C3 는 회수된 상태에서 통과한 것이다)
+--
+--    031 이 적용되지 않은 채로 이 파일을 먼저 적용하는 경우에만 아래를 수행한다:
+--      절차: 중개사 세션에서 자기 영업지역의 open 요청서에 매물 응답 1건 등록
+--      PASS: properties 행 생성 + 해당 requests.response_count 갱신
+--      FAIL: INSERT 는 됐는데 response_count 가 그대로
+--      ★ response_count 를 응답 전후로 직접 조회해 비교한다. 화면 표시만 보지 않는다.
+--      ★ 기대값이 031 적용 여부에 따라 다르다 - 031 전이면 +1(증분),
+--        031 후면 count(distinct realtor_id)(파생).
 --
 --   ※ 이 응답은 030 이후의 R6(영업지역 밖 INSERT 거부)과 짝이 되는 양성 대조이기도 하다.
 --     R6 이 "거부"를 보고, T16-b 가 "허용 + 부수효과 정상"을 본다.
+-- ========================================
 
 
 -- ========================================
 -- 롤백
 -- ========================================
 -- grant execute on function public.handle_new_user()            to public, anon, authenticated;
--- grant execute on function public.increment_response_count()   to public, anon, authenticated;
+--
+-- ★★ increment_response_count 의 grant 복구는 **넣지 않는다.** ★★
+--   031 이 적용된 뒤라면 그 회수는 이 파일이 한 것이 아니라 031:172 가 한 것이다.
+--   이 파일의 롤백이 그것까지 되돌리면 **031 의 상태를 무단으로 바꾸는 것**이 된다.
+--   (apply_030 실행본에서 같은 이유로 정본 롤백의 2줄을 뺐던 것과 같은 판단이다 -
+--    회수한 적 없는 권한을 부여하게 되므로.)
+--   031 까지 되돌려야 하는 상황이면 031 의 롤백 절차를 따로 수행한다.
+--
+--   ※ 031 미적용 상태에서 이 파일을 적용했다면 이 파일이 실제로 회수한 것이므로,
+--     그 경우에만 아래를 함께 실행한다:
+--     -- grant execute on function public.increment_response_count() to public, anon, authenticated;
 --
 -- ★ 되돌려도 보안이 나빠지지 않는다 — 회수 전 상태가 곧 030 적용 시점의 상태이고,
 --   030 자신이 그 상태를 "위험 0"으로 평가했다. 두 함수 모두 returns trigger 라

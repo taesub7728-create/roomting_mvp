@@ -748,7 +748,7 @@ API 레벨(9행)은 이미 확인됐다. **화면 회귀만 남았다.** write �
 
 | # | 내용 | 왜 남았나 |
 | --- | --- | --- |
-| **031** | 다중 매물 응답 (`properties_request_realtor_unique` 제거) | ⚠ **실질적으로 되돌릴 수 없다.** 적용 전 `properties`/`property_images`/`chat_rooms`/`chat_messages` **4개 테이블 백업이 선행 조건**(TODO 4번) |
+| **031** | 다중 매물 응답 (`properties_request_realtor_unique` 제거) | ⚠ 중복 응답 발생 후 **무손실 롤백이 불가능**하다. 적용 전 **5개 테이블** 백업이 선행 조건 — 대상·근거·READY 게이트는 **`TODO_PHASE2.md` 「031 백업 설계」가 기준**이다(2026-08-11 갱신, 여기 중복 기록하지 않음) |
 | **032** | requests CHECK 제약 | 전제 ② `extra_note` maxLength=300 + 카운터가 **미구현**(TODO 40번). `ExtraStep.jsx` 에 `maxLength` 없음. **032 직전에 처리할 것** |
 | **034** | 030 4-2 이월분 | 11월 신규 중개사 승인 플로우 때. T16-a/T16-b 동반 (TODO 50번) |
 | **R7** | 영업지역 없는 중개사 0행 | 미검증 — 대상 부재. 034 와 같은 시점 (TODO 49번) |

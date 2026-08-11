@@ -646,16 +646,39 @@ migration 022~032 파일을 작성했고 **아직 하나도 적용하지 않았�
   대응 방향 (a) 계정 생성 직후 검사로 이동해 인증 뒤로 넘기기 (b) Edge Function으로 rate limit
 - **관련 위치**: `migration_014_realtor_application_fields.sql`, `realtorApplication.api.js:6`
 
-## 4. migration 031은 실질적으로 되돌릴 수 없다
+## 4. migration 031은 중복 응답 발생 후 **무손실 롤백**이 불가능하다
+
+> **2026-08-11 표현 정정.** 이 항목은 원래 "실질적으로 되돌릴 수 없다"로 적혀 있었다.
+> **과한 표현이었다.** 되돌릴 수 없는 것은 스키마가 아니라 데이터다.
 
 - **현재 상태**: 설계 확정, 미적용
-- **제외 이유**: `properties_request_realtor_unique`(migration_007)를 drop해야 다중 매물이
-  가능한데, 되돌리려면 초과 행을 먼저 지워야 하고 `chat_rooms`가 cascade로 함께 사라진다.
-- **감수하는 위험**: 롤백 시 대화 기록 소실. Supabase Free 플랜에는 자동 백업이 없다
-  (일일 백업은 Pro 이상, PITR은 유료 애드온).
-- **재검토 조건**: 적용 전 `properties` / `property_images` / `chat_rooms` / `chat_messages`
-  4개 테이블 백업이 반드시 선행되어야 한다. 백업 없이 적용하지 않는다.
-- **관련 위치**: `migration_031_multi_property_response.sql` 헤더
+- **정확한 서술**: 031 적용 후 같은 `(request_id, realtor_id)` 중복 property 가 생기면
+  **031 이전 상태로의 lossless rollback 이 불가능하다.**
+  **스키마 자체는 되돌아간다** — 중복 그룹에서 하나만 남기고 나머지를 **의도적으로 폐기**한 뒤
+  `properties_request_realtor_unique` 를 재생성하면 된다.
+  불가능한 것은 스키마 롤백이 아니라 **무손실 롤백**이다.
+- **감수하는 위험**: 폐기된 property 에 연결된 `property_images` / `favorites` /
+  `chat_rooms` / `chat_messages` 가 **ON DELETE CASCADE 로 함께 손실된다**(대화 기록 포함).
+  Supabase Free 플랜에는 자동 백업이 없다(일일 백업은 Pro 이상, PITR 은 유료 애드온).
+  **무손실 롤백을 위해 백업이 필요한 이유가 이것이다** — 백업이 지키는 것은 스키마가 아니라
+  폐기될 데이터다.
+- **재검토 조건**: 적용 전 **5개 테이블** 백업이 반드시 선행되어야 한다.
+  백업 없이 적용하지 않는다.
+
+  ```
+  properties · property_images · favorites · chat_rooms · chat_messages
+  ```
+
+  ★ **`favorites` 는 2026-08-11 에 추가됐다.** 원래 이 항목은 4개로 적고 있었다.
+  근거: `favorites.property_id` → `properties.id`, **ON DELETE CASCADE**(schema.sql:141).
+  즉 `properties` 삭제 시 찜 데이터가 함께 사라지는 **구조적 폐쇄 집합의 일부**다.
+  "지금 몇 행이냐"와 무관하게 대상이며, **2026-08-11 프로덕션 실측에서 `favorites` = 1행**으로
+  실제 데이터 존재까지 확인됐다. 4개만 백업하고 롤백했다면 그 1행은 복구 수단 없이 소실됐다.
+  incoming FK 전수(4행, 전부 CASCADE)를 `pg_constraint` 로 실측 확인했다.
+
+  ※ `requests` 는 **snapshot-only / not restore target** — 아래 「031 백업 설계」 참고.
+- **관련 위치**: `migration_031_multi_property_response.sql` 헤더(13행이 4개로 적고 있다 —
+  **정본이므로 수정하지 않는다.** 실제 대상은 5개이며 이 문서가 기준이다)
 
 ## 5. extra_note 개인정보 — 경감 조치이지 해결이 아니다
 
@@ -1219,8 +1242,9 @@ Supabase Auth 탭 → User Signups 섹션)
 10. **030 적용** — ⚠ **프론트 B 없이 먼저 적용 금지.** 중개사 신규 채팅 진입이 막힌다
     → 「HARD PREREQUISITE」 및 `migration_029` 헤더
 
-**031·032는 위가 전부 끝난 뒤에 판단한다.** 031은 실질적으로 되돌릴 수 없고(위 4번 항목)
-적용 전 4개 테이블 백업이 선행 조건이다.
+**031·032는 위가 전부 끝난 뒤에 판단한다.** 031은 중복 응답이 생긴 뒤에는 무손실 롤백이
+불가능하고(위 4번 항목), 적용 전 **5개 테이블**(`properties`·`property_images`·`favorites`·
+`chat_rooms`·`chat_messages`) 백업이 선행 조건이다.
 
 ---
 
@@ -2570,7 +2594,7 @@ TEMP 대신 `VALUES` 인라인으로 기대값을 적는 것이다.
 | ② | `extra_note` maxLength=300 + 글자 수 카운터 | ✅ **완료 · 검증 통과** (2026-08-11) |
 
 **→ 032 의 프론트 적용 전제 ①② 가 모두 충족됐다.** 이제 032 를 막는 것은 프론트가
-아니라 **031(4개 테이블 백업 선행)** 뿐이다.
+아니라 **031(5개 테이블 백업 선행)** 뿐이다.
 
 **②는 2026-08-11 에 구현·배포·브라우저 검증까지 마쳤다.** 032 를 기다리지 않고 먼저 넣었다 — 032:11-14 가
 말한 순서 문제 때문이다(UI 가 먼저 제한해야 사용자가 입력 중에 안다). 미리 배포해서
@@ -3100,3 +3124,178 @@ JS `String.length` 와 HTML `maxLength` 는 UTF-16 코드유닛을 센다. 이�
   이번 구현으로 "보호 완료"가 되지 않았다.
 - **`jeonse_loan_detail` 카운터** — 같은 자유 입력 필드인데 현재 길이 제한이 전혀 없다.
   032 도 이 컬럼에는 CHECK 를 걸지 않는다. 제안 단계로만 기록한다.
+
+# 031 백업 설계 · preflight 실측 (2026-08-11) — 설계 확정, 백업 미실행
+
+031 은 **적용하지 않았고 백업도 뜨지 않았다.** 이 섹션은 설계와 read-only 실측 기록이다.
+
+## 031 실행문은 **5개**다
+
+| # | 줄 | 실행문 |
+| --- | --- | --- |
+| 1 | 91 | `alter table properties drop constraint if exists properties_request_realtor_unique;` |
+| 2 | 102 | `drop policy if exists "properties_insert_realtor" on properties;` |
+| 3 | 104-124 | `create policy "properties_insert_realtor" …` (030 조건 + `realtor_response_count() < 5`) |
+| 4 | 154-170 | `create or replace function public.increment_response_count()` (`+1` → `count(distinct realtor_id)`) |
+| 5 | **172** | `revoke all on function public.increment_response_count() from public, anon, authenticated;` |
+
+★ 정책 DROP+CREATE 를 **한 작업**으로 설명하더라도 **statement 개수는 5로 센다.**
+정본과 대조할 때 숫자가 어긋나면 재조사 비용이 생긴다.
+
+**data migration 은 0건이다.** 백필(176-196행)은 전부 주석이고 실행되는
+`UPDATE`/`DELETE`/`INSERT` 가 없다. 인덱스 변경도 없다.
+
+## preflight 실측 (2026-08-11, read-only, DB write 0건)
+
+| Q | 항목 | 결과 |
+| --- | --- | --- |
+| Q1 | 권한·소유자·RLS | `is_superuser=false` / 대상 테이블 `owner=postgres` / `rls_forced=false` |
+| Q2 | 트리거 전수(public) | **4행.** 백업 대상 5개 중 트리거는 `properties` 의 `trg_increment_response_count`(AFTER INSERT, `tgenabled='O'`) **1개뿐**. `property_images`·`favorites`·`chat_rooms`·`chat_messages` = **0** |
+| Q3 | incoming FK | **4행 전부 ON DELETE CASCADE.** `properties` ← `property_images`/`favorites`/`chat_rooms`, `chat_rooms` ← `chat_messages` |
+| Q4 | 행 수 | properties **2** / property_images **4** / **favorites 1** / chat_rooms **2** / chat_messages **3** / requests **10** |
+| Q5 | property 별 팬아웃 | `4c51fb17…`(공개, `request_id` NULL): img4 fav1 room1 msg1 · `c8ab5299…`(`dz`, 신촌 응답): img0 fav0 room1 msg2 — 합계가 Q4 와 일치 |
+| Q6 | 중복 그룹 (P5) | **0 / (none)** |
+| **Q7** | **`response_count` 정합성 (HARD GATE)** | **`total_mismatches` 0.** 10행 전부 정합. `cc193972…` 만 counter 1 / rows 1 / distinct 1, 나머지 9건 0 |
+| Q8 | 031 전제 상태 (P6) | **5/5 OK** |
+
+★ **Q7 이 이 묶음의 게이트였다.** 031 전이므로 트리거가 `+1` 증분식이고
+`response_count == actual_property_rows` 가 성립해야 정상이다. 불일치가 있었다면 백업보다
+원인 조사가 먼저였다 — 잘못된 카운터를 백업해 두고 나중에 "원본"이라며 복구하면 그 값이
+사실로 굳는다. `response_count` 는 파생값이라 `properties` 에서 언제든 재계산할 수 있으므로
+불일치는 **복구 대상이 아니라 조사 대상**이다.
+
+## 백업 대상 — 폐쇄 집합 5개 (실측 확정)
+
+```
+properties · property_images · favorites · chat_rooms · chat_messages
+```
+
+`favorites` 추가 근거는 위 4번 항목 참고. Q3 의 FK 전수와 Q4 의 1행 실측으로 확정됐다.
+
+### `requests` 는 **snapshot-only / not restore target**
+
+★ **`requests` 는 복원 시 DELETE/INSERT 대상이 아니다.** 031 은 `requests` 행을 만들거나
+지우지 않고, 복원 절차도 `requests` 행을 건드리지 않는다. 전체 행 복원 대상으로 오해하지 말 것.
+
+스냅샷에 담는 것은 **4개 컬럼**이다:
+
+| 컬럼 | 용도 |
+| --- | --- |
+| `id` | 카운터 원복 대상 식별 |
+| `response_count` | 복원 후 대조·원복 |
+| `status` | 나중에 사람이 어느 요청서인지 식별 (감사) |
+| `created_at` | 동일 (감사) |
+
+`status`/`created_at` 은 복구에 불필요하지만 비용이 거의 0이고, 없으면 나중에 스냅샷을 보고
+어느 요청서인지 알 수 없어 감사가 되지 않는다.
+
+## 트리거 전략 — 끄지 않는다 (실측 근거 추가)
+
+**결론 유지**: `DISABLE TRIGGER` 도 `session_replication_role` 도 쓰지 않는다.
+복원 후 `response_count` 를 스냅샷 값과 대조해 원복한다.
+
+- **Q1 실측으로 `session_replication_role` 이 실제로 불가함이 확인됐다** — `is_superuser=false`.
+  이 설정은 superuser 권한을 요구한다. 추정이 아니라 확정이다.
+- `ALTER TABLE ... DISABLE TRIGGER` 는 `owner=postgres = current_user` 라 **가능하지만 쓰지 않는다.**
+  끄고 다시 켜야 하는데 복원 중 오류로 중단되면 꺼진 채 남고, 그 상태에서 정상 응답이 들어오면
+  카운터가 조용히 안 오른다 — 발견이 가장 어려운 종류의 고장이다.
+- `response_count` 는 **파생값**이다. 원본이 아닌 값을 지키려고 특권 조작을 할 이유가 없다.
+
+★ **이번 작업에서 트리거 상태 변경은 0건이다.**
+
+### 복원 시 카운터 거동이 트리거 버전에 따라 갈린다
+
+| 시점 | 트리거 본문 | 복원 INSERT 의 효과 |
+| --- | --- | --- |
+| 031 **전**(현재) | `response_count + 1` | **증분** — 재INSERT 마다 누적, 행 수만큼 부풀어 오른다 |
+| 031 **후** | `count(distinct realtor_id)` | **파생** — 매번 재계산, 복원이 끝나면 자동 수렴 |
+
+→ 데이터 복원을 **트리거 롤백보다 먼저** 한다. 순서가 바뀌면 마지막에 스냅샷 값으로 덮어쓴다.
+
+## RLS — SQL Editor 는 우회한다 (실측 확정)
+
+Q1 에서 `rls_forced=false` + `owner=postgres` 를 확인했다. 즉 **SQL Editor 의 DELETE 에는
+RLS 방어가 없다.** 앱에는 `properties` DELETE 정책이 아예 없어(031:130) 아무도 못 지우지만
+SQL Editor 에는 그 방어가 존재하지 않는다.
+
+★ **복원 SQL 의 모든 DELETE 에 id 명시 열거 가드를 넣는다.** `where` 없는 DELETE 를 쓰지 않고,
+`where request_id = …` 같은 조건식도 쓰지 않는다(백업에 없는 행이 범위에 들어올 수 있다).
+
+## 복원 순서
+
+```
+DELETE (자식 → 부모)   chat_messages → chat_rooms → favorites → property_images → properties
+INSERT (부모 → 자식)   properties → property_images → favorites → chat_rooms → chat_messages
+이후                   중복 0 확인 → unique 재생성 → 정책 롤백 → 트리거 롤백 → 카운터 원복
+```
+
+PK 는 5개 테이블 전부 `uuid` + `gen_random_uuid()` 이고 **sequence 가 없어 재조정이 불필요**하다.
+id 를 원본 그대로 넣으면 FK 관계가 그대로 살아난다. `created_at` 은 default `now()` 가 있으므로
+**명시하지 않으면 복원 시각으로 덮인다** — JSON 에 포함해 넣는다.
+
+## Storage 백업 불필요
+
+`property_images.image_url` 은 `getPublicUrl()` 결과 문자열이다. 031 에 storage 문이 0건이고,
+Postgres FK cascade 는 `storage.objects` 에 도달할 수 없으며, 앱에 `.remove(` 호출이 0건이다
+(`src/` 전수 확인). → **DB 행만 복원하면 이미지가 돌아온다.** 스토리지 객체는 고아가 될 뿐
+사라지지 않는다.
+
+## 백업 방식 — `jsonb_agg` 단일 문장
+
+CSV 는 **null 과 빈 문자열을 구분하지 못해** 기각했다(`properties.address`/`description`,
+`chat_rooms.*_last_read_at` 이 전부 nullable). 5개 테이블 + `requests` 스냅샷을 **한 문장**으로
+떠서 statement-level consistency 로 정합성을 확보한다 — 락도 서비스 중단도 필요 없다.
+
+★ 실사용자가 생기면 SQL Editor 결과 크기·복사 한계로 이 방식이 깨진다. 그 시점에는
+CLI dump 또는 Pro 플랜 PITR 로 전환해야 한다. **백업 전략 재검토 시점 = 실사용자 확보 직전.**
+
+## 031 READY 게이트
+
+| # | 항목 | 상태 |
+| --- | --- | --- |
+| **P1** | 백업 대상 확정 (폐쇄 집합 5 + `requests` 카운터 스냅샷) | ✅ Q3/Q4 실측 |
+| **P2** | 실제 백업 완료 | ❌ **미실행** |
+| **P3** | manifest 작성 (행 수 대조 가능) | ❌ **미작성** |
+| **P4** | 복원 절차 검증 (`begin`/`rollback` 리허설) | ❌ **미실행** |
+| **P5** | 중복 0건 | ✅ Q6 = 0 |
+| **P6** | 031 원문과 DB 상태 일치 | ✅ Q8 = 5/5 |
+| **P7** | rollback 경계 문서화 (lossless 경계) | ✅ 위 4번 항목 |
+| **P8** | 031 ↔ 034 권한 중복 정리 | ✅ 2026-08-11 (아래) |
+
+**→ 031 READY 아님. 남은 blocker: P2 / P3 / P4.**
+
+## ★ P8 — 031:172 가 034 의 일부를 선행 실행한다
+
+```
+migration_030 4-2 (2026-08-11 에 제외한 2줄):
+  revoke all on function public.handle_new_user()          from public, anon, authenticated;
+  revoke all on function public.increment_response_count() from public, anon, authenticated;  ← 이것
+
+migration_031:172:
+  revoke all on function public.increment_response_count() from public, anon, authenticated;  ← 같은 것
+```
+
+- **031 을 적용하면 034 가 하려던 일의 절반이 그때 실행된다.** 50번에서 T16 검증 비용 때문에
+  미뤄둔 바로 그 회수다.
+- **034 에서 재실행되어도 무해하다** — `REVOKE` 는 idempotent 다. 다만 "왜 034 적용 전에 이미
+  회수돼 있지?" 라는 혼동을 막기 위해 034 에 기록했다.
+- **T16-b 는 031 의 C1/C3 에 흡수된다.** C1(매물 1→5개 순차 제출)과 C3(`response_count` 갱신)이
+  정확히 "권한 회수 후에도 트리거가 도는가"를 확인한다. **031 적용 후 C1/C3 가 PASS 면
+  `increment_response_count` 쪽 T16-b 는 완료**로 본다.
+- **034 에 남는 실질 신규 작업은 `handle_new_user()` revoke 하나**다.
+
+★ **034 의 revoke SQL 문장 자체는 지우지 않았다.** 031 이 선행해 no-op 이 되더라도 문장을
+제거하면 "034 가 원래 무엇을 하려던 것인지" 추적이 어려워진다. 남겨 두고 상태를 주석으로
+기록하는 쪽이 provenance 가 깔끔하다.
+
+## 다음 단계 (전부 승인 대상)
+
+1. **P2** — 백업 단일 쿼리 1회 실행 → `backup.json` 저장 (저장소 **밖**)
+2. **P3** — manifest 작성 (행 수 / 커밋 해시 / migration 상태 / 복원 순서 / 검증 기준)
+3. **P4** — `begin`/`rollback` 복원 리허설. ★ **DB write 포함**(롤백됨). 별도 승인 필요.
+   이 저장소에 선례가 있다 — migration_020/021 검증을 같은 방식으로 했다(위 「RequestWizard
+   단계형 전환」 항목)
+4. P2~P4 전부 PASS → **031 READY 선언**
+
+★ P4 를 건너뛰면 "백업 파일은 있는데 복원되는지는 모르는" 상태다. 031 백업 설계의 목적은
+파일 확보가 아니라 **복원 가능성 확보**다.
